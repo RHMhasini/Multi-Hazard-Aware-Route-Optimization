@@ -1,0 +1,46 @@
+# Python virtual environment
+.venv/
+env/
+venv/
+ENV/
+
+# Byte-compiled / optimized files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Testing and coverage
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Editor / IDE configuration
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Environment variables
+.env
+.env.*
+
+# Large geospatial datasets / raw artifacts (allow metadata/config to be tracked)
+data/raw/*
+!data/raw/.gitkeep
+data/intermediate/*
+!data/intermediate/.gitkeep
+data/processed/*
+!data/processed/.gitkeep
+
+# Output generated graphs, maps, evaluation results
+outputs/graphs/*
+!outputs/graphs/.gitkeep
+outputs/geojson/*
+!outputs/geojson/.gitkeep
+outputs/maps/*
+!outputs/maps/.gitkeep
+outputs/evaluation/*
+!outputs/evaluation/.gitkeep
+
+# Jupyter Notebook checkpoints
+.ipynb_checkpoints/
