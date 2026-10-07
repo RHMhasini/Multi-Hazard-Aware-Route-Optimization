@@ -24,9 +24,15 @@ htmlcov/
 .env
 .env.*
 
+# OSMnx / local cache
+cache/
+.ox_cache/
+
 # Large geospatial datasets / raw artifacts (allow metadata/config to be tracked)
 data/raw/*
 !data/raw/.gitkeep
+!data/raw/c2_sabaragamuwa_osm_metadata.json
+!data/raw/c2_sabaragamuwa_boundary.geojson
 data/intermediate/*
 !data/intermediate/.gitkeep
 data/processed/*
@@ -44,3 +50,4 @@ outputs/evaluation/*
 
 # Jupyter Notebook checkpoints
 .ipynb_checkpoints/
+
