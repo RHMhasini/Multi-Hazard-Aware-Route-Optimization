@@ -216,12 +216,30 @@ class TestExtractionScript:
             -2,
             osmid=7,
             length=123.4,
-            **{tag: "value" for tag in module.ROAD_TAGS},
+            **{
+                tag: "value"
+                for tag in module.GRAPHML_TAGS
+                if tag not in {"oneway", "oneway_osm"}
+            },
+            oneway=False,
+            oneway_osm="no",
         )
         output = tmp_path / "graph.graphml"
         module.save_graphml(graph, output)
         assert output.exists()
         assert output.stat().st_size > 0
+
+    def test_oneway_preserves_original_value_and_uses_graphml_boolean(self):
+        """OSMnx's reserved oneway field is boolean; OSM meaning remains available."""
+        module = _load_module()
+        tags = {tag: "" for tag in module.ROAD_TAGS}
+        tags["oneway"] = " -1 "
+        tags["junction"] = ""
+        original = tags["oneway"]
+        tags["oneway_osm"] = original
+        tags["oneway"] = module._graphml_oneway_value(tags)
+        assert tags["oneway"] is False
+        assert tags["oneway_osm"] == " -1 "
 
     def test_metadata_contains_local_pbf_provenance(self, tmp_path):
         """Metadata records the local source and extraction contract."""
@@ -252,7 +270,7 @@ class TestExtractionScript:
         assert data["simplify"] is False
         assert data["retain_all"] is True
         assert data["crs"] == "EPSG:4326"
-        assert set(module.ROAD_TAGS).issubset(data["road_tags"])
+        assert set(module.GRAPHML_TAGS).issubset(data["road_tags"])
         assert data["status"] == "success"
 
     def test_failed_metadata_is_explicit(self, tmp_path):

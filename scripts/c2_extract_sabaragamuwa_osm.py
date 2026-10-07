@@ -59,6 +59,7 @@ ROAD_TAGS = (
     "vehicle",
     "service",
 )
+GRAPHML_TAGS = ROAD_TAGS + ("oneway_osm",)
 DRIVE_HIGHWAY_TYPES = {
     "motorway",
     "motorway_link",
@@ -164,6 +165,11 @@ def _direction_pairs(tags: dict[str, str]) -> list[tuple[int, int]]:
     return [(0, 1), (1, 0)]
 
 
+def _graphml_oneway_value(tags: dict[str, str]) -> bool:
+    """Return OSMnx-compatible oneway while retaining the original value."""
+    return bool(_direction_pairs(tags) == [(0, 1)])
+
+
 class _RoadHandler(osmium.SimpleHandler):
     """Collect drive-road ways and their segment coordinates from a PBF."""
 
@@ -202,7 +208,9 @@ class _RoadHandler(osmium.SimpleHandler):
             return
 
         tags = {key: _tag_value(way.tags, key) for key in ROAD_TAGS}
+        tags["oneway_osm"] = tags["oneway"]
         directions = _direction_pairs(tags)
+        tags["oneway"] = _graphml_oneway_value(tags)
 
         for index, (start, end) in enumerate(zip(way_nodes, way_nodes[1:])):
             start_xy = points[index]
@@ -313,7 +321,7 @@ def save_metadata(
         "edge_count": stats.get("edge_count"),
         "is_directed": stats.get("is_directed"),
         "graph_type": stats.get("graph_type"),
-        "road_tags": list(ROAD_TAGS),
+        "road_tags": list(GRAPHML_TAGS),
         "boundary_filename": BOUNDARY_FILENAME if boundary_saved else None,
         "raw_graph_filename": GRAPHML_FILENAME,
         "extraction_total_seconds": round(elapsed_total, 1),
