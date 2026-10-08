@@ -1,0 +1,171 @@
+{
+  "boundary_validation": {
+    "boundary_crs": "EPSG:4326",
+    "boundary_feature_count": 1,
+    "boundary_intersecting_edge_count": 233,
+    "boundary_valid": true,
+    "classification": "Boundary observations are retained. Outside nodes are predominantly synthetic clipping nodes; not-fully-covered edges are reported for later spatial/topology review and are not removed in Step 4.",
+    "not_fully_covered_edge_count": 225,
+    "not_fully_covered_edges_with_synthetic_endpoint": 225,
+    "outside_node_count": 113,
+    "outside_positive_osm_node_count": 0,
+    "outside_synthetic_examples": [
+      -396139582315633558,
+      -787318799580955333,
+      -37709598043281835,
+      -259653989979472037,
+      -615973502813875586,
+      -723247124342915123,
+      -122891698408951364,
+      -751092153644389615,
+      -694687472784067269,
+      -1013328610713023999
+    ],
+    "outside_synthetic_node_count": 113
+  },
+  "connectivity": {
+    "component_count": 196,
+    "component_removal_reason": null,
+    "component_size_max": 293043,
+    "component_size_min": 2,
+    "components_at_most_10_nodes": 115,
+    "components_removed": 0,
+    "strong_components": 222,
+    "weak_components": 196
+  },
+  "decisions": {
+    "records_removed": 0,
+    "records_retained_despite_unusual": [
+      "degree-one endpoints",
+      "sub-metre edges",
+      "disconnected components",
+      "boundary-adjacent and boundary-crossing observations",
+      "all valid bridge/tunnel/layer/access/service semantics"
+    ],
+    "removal_reasons": {},
+    "summary": "Validation-only cleaning produced an unchanged structural copy; no clearly invalid records were found.",
+    "unresolved_observations": [
+      "Boundary coverage observations require later spatial review.",
+      "Very short edges require later topology analysis.",
+      "Disconnected components require contextual review, not size-only deletion."
+    ]
+  },
+  "highway_validation": {
+    "allowed_classes": [
+      "living_street",
+      "motorway",
+      "motorway_link",
+      "primary",
+      "primary_link",
+      "residential",
+      "road",
+      "secondary",
+      "secondary_link",
+      "service",
+      "tertiary",
+      "tertiary_link",
+      "trunk",
+      "trunk_link",
+      "unclassified"
+    ],
+    "missing_count": 0,
+    "unexpected_count": 0,
+    "unexpected_counts": {}
+  },
+  "inspection": {
+    "cleaned_graph": "data\\intermediate\\c2_sabaragamuwa_cleaned_graph.graphml",
+    "cleaned_graph_size_bytes": 379592640,
+    "generated_at": "2026-10-08T12:42:49.086680+00:00",
+    "raw_graph": "data\\raw\\c2_sabaragamuwa_raw_drive_network.graphml",
+    "raw_graph_size_bytes": 379592640,
+    "raw_metadata_status": "success",
+    "study_area": "Sabaragamuwa Province, Sri Lanka"
+  },
+  "length_validation": {
+    "counts": {
+      "valid": 598898,
+      "very_short": 179
+    },
+    "very_short_investigation": "All 179 sub-metre edges are retained. They are not deleted solely for short length; they require later geometry/topology review."
+  },
+  "node_validation": {
+    "all_synthetic_ids_negative": true,
+    "invalid_coordinate_count": 0,
+    "invalid_node_ids": [],
+    "positive_osm_ids_replaced": false,
+    "synthetic_isolated_count": 0,
+    "synthetic_negative_node_count": 218
+  },
+  "operations": {
+    "bridging_performed": false,
+    "component_3_processing_performed": false,
+    "node_merging_performed": false,
+    "risk_calculation_performed": false,
+    "route_optimization_performed": false,
+    "simplification_performed": false,
+    "snapping_performed": false,
+    "topology_modified": false
+  },
+  "records": {
+    "edges_inspected": 599077,
+    "edges_removed": 0,
+    "nodes_inspected": 297581,
+    "nodes_removed": 0,
+    "suspicious_edges": 0,
+    "suspicious_nodes": 0,
+    "valid_edges": 599077,
+    "valid_nodes": 297581
+  },
+  "semantic_validation": {
+    "attribute_presence_counts": {
+      "access": 599077,
+      "bridge": 599077,
+      "highway": 599077,
+      "junction": 599077,
+      "lanes": 599077,
+      "layer": 599077,
+      "length": 599077,
+      "maxspeed": 599077,
+      "motor_vehicle": 599077,
+      "name": 599077,
+      "oneway": 599077,
+      "oneway_osm": 599077,
+      "ref": 599077,
+      "service": 599077,
+      "tunnel": 599077,
+      "vehicle": 599077
+    },
+    "direction_normalization_performed": false,
+    "preserved_attributes": [
+      "highway",
+      "oneway",
+      "oneway_osm",
+      "junction",
+      "bridge",
+      "tunnel",
+      "layer",
+      "access",
+      "motor_vehicle",
+      "vehicle",
+      "service",
+      "maxspeed",
+      "lanes",
+      "ref",
+      "name",
+      "length"
+    ]
+  },
+  "structure": {
+    "cleaned_edge_count": 599077,
+    "cleaned_graph_type": "MultiDiGraph",
+    "cleaned_node_count": 297581,
+    "directed": true,
+    "duplicate_structural_records": 0,
+    "invalid_edge_references": 0,
+    "multigraph": true,
+    "raw_edge_count": 599077,
+    "raw_graph_type": "MultiDiGraph",
+    "raw_node_count": 297581,
+    "self_loops": 0
+  }
+}
