@@ -1,0 +1,267 @@
+{
+  "candidate_topology_indicators": {
+    "component_size_summary": {
+      "weak_components_at_most_10_nodes": 115,
+      "weak_max": 293043,
+      "weak_min": 2
+    },
+    "degree_1_nodes": 7,
+    "high_degree_threshold": 20,
+    "interpretation": "These are candidate indicators only; no defect or repair decision is made.",
+    "isolated_nodes": 0,
+    "nearby_endpoint_candidates": {
+      "available": false,
+      "reason": "scipy is not installed"
+    },
+    "nodes_degree_at_least_20": 0,
+    "self_loops": 0,
+    "very_short_edges_below_1m": 179
+  },
+  "edge_statistics": {
+    "length": {
+      "count": 599077,
+      "maximum": 3659.727284363393,
+      "mean": 29.133524227401228,
+      "median": 21.59256742990773,
+      "minimum": 0.08802206075090219
+    },
+    "parallel_edges": {
+      "directed_pair_multiplicity_distribution": {
+        "1": 599077
+      },
+      "edges_in_parallel_groups": 0,
+      "maximum_edges_per_node_pair": 1,
+      "multiplicity_distribution": {
+        "1": 599077
+      },
+      "node_pair_count": 599077,
+      "parallel_node_pair_count": 0
+    },
+    "self_loop_count": 0,
+    "total_directed_edges": 599077
+  },
+  "graph_structure": {
+    "edge_count": 599077,
+    "graph_class": "MultiDiGraph",
+    "is_directed": true,
+    "is_multigraph": true,
+    "node_count": 297581,
+    "osmnx_validation": {
+      "edge_count": 599077,
+      "graph_type": "MultiDiGraph",
+      "is_directed": true,
+      "node_count": 297581,
+      "performed": true
+    },
+    "strongly_connected_components": 222,
+    "weakly_connected_components": 196
+  },
+  "inspection": {
+    "boundary_path": "data\\raw\\c2_sabaragamuwa_boundary.geojson",
+    "generated_at": "2026-10-08T07:18:18.863644+00:00",
+    "graph_path": "data\\raw\\c2_sabaragamuwa_raw_drive_network.graphml",
+    "graph_size_bytes": 379592640,
+    "metadata_path": "data\\raw\\c2_sabaragamuwa_osm_metadata.json",
+    "raw_metadata_status": "success",
+    "study_area": "Sabaragamuwa Province, Sri Lanka"
+  },
+  "limitations": [
+    "Degree-one nodes may be legitimate endpoints, cul-de-sacs, access roads, or digitization candidates.",
+    "No Dmerge or angular thresholds were selected.",
+    "No topology modification, snapping, bridging, merging, deletion, or simplification was performed."
+  ],
+  "node_statistics": {
+    "degree_0": 0,
+    "degree_1": 7,
+    "degree_2": 8778,
+    "degree_3": 88,
+    "degree_4": 276337,
+    "degree_distribution": {
+      "1": 7,
+      "10": 3,
+      "2": 8778,
+      "3": 88,
+      "4": 276337,
+      "5": 64,
+      "6": 11900,
+      "7": 3,
+      "8": 401
+    },
+    "degree_greater_than_4": 12371,
+    "maximum_degree": 10,
+    "mean_degree": 4.026312163747013,
+    "median_degree": 4,
+    "minimum_degree": 1,
+    "total": 297581
+  },
+  "operations": {
+    "component_3_processing_performed": false,
+    "risk_calculation_performed": false,
+    "route_optimization_performed": false,
+    "topology_modified": false
+  },
+  "road_class_distribution": {
+    "additional_classes": [],
+    "all_classes": {
+      "living_street": {
+        "count": 6472,
+        "percentage": 1.080329
+      },
+      "motorway": {
+        "count": 10,
+        "percentage": 0.001669
+      },
+      "motorway_link": {
+        "count": 4,
+        "percentage": 0.000668
+      },
+      "primary": {
+        "count": 57777,
+        "percentage": 9.644336
+      },
+      "primary_link": {
+        "count": 86,
+        "percentage": 0.014355
+      },
+      "residential": {
+        "count": 217344,
+        "percentage": 36.27981
+      },
+      "road": {
+        "count": 0,
+        "percentage": 0.0
+      },
+      "secondary": {
+        "count": 9123,
+        "percentage": 1.522843
+      },
+      "secondary_link": {
+        "count": 2,
+        "percentage": 0.000334
+      },
+      "service": {
+        "count": 20381,
+        "percentage": 3.402067
+      },
+      "tertiary": {
+        "count": 60776,
+        "percentage": 10.14494
+      },
+      "tertiary_link": {
+        "count": 106,
+        "percentage": 0.017694
+      },
+      "trunk": {
+        "count": 25870,
+        "percentage": 4.31831
+      },
+      "trunk_link": {
+        "count": 27,
+        "percentage": 0.004507
+      },
+      "unclassified": {
+        "count": 201099,
+        "percentage": 33.568139
+      }
+    },
+    "classes_requested": [
+      "motorway",
+      "motorway_link",
+      "trunk",
+      "trunk_link",
+      "primary",
+      "primary_link",
+      "secondary",
+      "secondary_link",
+      "tertiary",
+      "tertiary_link",
+      "unclassified",
+      "residential",
+      "living_street",
+      "service",
+      "road"
+    ]
+  },
+  "semantic_attributes": {
+    "access": {
+      "": 515479,
+      "no": 349,
+      "permissive": 276,
+      "private": 418,
+      "unknown": 276,
+      "yes": 82279
+    },
+    "bridge": {
+      "": 596456,
+      "construction": 28,
+      "covered": 4,
+      "low_water_crossing": 6,
+      "no": 987,
+      "viaduct": 80,
+      "yes": 1516
+    },
+    "junction": {
+      "": 598839,
+      "roundabout": 238
+    },
+    "layer": {
+      "": 596280,
+      "-1": 284,
+      "0": 343,
+      "1": 2170
+    },
+    "motor_vehicle": {
+      "": 515811,
+      "designated": 14,
+      "no": 168,
+      "unknown": 22,
+      "yes": 83062
+    },
+    "oneway": {
+      "False": 598100,
+      "True": 977
+    },
+    "oneway_osm": {
+      "": 516761,
+      "no": 81506,
+      "yes": 810
+    },
+    "service": {
+      "": 597383,
+      "alley": 776,
+      "driveway": 874,
+      "epalapitiya": 14,
+      "parking_aisle": 30
+    },
+    "tunnel": {
+      "": 599067,
+      "no": 4,
+      "yes": 6
+    },
+    "vehicle": {
+      "": 599077
+    }
+  },
+  "spatial_validation": {
+    "boundary_bounds": [
+      80.1453682,
+      6.22795,
+      80.9532207,
+      7.3966054
+    ],
+    "boundary_crs": "EPSG:4326",
+    "boundary_feature_count": 1,
+    "boundary_geometry_valid": true,
+    "edges_intersecting_boundary": 599077,
+    "edges_not_covered_by_boundary": 225,
+    "graph_node_bounds": [
+      80.1461703,
+      6.228130568776175,
+      80.9514508,
+      7.396209825699008
+    ],
+    "negative_node_count": 218,
+    "negative_node_ids_all_boundary_clipping_candidates": true,
+    "nodes_outside_boundary": 113
+  }
+}
