@@ -1,0 +1,70 @@
+{
+  "input": "data\\intermediate\\c2_sabaragamuwa_cleaned_graph.graphml",
+  "output": "data\\intermediate\\c2_sabaragamuwa_direction_normalized_graph.graphml",
+  "direction": {
+    "directed_edges_before": 599077,
+    "directed_edges_after": 599077,
+    "directed_edge_records_one_way": 977,
+    "directed_edge_records_bidirectional": 598100,
+    "osm_way_statistics": {
+      "unique_osm_way_count": 13561,
+      "one_way_osm_way_count": 179,
+      "bidirectional_osm_way_count": 13382,
+      "edges_without_osmid": 0,
+      "method": "Group directed edge records by their osmid attribute; no edge-to-way inference is performed."
+    },
+    "reverse_direction_cases": 0,
+    "roundabout_records": 238,
+    "missing_oneway_records": 516761,
+    "edges_retained_without_structural_modification": 599077,
+    "direction_metadata_classified": 599077,
+    "direction_semantics_independently_verified": false,
+    "direction_semantics_unverified_records": 599077,
+    "verification_limitation": "The cleaned GraphML has edge endpoints and OSM tags but does not retain source-way geometry/order correspondence needed to independently verify every stored direction, especially oneway=-1.",
+    "normalized_direction_counts": {
+      "bidirectional": 598100,
+      "forward": 977
+    },
+    "direction_source_counts": {
+      "existing_extraction_representation": 82316,
+      "missing_oneway_default": 516594,
+      "roundabout_default": 167
+    }
+  },
+  "preservation": {
+    "same_node_count": true,
+    "same_edge_count": true,
+    "same_node_ids": true,
+    "same_node_attributes": true,
+    "same_edge_keys": true,
+    "same_original_edge_attributes": true,
+    "graph_type_preserved": true,
+    "directed_preserved": true,
+    "multigraph_preserved": true,
+    "topology_changed": false
+  },
+  "serialization_preservation": {
+    "same_node_count": true,
+    "same_edge_count": true,
+    "same_node_ids": true,
+    "same_node_attributes": true,
+    "same_edge_keys": true,
+    "same_original_edge_attributes": true,
+    "graph_type_preserved": true,
+    "directed_preserved": true,
+    "multigraph_preserved": true,
+    "topology_changed": false
+  },
+  "normalization_decision": "The extraction stage already encoded OSM direction semantics. Step 5 added canonical direction metadata only; no edges were reversed, duplicated, removed, or created.",
+  "scope_exclusions": {
+    "topology_healing": false,
+    "snapping": false,
+    "bridging": false,
+    "dmerge": false,
+    "angular_analysis": false,
+    "suspicious_topology_detection": false,
+    "risk_calculation": false,
+    "route_optimization": false,
+    "component_3_processing": false
+  }
+}
