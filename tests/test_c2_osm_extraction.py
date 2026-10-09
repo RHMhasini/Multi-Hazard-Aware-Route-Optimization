@@ -455,12 +455,13 @@ class TestMetadataOutput:
             "study_area",
             "country",
             "network_type",
-            "data_source",
-            "osmnx_version",
-            "python_version",
+            "source",
+            "source_file",
+            "extraction_method",
             "node_count",
             "edge_count",
             "is_directed",
+            "graph_type",
             "raw_graph_filename",
         ]
         for key in required_keys:
