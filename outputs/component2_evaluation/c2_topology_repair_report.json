@@ -1,0 +1,420 @@
+{
+  "function": "Component 2 Function 2: conservative topology repair",
+  "input_graph": {
+    "graph_type": "MultiDiGraph",
+    "directed": true,
+    "multigraph": true
+  },
+  "policy": {
+    "operation": "add one explicitly approved directed connector edge",
+    "approval_gate": "Candidate status must be eligible, explicitly approved, not already connected, heading-compatible, and free of missing or conflicting semantic evidence.",
+    "direction_policy": "The approval manifest must name exactly one direction; reverse edges are never inferred or added.",
+    "semantic_policy": "Missing, ambiguous, bridge, tunnel, layer, and access conflicts are not overridden by proximity and remain unrepairable without new evidence.",
+    "threshold_status": "Inherited from candidate output; not calibrated."
+  },
+  "counts": {
+    "candidate_count": 40,
+    "approval_count": 0,
+    "manifest_entry_count": 0,
+    "valid_approval_count": 0,
+    "rejected_approval_count": 0,
+    "accepted_repair_count": 0,
+    "skipped_candidate_count": 40,
+    "real_data_repair_count": 0
+  },
+  "before": {
+    "node_count": 297581,
+    "edge_count": 599077,
+    "weak_component_count": 196,
+    "strong_component_count": 222
+  },
+  "after": {
+    "node_count": 297581,
+    "edge_count": 599077,
+    "weak_component_count": 196,
+    "strong_component_count": 222
+  },
+  "accepted_repairs": [],
+  "skipped_candidates": [
+    {
+      "candidate_id": "candidate-0f70100b8e0714d3",
+      "repair_id": null,
+      "status": "skipped",
+      "action": "none",
+      "reason": "not_explicitly_approved",
+      "endpoint_u": 8015414755,
+      "endpoint_v": 8015414758
+    },
+    {
+      "candidate_id": "candidate-1074caa167fa8fc1",
+      "repair_id": null,
+      "status": "skipped",
+      "action": "none",
+      "reason": "not_explicitly_approved",
+      "endpoint_u": 8039062789,
+      "endpoint_v": 8039062793
+    },
+    {
+      "candidate_id": "candidate-18a0c27d46f3cabd",
+      "repair_id": null,
+      "status": "skipped",
+      "action": "none",
+      "reason": "not_explicitly_approved",
+      "endpoint_u": -638426248475453360,
+      "endpoint_v": -759021275313922970
+    },
+    {
+      "candidate_id": "candidate-1d14efe6a5c28d64",
+      "repair_id": null,
+      "status": "skipped",
+      "action": "none",
+      "reason": "not_explicitly_approved",
+      "endpoint_u": -1048104764529008573,
+      "endpoint_v": -399702484952533220
+    },
+    {
+      "candidate_id": "candidate-24c41e0363ee2e9b",
+      "repair_id": null,
+      "status": "skipped",
+      "action": "none",
+      "reason": "not_explicitly_approved",
+      "endpoint_u": 5263528570,
+      "endpoint_v": 5372323444
+    },
+    {
+      "candidate_id": "candidate-26118467dead2980",
+      "repair_id": null,
+      "status": "skipped",
+      "action": "none",
+      "reason": "not_explicitly_approved",
+      "endpoint_u": 5404558645,
+      "endpoint_v": 5404558648
+    },
+    {
+      "candidate_id": "candidate-304d37da74e6710c",
+      "repair_id": null,
+      "status": "skipped",
+      "action": "none",
+      "reason": "not_explicitly_approved",
+      "endpoint_u": 7732768312,
+      "endpoint_v": 7732777973
+    },
+    {
+      "candidate_id": "candidate-387721c7724fb553",
+      "repair_id": null,
+      "status": "skipped",
+      "action": "none",
+      "reason": "not_explicitly_approved",
+      "endpoint_u": 5540641224,
+      "endpoint_v": 5540641233
+    },
+    {
+      "candidate_id": "candidate-4088aa20ed75d188",
+      "repair_id": null,
+      "status": "skipped",
+      "action": "none",
+      "reason": "not_explicitly_approved",
+      "endpoint_u": 7688238651,
+      "endpoint_v": 7688238652
+    },
+    {
+      "candidate_id": "candidate-42211c0bdb44e4fd",
+      "repair_id": null,
+      "status": "skipped",
+      "action": "none",
+      "reason": "not_explicitly_approved",
+      "endpoint_u": 11011865926,
+      "endpoint_v": 11011865932
+    },
+    {
+      "candidate_id": "candidate-44b58c53b9775589",
+      "repair_id": null,
+      "status": "skipped",
+      "action": "none",
+      "reason": "not_explicitly_approved",
+      "endpoint_u": 7725207215,
+      "endpoint_v": 7725207217
+    },
+    {
+      "candidate_id": "candidate-4574c5d87f3a9dae",
+      "repair_id": null,
+      "status": "skipped",
+      "action": "none",
+      "reason": "not_explicitly_approved",
+      "endpoint_u": -200563434504244562,
+      "endpoint_v": -52623867482470155
+    },
+    {
+      "candidate_id": "candidate-490a9fa4c46b6838",
+      "repair_id": null,
+      "status": "skipped",
+      "action": "none",
+      "reason": "not_explicitly_approved",
+      "endpoint_u": 10129826025,
+      "endpoint_v": 10129826026
+    },
+    {
+      "candidate_id": "candidate-4ba327be27970d7b",
+      "repair_id": null,
+      "status": "skipped",
+      "action": "none",
+      "reason": "not_explicitly_approved",
+      "endpoint_u": 6435334418,
+      "endpoint_v": 7596105117
+    },
+    {
+      "candidate_id": "candidate-50b35f904a6c5c7e",
+      "repair_id": null,
+      "status": "skipped",
+      "action": "none",
+      "reason": "not_explicitly_approved",
+      "endpoint_u": 8008555994,
+      "endpoint_v": 8008556001
+    },
+    {
+      "candidate_id": "candidate-53ee47d9b6e6b8e6",
+      "repair_id": null,
+      "status": "skipped",
+      "action": "none",
+      "reason": "not_explicitly_approved",
+      "endpoint_u": 8015533680,
+      "endpoint_v": 8015533681
+    },
+    {
+      "candidate_id": "candidate-5e547e00d5a1e3ad",
+      "repair_id": null,
+      "status": "skipped",
+      "action": "none",
+      "reason": "not_explicitly_approved",
+      "endpoint_u": 5167524593,
+      "endpoint_v": 5167524594
+    },
+    {
+      "candidate_id": "candidate-678977a7c88a7b2b",
+      "repair_id": null,
+      "status": "skipped",
+      "action": "none",
+      "reason": "not_explicitly_approved",
+      "endpoint_u": 10129599872,
+      "endpoint_v": 10129599878
+    },
+    {
+      "candidate_id": "candidate-69729ef945ef029b",
+      "repair_id": null,
+      "status": "skipped",
+      "action": "none",
+      "reason": "not_explicitly_approved",
+      "endpoint_u": 8038884529,
+      "endpoint_v": 8038884530
+    },
+    {
+      "candidate_id": "candidate-6c6e233ae24da57a",
+      "repair_id": null,
+      "status": "skipped",
+      "action": "none",
+      "reason": "not_explicitly_approved",
+      "endpoint_u": 8034935808,
+      "endpoint_v": 8034935812
+    },
+    {
+      "candidate_id": "candidate-74d4f652cf38ec98",
+      "repair_id": null,
+      "status": "skipped",
+      "action": "none",
+      "reason": "not_explicitly_approved",
+      "endpoint_u": 8038884406,
+      "endpoint_v": 8038884408
+    },
+    {
+      "candidate_id": "candidate-7c9f674524090dd6",
+      "repair_id": null,
+      "status": "skipped",
+      "action": "none",
+      "reason": "not_explicitly_approved",
+      "endpoint_u": 10262625207,
+      "endpoint_v": 10262645918
+    },
+    {
+      "candidate_id": "candidate-7d97bf36d9b91ad0",
+      "repair_id": null,
+      "status": "skipped",
+      "action": "none",
+      "reason": "not_explicitly_approved",
+      "endpoint_u": 7731734556,
+      "endpoint_v": 7731734565
+    },
+    {
+      "candidate_id": "candidate-7f53bfcc1ffb6020",
+      "repair_id": null,
+      "status": "skipped",
+      "action": "none",
+      "reason": "not_explicitly_approved",
+      "endpoint_u": -243580291660896138,
+      "endpoint_v": -729266923081614321
+    },
+    {
+      "candidate_id": "candidate-845ae7eb617a8722",
+      "repair_id": null,
+      "status": "skipped",
+      "action": "none",
+      "reason": "not_explicitly_approved",
+      "endpoint_u": 7697829446,
+      "endpoint_v": 7697829450
+    },
+    {
+      "candidate_id": "candidate-86857aafd01774a0",
+      "repair_id": null,
+      "status": "skipped",
+      "action": "none",
+      "reason": "not_explicitly_approved",
+      "endpoint_u": -495535541177654567,
+      "endpoint_v": -864164900325871242
+    },
+    {
+      "candidate_id": "candidate-8f33660321875be2",
+      "repair_id": null,
+      "status": "skipped",
+      "action": "none",
+      "reason": "not_explicitly_approved",
+      "endpoint_u": 2384956413,
+      "endpoint_v": 2384957838
+    },
+    {
+      "candidate_id": "candidate-99f1184259d6cb87",
+      "repair_id": null,
+      "status": "skipped",
+      "action": "none",
+      "reason": "not_explicitly_approved",
+      "endpoint_u": 7692447628,
+      "endpoint_v": 7692447632
+    },
+    {
+      "candidate_id": "candidate-9c95b85a49179601",
+      "repair_id": null,
+      "status": "skipped",
+      "action": "none",
+      "reason": "not_explicitly_approved",
+      "endpoint_u": 7984268489,
+      "endpoint_v": 7984268497
+    },
+    {
+      "candidate_id": "candidate-9e29d69b6bad5283",
+      "repair_id": null,
+      "status": "skipped",
+      "action": "none",
+      "reason": "not_explicitly_approved",
+      "endpoint_u": 8038884399,
+      "endpoint_v": 8038884401
+    },
+    {
+      "candidate_id": "candidate-a196d02daee34f7d",
+      "repair_id": null,
+      "status": "skipped",
+      "action": "none",
+      "reason": "not_explicitly_approved",
+      "endpoint_u": 8008555999,
+      "endpoint_v": 8008556001
+    },
+    {
+      "candidate_id": "candidate-a7b4083a52d4a012",
+      "repair_id": null,
+      "status": "skipped",
+      "action": "none",
+      "reason": "not_explicitly_approved",
+      "endpoint_u": 7828755910,
+      "endpoint_v": 7984606605
+    },
+    {
+      "candidate_id": "candidate-aa0097db3a370d9f",
+      "repair_id": null,
+      "status": "skipped",
+      "action": "none",
+      "reason": "not_explicitly_approved",
+      "endpoint_u": 7684697483,
+      "endpoint_v": 7816487662
+    },
+    {
+      "candidate_id": "candidate-b16ebc0b46fde81e",
+      "repair_id": null,
+      "status": "skipped",
+      "action": "none",
+      "reason": "not_explicitly_approved",
+      "endpoint_u": 8034935799,
+      "endpoint_v": 8034935800
+    },
+    {
+      "candidate_id": "candidate-ca70a9675ece166b",
+      "repair_id": null,
+      "status": "skipped",
+      "action": "none",
+      "reason": "not_explicitly_approved",
+      "endpoint_u": 5155424291,
+      "endpoint_v": 7822452099
+    },
+    {
+      "candidate_id": "candidate-d04a8de730415b92",
+      "repair_id": null,
+      "status": "skipped",
+      "action": "none",
+      "reason": "not_explicitly_approved",
+      "endpoint_u": 8038884532,
+      "endpoint_v": 8038884535
+    },
+    {
+      "candidate_id": "candidate-d8d49f0fbae385b6",
+      "repair_id": null,
+      "status": "skipped",
+      "action": "none",
+      "reason": "not_explicitly_approved",
+      "endpoint_u": 7539851914,
+      "endpoint_v": 7827693508
+    },
+    {
+      "candidate_id": "candidate-e3771c35e8764d33",
+      "repair_id": null,
+      "status": "skipped",
+      "action": "none",
+      "reason": "not_explicitly_approved",
+      "endpoint_u": 7517690473,
+      "endpoint_v": 7517690475
+    },
+    {
+      "candidate_id": "candidate-ec9afd28afba9f64",
+      "repair_id": null,
+      "status": "skipped",
+      "action": "none",
+      "reason": "not_explicitly_approved",
+      "endpoint_u": -653902654968259224,
+      "endpoint_v": -937851896392589107
+    },
+    {
+      "candidate_id": "candidate-fb32c3156d1da78b",
+      "repair_id": null,
+      "status": "skipped",
+      "action": "none",
+      "reason": "not_explicitly_approved",
+      "endpoint_u": -467414038942128076,
+      "endpoint_v": -591932740699791753
+    }
+  ],
+  "rejected_approvals": [],
+  "real_data_repair_occurred": false,
+  "provenance": {
+    "source_graph_mutated": false,
+    "source_graph_preserved": true,
+    "candidate_evidence_used": true,
+    "approval_manifest_required_for_change": true,
+    "candidate_report_sha256": "e0e178caf8a31af10bd830955299de1e7555a4d431a0a637168257870e67cdf3",
+    "candidate_report_hash_kind": "exact_file_bytes",
+    "candidate_report_schema": null
+  },
+  "limitations": [
+    "No node merging, snapping, coordinate movement, reverse-edge inference, or semantic conflict override is performed.",
+    "An accepted synthetic repair is an explicitly approved graph edit, not evidence of a real topology defect.",
+    "Real-data repair requires independently reviewed approvals; the default study-area run supplies none."
+  ],
+  "input_graph_path": "D:\\SLIIT\\4th year 1st semester\\Research\\PP1\\road_network_graph\\data\\intermediate\\c2_sabaragamuwa_direction_normalized_graph.graphml",
+  "candidate_report_path": "D:\\SLIIT\\4th year 1st semester\\Research\\PP1\\road_network_graph\\outputs\\component2_evaluation\\c2_topology_candidates.json",
+  "approval_manifest_path": null,
+  "output_graph_path": "D:\\SLIIT\\4th year 1st semester\\Research\\PP1\\road_network_graph\\data\\intermediate\\c2_sabaragamuwa_topology_repaired_graph.graphml"
+}

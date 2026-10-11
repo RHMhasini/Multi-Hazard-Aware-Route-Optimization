@@ -17,7 +17,15 @@ The planned high-level processing pipeline consists of:
 3. **Direction Normalization** — Standardizing one-way, two-way, and roundabout lane orientations.
 4. **Initial Graph Construction** — Assembling a Directed Multigraph (`networkx.MultiDiGraph`).
 5. **Topology Defect Detection & Inspection** — Identifying disconnected components, dangling nodes, and angular anomalies.
-6. **Topology Refinement & Healing** — Automated proximity-based healing, directional bridging, and layer/bridge/tunnel semantic preservation.
+6. **Topology Refinement & Healing** — Conservative, approval-gated directed connector repairs with layer/bridge/tunnel semantic preservation; proximity alone never authorizes a repair.
+
+Function 2 adds only an explicitly approved directed connector. A synthetic connector
+must provide string-valued `layer`, `bridge`, `tunnel`, `oneway_normalized`, and
+`direction_source` attributes. The direction source must be
+`component2_explicit_approval`; OSM identity fields such as `osmid`, `highway`,
+road names, and physical geometry are not invented. Candidate evidence and the
+exact candidate-report file SHA-256 are retained in repair provenance. Unknown,
+duplicate, malformed, rejected, or unapproved manifest entries are never applied.
 7. **Validation & Evaluation** — Quantifying network graph metrics and structural correctness.
 8. **Graph Export** — Exporting routing-ready artifacts in GraphML and GeoJSON formats.
 
