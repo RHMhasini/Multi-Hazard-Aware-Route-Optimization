@@ -1,0 +1,3387 @@
+{
+  "crs": {
+    "properties": {
+      "name": "EPSG:4326"
+    },
+    "type": "name"
+  },
+  "features": [
+    {
+      "geometry": {
+        "coordinates": [
+          [
+            80.3092217,
+            6.6304768
+          ],
+          [
+            80.3092378,
+            6.630626
+          ]
+        ],
+        "type": "LineString"
+      },
+      "properties": {
+        "already_connected": false,
+        "candidate_id": "candidate-0f70100b8e0714d3",
+        "distance_m": 16.590221,
+        "endpoint_semantics": "{\"u\": {\"access\": {\"ambiguous\": false, \"missing\": true, \"values\": []}, \"bridge\": {\"ambiguous\": false, \"missing\": true, \"values\": []}, \"highway\": {\"ambiguous\": false, \"missing\": false, \"values\": [\"residential\"]}, \"layer\": {\"ambiguous\": false, \"missing\": true, \"values\": []}, \"motor_vehicle\": {\"ambiguous\": false, \"missing\": true, \"values\": []}, \"service\": {\"ambiguous\": false, \"missing\": true, \"values\": []}, \"tunnel\": {\"ambiguous\": false, \"missing\": true, \"values\": []}, \"vehicle\": {\"ambiguous\": false, \"missing\": true, \"values\": []}}, \"v\": {\"access\": {\"ambiguous\": false, \"missing\": true, \"values\": []}, \"bridge\": {\"ambiguous\": false, \"missing\": true, \"values\": []}, \"highway\": {\"ambiguous\": false, \"missing\": false, \"values\": [\"residential\"]}, \"layer\": {\"ambiguous\": false, \"missing\": true, \"values\": []}, \"motor_vehicle\": {\"ambiguous\": false, \"missing\": true, \"values\": []}, \"service\": {\"ambiguous\": false, \"missing\": true, \"values\": []}, \"tunnel\": {\"ambiguous\": false, \"missing\": true, \"values\": []}, \"vehicle\": {\"ambiguous\": false, \"missing\": true, \"values\": []}}}",
+        "endpoint_u": 8015414755,
+        "endpoint_v": 8015414758,
+        "feature_type": "candidate_connection",
+        "heading_compatible": false,
+        "heading_deviation_degrees": 108.066516,
+        "heading_u_degrees": 35.277376,
+        "heading_v_degrees": 323.343892,
+        "reasons": [
+          "access",
+          "bridge",
+          "heading_incompatible",
+          "layer",
+          "missing_semantic_attributes",
+          "motor_vehicle",
+          "service",
+          "tunnel",
+          "vehicle"
+        ],
+        "semantic_conflicts": [],
+        "semantic_missing_attributes": [
+          "access",
+          "bridge",
+          "layer",
+          "motor_vehicle",
+          "service",
+          "tunnel",
+          "vehicle"
+        ],
+        "status": "rejected"
+      },
+      "type": "Feature"
+    },
+    {
+      "geometry": {
+        "coordinates": [
+          80.3092217,
+          6.6304768
+        ],
+        "type": "Point"
+      },
+      "properties": {
+        "candidate_id": "candidate-0f70100b8e0714d3",
+        "endpoint": 8015414755,
+        "feature_type": "endpoint_u",
+        "reasons": "[\"access\", \"bridge\", \"heading_incompatible\", \"layer\", \"missing_semantic_attributes\", \"motor_vehicle\", \"service\", \"tunnel\", \"vehicle\"]",
+        "status": "rejected"
+      },
+      "type": "Feature"
+    },
+    {
+      "geometry": {
+        "coordinates": [
+          80.3092378,
+          6.630626
+        ],
+        "type": "Point"
+      },
+      "properties": {
+        "candidate_id": "candidate-0f70100b8e0714d3",
+        "endpoint": 8015414758,
+        "feature_type": "endpoint_v",
+        "reasons": "[\"access\", \"bridge\", \"heading_incompatible\", \"layer\", \"missing_semantic_attributes\", \"motor_vehicle\", \"service\", \"tunnel\", \"vehicle\"]",
+        "status": "rejected"
+      },
+      "type": "Feature"
+    },
+    {
+      "geometry": {
+        "coordinates": [
+          [
+            80.3481781,
+            6.65657
+          ],
+          [
+            80.3481889,
+            6.6563995
+          ]
+        ],
+        "type": "LineString"
+      },
+      "properties": {
+        "already_connected": false,
+        "candidate_id": "candidate-1074caa167fa8fc1",
+        "distance_m": 18.886894,
+        "endpoint_semantics": "{\"u\": {\"access\": {\"ambiguous\": false, \"missing\": true, \"values\": []}, \"bridge\": {\"ambiguous\": false, \"missing\": true, \"values\": []}, \"highway\": {\"ambiguous\": false, \"missing\": false, \"values\": [\"residential\"]}, \"layer\": {\"ambiguous\": false, \"missing\": true, \"values\": []}, \"motor_vehicle\": {\"ambiguous\": false, \"missing\": true, \"values\": []}, \"service\": {\"ambiguous\": false, \"missing\": true, \"values\": []}, \"tunnel\": {\"ambiguous\": false, \"missing\": true, \"values\": []}, \"vehicle\": {\"ambiguous\": false, \"missing\": true, \"values\": []}}, \"v\": {\"access\": {\"ambiguous\": false, \"missing\": true, \"values\": []}, \"bridge\": {\"ambiguous\": false, \"missing\": true, \"values\": []}, \"highway\": {\"ambiguous\": false, \"missing\": false, \"values\": [\"residential\"]}, \"layer\": {\"ambiguous\": false, \"missing\": true, \"values\": []}, \"motor_vehicle\": {\"ambiguous\": false, \"missing\": true, \"values\": []}, \"service\": {\"ambiguous\": false, \"missing\": true, \"values\": []}, \"tunnel\": {\"ambiguous\": false, \"missing\": true, \"values\": []}, \"vehicle\": {\"ambiguous\": false, \"missing\": true, \"values\": []}}}",
+        "endpoint_u": 8039062789,
+        "endpoint_v": 8039062793,
+        "feature_type": "candidate_connection",
+        "heading_compatible": false,
+        "heading_deviation_degrees": 99.332263,
+        "heading_u_degrees": 320.334731,
+        "heading_v_degrees": 41.002468,
+        "reasons": [
+          "access",
+          "bridge",
+          "heading_incompatible",
+          "layer",
+          "missing_semantic_attributes",
+          "motor_vehicle",
+          "service",
+          "tunnel",
+          "vehicle"
+        ],
+        "semantic_conflicts": [],
+        "semantic_missing_attributes": [
+          "access",
+          "bridge",
+          "layer",
+          "motor_vehicle",
+          "service",
+          "tunnel",
+          "vehicle"
+        ],
+        "status": "rejected"
+      },
+      "type": "Feature"
+    },
+    {
+      "geometry": {
+        "coordinates": [
+          80.3481781,
+          6.65657
+        ],
+        "type": "Point"
+      },
+      "properties": {
+        "candidate_id": "candidate-1074caa167fa8fc1",
+        "endpoint": 8039062789,
+        "feature_type": "endpoint_u",
+        "reasons": "[\"access\", \"bridge\", \"heading_incompatible\", \"layer\", \"missing_semantic_attributes\", \"motor_vehicle\", \"service\", \"tunnel\", \"vehicle\"]",
+        "status": "rejected"
+      },
+      "type": "Feature"
+    },
+    {
+      "geometry": {
+        "coordinates": [
+          80.3481889,
+          6.6563995
+        ],
+        "type": "Point"
+      },
+      "properties": {
+        "candidate_id": "candidate-1074caa167fa8fc1",
+        "endpoint": 8039062793,
+        "feature_type": "endpoint_v",
+        "reasons": "[\"access\", \"bridge\", \"heading_incompatible\", \"layer\", \"missing_semantic_attributes\", \"motor_vehicle\", \"service\", \"tunnel\", \"vehicle\"]",
+        "status": "rejected"
+      },
+      "type": "Feature"
+    },
+    {
+      "geometry": {
+        "coordinates": [
+          [
+            80.20403329809345,
+            6.912883873878909
+          ],
+          [
+            80.20408954416511,
+            6.912933511209405
+          ]
+        ],
+        "type": "LineString"
+      },
+      "properties": {
+        "already_connected": false,
+        "candidate_id": "candidate-18a0c27d46f3cabd",
+        "distance_m": 8.290433,
+        "endpoint_semantics": "{\"u\": {\"access\": {\"ambiguous\": false, \"missing\": true, \"values\": []}, \"bridge\": {\"ambiguous\": false, \"missing\": true, \"values\": []}, \"highway\": {\"ambiguous\": false, \"missing\": false, \"values\": [\"unclassified\"]}, \"layer\": {\"ambiguous\": false, \"missing\": true, \"values\": []}, \"motor_vehicle\": {\"ambiguous\": false, \"missing\": true, \"values\": []}, \"service\": {\"ambiguous\": false, \"missing\": true, \"values\": []}, \"tunnel\": {\"ambiguous\": false, \"missing\": true, \"values\": []}, \"vehicle\": {\"ambiguous\": false, \"missing\": true, \"values\": []}}, \"v\": {\"access\": {\"ambiguous\": false, \"missing\": true, \"values\": []}, \"bridge\": {\"ambiguous\": false, \"missing\": true, \"values\": []}, \"highway\": {\"ambiguous\": false, \"missing\": false, \"values\": [\"unclassified\"]}, \"layer\": {\"ambiguous\": false, \"missing\": true, \"values\": []}, \"motor_vehicle\": {\"ambiguous\": false, \"missing\": true, \"values\": []}, \"service\": {\"ambiguous\": false, \"missing\": true, \"values\": []}, \"tunnel\": {\"ambiguous\": false, \"missing\": true, \"values\": []}, \"vehicle\": {\"ambiguous\": false, \"missing\": true, \"values\": []}}}",
+        "endpoint_u": -638426248475453360,
+        "endpoint_v": -759021275313922970,
+        "feature_type": "candidate_connection",
+        "heading_compatible": false,
+        "heading_deviation_degrees": 163.606831,
+        "heading_u_degrees": 300.354565,
+        "heading_v_degrees": 316.747734,
+        "reasons": [
+          "access",
+          "bridge",
+          "heading_incompatible",
+          "layer",
+          "missing_semantic_attributes",
+          "motor_vehicle",
+          "service",
+          "tunnel",
+          "vehicle"
+        ],
+        "semantic_conflicts": [],
+        "semantic_missing_attributes": [
+          "access",
+          "bridge",
+          "layer",
+          "motor_vehicle",
+          "service",
+          "tunnel",
+          "vehicle"
+        ],
+        "status": "rejected"
+      },
+      "type": "Feature"
+    },
+    {
+      "geometry": {
+        "coordinates": [
+          80.20403329809345,
+          6.912883873878909
+        ],
+        "type": "Point"
+      },
+      "properties": {
+        "candidate_id": "candidate-18a0c27d46f3cabd",
+        "endpoint": -638426248475453360,
+        "feature_type": "endpoint_u",
+        "reasons": "[\"access\", \"bridge\", \"heading_incompatible\", \"layer\", \"missing_semantic_attributes\", \"motor_vehicle\", \"service\", \"tunnel\", \"vehicle\"]",
+        "status": "rejected"
+      },
+      "type": "Feature"
+    },
+    {
+      "geometry": {
+        "coordinates": [
+          80.20408954416511,
+          6.912933511209405
+        ],
+        "type": "Point"
+      },
+      "properties": {
+        "candidate_id": "candidate-18a0c27d46f3cabd",
+        "endpoint": -759021275313922970,
+        "feature_type": "endpoint_v",
+        "reasons": "[\"access\", \"bridge\", \"heading_incompatible\", \"layer\", \"missing_semantic_attributes\", \"motor_vehicle\", \"service\", \"tunnel\", \"vehicle\"]",
+        "status": "rejected"
+      },
+      "type": "Feature"
+    },
+    {
+      "geometry": {
+        "coordinates": [
+          [
+            80.94749388028028,
+            6.246048943181867
+          ],
+          [
+            80.94747261802411,
+            6.246173024742519
+          ]
+        ],
+        "type": "LineString"
+      },
+      "properties": {
+        "already_connected": false,
+        "candidate_id": "candidate-1d14efe6a5c28d64",
+        "distance_m": 13.91657,
+        "endpoint_semantics": "{\"u\": {\"access\": {\"ambiguous\": false, \"missing\": true, \"values\": []}, \"bridge\": {\"ambiguous\": false, \"missing\": false, \"values\": [\"yes\"]}, \"highway\": {\"ambiguous\": false, \"missing\": false, \"values\": [\"motorway\"]}, \"layer\": {\"ambiguous\": false, \"missing\": false, \"values\": [\"1\"]}, \"motor_vehicle\": {\"ambiguous\": false, \"missing\": false, \"values\": [\"designated\"]}, \"service\": {\"ambiguous\": false, \"missing\": true, \"values\": []}, \"tunnel\": {\"ambiguous\": false, \"missing\": true, \"values\": []}, \"vehicle\": {\"ambiguous\": false, \"missing\": true, \"values\": []}}, \"v\": {\"access\": {\"ambiguous\": false, \"missing\": true, \"values\": []}, \"bridge\": {\"ambiguous\": false, \"missing\": false, \"values\": [\"yes\"]}, \"highway\": {\"ambiguous\": false, \"missing\": false, \"values\": [\"motorway\"]}, \"layer\": {\"ambiguous\": false, \"missing\": false, \"values\": [\"1\"]}, \"motor_vehicle\": {\"ambiguous\": false, \"missing\": false, \"values\": [\"designated\"]}, \"service\": {\"ambiguous\": false, \"missing\": true, \"values\": []}, \"tunnel\": {\"ambiguous\": false, \"missing\": true, \"values\": []}, \"vehicle\": {\"ambiguous\": false, \"missing\": true, \"values\": []}}}",
+        "endpoint_u": -1048104764529008573,
+        "endpoint_v": -399702484952533220,
+        "feature_type": "candidate_connection",
+        "heading_compatible": false,
+        "heading_deviation_degrees": 179.756979,
+        "heading_u_degrees": 216.355571,
+        "heading_v_degrees": 216.598592,
+        "reasons": [
+          "access",
+          "heading_incompatible",
+          "missing_semantic_attributes",
+          "service",
+          "tunnel",
+          "vehicle"
+        ],
+        "semantic_conflicts": [],
+        "semantic_missing_attributes": [
+          "access",
+          "service",
+          "tunnel",
+          "vehicle"
+        ],
+        "status": "rejected"
+      },
+      "type": "Feature"
+    },
+    {
+      "geometry": {
+        "coordinates": [
+          80.94749388028028,
+          6.246048943181867
+        ],
+        "type": "Point"
+      },
+      "properties": {
+        "candidate_id": "candidate-1d14efe6a5c28d64",
+        "endpoint": -1048104764529008573,
+        "feature_type": "endpoint_u",
+        "reasons": "[\"access\", \"heading_incompatible\", \"missing_semantic_attributes\", \"service\", \"tunnel\", \"vehicle\"]",
+        "status": "rejected"
+      },
+      "type": "Feature"
+    },
+    {
+      "geometry": {
+        "coordinates": [
+          80.94747261802411,
+          6.246173024742519
+        ],
+        "type": "Point"
+      },
+      "properties": {
+        "candidate_id": "candidate-1d14efe6a5c28d64",
+        "endpoint": -399702484952533220,
+        "feature_type": "endpoint_v",
+        "reasons": "[\"access\", \"heading_incompatible\", \"missing_semantic_attributes\", \"service\", \"tunnel\", \"vehicle\"]",
+        "status": "rejected"
+      },
+      "type": "Feature"
+    },
+    {
+      "geometry": {
+        "coordinates": [
+          [
+            80.3823203,
+            6.71541
+          ],
+          [
+            80.3823478,
+            6.7152773
+          ]
+        ],
+        "type": "LineString"
+      },
+      "properties": {
+        "already_connected": false,
+        "candidate_id": "candidate-24c41e0363ee2e9b",
+        "distance_m": 14.98174,
+        "endpoint_semantics": "{\"u\": {\"access\": {\"ambiguous\": false, \"missing\": true, \"values\": []}, \"bridge\": {\"ambiguous\": false, \"missing\": true, \"values\": []}, \"highway\": {\"ambiguous\": false, \"missing\": false, \"values\": [\"residential\"]}, \"layer\": {\"ambiguous\": false, \"missing\": true, \"values\": []}, \"motor_vehicle\": {\"ambiguous\": false, \"missing\": true, \"values\": []}, \"service\": {\"ambiguous\": false, \"missing\": true, \"values\": []}, \"tunnel\": {\"ambiguous\": false, \"missing\": true, \"values\": []}, \"vehicle\": {\"ambiguous\": false, \"missing\": true, \"values\": []}}, \"v\": {\"access\": {\"ambiguous\": false, \"missing\": true, \"values\": []}, \"bridge\": {\"ambiguous\": false, \"missing\": true, \"values\": []}, \"highway\": {\"ambiguous\": false, \"missing\": false, \"values\": [\"service\"]}, \"layer\": {\"ambiguous\": false, \"missing\": true, \"values\": []}, \"motor_vehicle\": {\"ambiguous\": false, \"missing\": true, \"values\": []}, \"service\": {\"ambiguous\": false, \"missing\": true, \"values\": []}, \"tunnel\": {\"ambiguous\": false, \"missing\": true, \"values\": []}, \"vehicle\": {\"ambiguous\": false, \"missing\": true, \"values\": []}}}",
+        "endpoint_u": 5263528570,
+        "endpoint_v": 5372323444,
+        "feature_type": "candidate_connection",
+        "heading_compatible": false,
+        "heading_deviation_degrees": 155.78212,
+        "heading_u_degrees": 24.21788,
+        "heading_v_degrees": 0.0,
+        "reasons": [
+          "access",
+          "bridge",
+          "heading_incompatible",
+          "layer",
+          "missing_semantic_attributes",
+          "motor_vehicle",
+          "service",
+          "tunnel",
+          "vehicle"
+        ],
+        "semantic_conflicts": [],
+        "semantic_missing_attributes": [
+          "access",
+          "bridge",
+          "layer",
+          "motor_vehicle",
+          "service",
+          "tunnel",
+          "vehicle"
+        ],
+        "status": "rejected"
+      },
+      "type": "Feature"
+    },
+    {
+      "geometry": {
+        "coordinates": [
+          80.3823203,
+          6.71541
+        ],
+        "type": "Point"
+      },
+      "properties": {
+        "candidate_id": "candidate-24c41e0363ee2e9b",
+        "endpoint": 5263528570,
+        "feature_type": "endpoint_u",
+        "reasons": "[\"access\", \"bridge\", \"heading_incompatible\", \"layer\", \"missing_semantic_attributes\", \"motor_vehicle\", \"service\", \"tunnel\", \"vehicle\"]",
+        "status": "rejected"
+      },
+      "type": "Feature"
+    },
+    {
+      "geometry": {
+        "coordinates": [
+          80.3823478,
+          6.7152773
+        ],
+        "type": "Point"
+      },
+      "properties": {
+        "candidate_id": "candidate-24c41e0363ee2e9b",
+        "endpoint": 5372323444,
+        "feature_type": "endpoint_v",
+        "reasons": "[\"access\", \"bridge\", \"heading_incompatible\", \"layer\", \"missing_semantic_attributes\", \"motor_vehicle\", \"service\", \"tunnel\", \"vehicle\"]",
+        "status": "rejected"
+      },
+      "type": "Feature"
+    },
+    {
+      "geometry": {
+        "coordinates": [
+          [
+            80.3739273,
+            6.7190105
+          ],
+          [
+            80.3740936,
+            6.7190051
+          ]
+        ],
+        "type": "LineString"
+      },
+      "properties": {
+        "already_connected": false,
+        "candidate_id": "candidate-26118467dead2980",
+        "distance_m": 18.389555,
+        "endpoint_semantics": "{\"u\": {\"access\": {\"ambiguous\": false, \"missing\": true, \"values\": []}, \"bridge\": {\"ambiguous\": false, \"missing\": true, \"values\": []}, \"highway\": {\"ambiguous\": false, \"missing\": false, \"values\": [\"service\"]}, \"layer\": {\"ambiguous\": false, \"missing\": true, \"values\": []}, \"motor_vehicle\": {\"ambiguous\": false, \"missing\": true, \"values\": []}, \"service\": {\"ambiguous\": false, \"missing\": true, \"values\": []}, \"tunnel\": {\"ambiguous\": false, \"missing\": true, \"values\": []}, \"vehicle\": {\"ambiguous\": false, \"missing\": true, \"values\": []}}, \"v\": {\"access\": {\"ambiguous\": false, \"missing\": true, \"values\": []}, \"bridge\": {\"ambiguous\": false, \"missing\": true, \"values\": []}, \"highway\": {\"ambiguous\": false, \"missing\": false, \"values\": [\"service\"]}, \"layer\": {\"ambiguous\": false, \"missing\": true, \"values\": []}, \"motor_vehicle\": {\"ambiguous\": false, \"missing\": true, \"values\": []}, \"service\": {\"ambiguous\": false, \"missing\": true, \"values\": []}, \"tunnel\": {\"ambiguous\": false, \"missing\": true, \"values\": []}, \"vehicle\": {\"ambiguous\": false, \"missing\": true, \"values\": []}}}",
+        "endpoint_u": 5404558645,
+        "endpoint_v": 5404558648,
+        "feature_type": "candidate_connection",
+        "heading_compatible": false,
+        "heading_deviation_degrees": 179.317383,
+        "heading_u_degrees": 316.815615,
+        "heading_v_degrees": 317.498231,
+        "reasons": [
+          "access",
+          "bridge",
+          "heading_incompatible",
+          "layer",
+          "missing_semantic_attributes",
+          "motor_vehicle",
+          "service",
+          "tunnel",
+          "vehicle"
+        ],
+        "semantic_conflicts": [],
+        "semantic_missing_attributes": [
+          "access",
+          "bridge",
+          "layer",
+          "motor_vehicle",
+          "service",
+          "tunnel",
+          "vehicle"
+        ],
+        "status": "rejected"
+      },
+      "type": "Feature"
+    },
+    {
+      "geometry": {
+        "coordinates": [
+          80.3739273,
+          6.7190105
+        ],
+        "type": "Point"
+      },
+      "properties": {
+        "candidate_id": "candidate-26118467dead2980",
+        "endpoint": 5404558645,
+        "feature_type": "endpoint_u",
+        "reasons": "[\"access\", \"bridge\", \"heading_incompatible\", \"layer\", \"missing_semantic_attributes\", \"motor_vehicle\", \"service\", \"tunnel\", \"vehicle\"]",
+        "status": "rejected"
+      },
+      "type": "Feature"
+    },
+    {
+      "geometry": {
+        "coordinates": [
+          80.3740936,
+          6.7190051
+        ],
+        "type": "Point"
+      },
+      "properties": {
+        "candidate_id": "candidate-26118467dead2980",
+        "endpoint": 5404558648,
+        "feature_type": "endpoint_v",
+        "reasons": "[\"access\", \"bridge\", \"heading_incompatible\", \"layer\", \"missing_semantic_attributes\", \"motor_vehicle\", \"service\", \"tunnel\", \"vehicle\"]",
+        "status": "rejected"
+      },
+      "type": "Feature"
+    },
+    {
+      "geometry": {
+        "coordinates": [
+          [
+            80.2516186,
+            6.6553338
+          ],
+          [
+            80.2517715,
+            6.6553738
+          ]
+        ],
+        "type": "LineString"
+      },
+      "properties": {
+        "already_connected": false,
+        "candidate_id": "candidate-304d37da74e6710c",
+        "distance_m": 17.470422,
+        "endpoint_semantics": "{\"u\": {\"access\": {\"ambiguous\": false, \"missing\": true, \"values\": []}, \"bridge\": {\"ambiguous\": false, \"missing\": true, \"values\": []}, \"highway\": {\"ambiguous\": false, \"missing\": false, \"values\": [\"residential\"]}, \"layer\": {\"ambiguous\": false, \"missing\": true, \"values\": []}, \"motor_vehicle\": {\"ambiguous\": false, \"missing\": true, \"values\": []}, \"service\": {\"ambiguous\": false, \"missing\": true, \"values\": []}, \"tunnel\": {\"ambiguous\": false, \"missing\": true, \"values\": []}, \"vehicle\": {\"ambiguous\": false, \"missing\": true, \"values\": []}}, \"v\": {\"access\": {\"ambiguous\": false, \"missing\": true, \"values\": []}, \"bridge\": {\"ambiguous\": false, \"missing\": true, \"values\": []}, \"highway\": {\"ambiguous\": false, \"missing\": false, \"values\": [\"residential\"]}, \"layer\": {\"ambiguous\": false, \"missing\": true, \"values\": []}, \"motor_vehicle\": {\"ambiguous\": false, \"missing\": true, \"values\": []}, \"service\": {\"ambiguous\": false, \"missing\": true, \"values\": []}, \"tunnel\": {\"ambiguous\": false, \"missing\": true, \"values\": []}, \"vehicle\": {\"ambiguous\": false, \"missing\": true, \"values\": []}}}",
+        "endpoint_u": 7732768312,
+        "endpoint_v": 7732777973,
+        "feature_type": "candidate_connection",
+        "heading_compatible": false,
+        "heading_deviation_degrees": 164.458591,
+        "heading_u_degrees": 126.57892,
+        "heading_v_degrees": 111.037511,
+        "reasons": [
+          "access",
+          "bridge",
+          "heading_incompatible",
+          "layer",
+          "missing_semantic_attributes",
+          "motor_vehicle",
+          "service",
+          "tunnel",
+          "vehicle"
+        ],
+        "semantic_conflicts": [],
+        "semantic_missing_attributes": [
+          "access",
+          "bridge",
+          "layer",
+          "motor_vehicle",
+          "service",
+          "tunnel",
+          "vehicle"
+        ],
+        "status": "rejected"
+      },
+      "type": "Feature"
+    },
+    {
+      "geometry": {
+        "coordinates": [
+          80.2516186,
+          6.6553338
+        ],
+        "type": "Point"
+      },
+      "properties": {
+        "candidate_id": "candidate-304d37da74e6710c",
+        "endpoint": 7732768312,
+        "feature_type": "endpoint_u",
+        "reasons": "[\"access\", \"bridge\", \"heading_incompatible\", \"layer\", \"missing_semantic_attributes\", \"motor_vehicle\", \"service\", \"tunnel\", \"vehicle\"]",
+        "status": "rejected"
+      },
+      "type": "Feature"
+    },
+    {
+      "geometry": {
+        "coordinates": [
+          80.2517715,
+          6.6553738
+        ],
+        "type": "Point"
+      },
+      "properties": {
+        "candidate_id": "candidate-304d37da74e6710c",
+        "endpoint": 7732777973,
+        "feature_type": "endpoint_v",
+        "reasons": "[\"access\", \"bridge\", \"heading_incompatible\", \"layer\", \"missing_semantic_attributes\", \"motor_vehicle\", \"service\", \"tunnel\", \"vehicle\"]",
+        "status": "rejected"
+      },
+      "type": "Feature"
+    },
+    {
+      "geometry": {
+        "coordinates": [
+          [
+            80.2598922,
+            7.0275107
+          ],
+          [
+            80.2597796,
+            7.0274934
+          ]
+        ],
+        "type": "LineString"
+      },
+      "properties": {
+        "already_connected": false,
+        "candidate_id": "candidate-387721c7724fb553",
+        "distance_m": 12.58329,
+        "endpoint_semantics": "{\"u\": {\"access\": {\"ambiguous\": false, \"missing\": true, \"values\": []}, \"bridge\": {\"ambiguous\": false, \"missing\": true, \"values\": []}, \"highway\": {\"ambiguous\": false, \"missing\": false, \"values\": [\"service\"]}, \"layer\": {\"ambiguous\": false, \"missing\": true, \"values\": []}, \"motor_vehicle\": {\"ambiguous\": false, \"missing\": true, \"values\": []}, \"service\": {\"ambiguous\": false, \"missing\": true, \"values\": []}, \"tunnel\": {\"ambiguous\": false, \"missing\": true, \"values\": []}, \"vehicle\": {\"ambiguous\": false, \"missing\": true, \"values\": []}}, \"v\": {\"access\": {\"ambiguous\": false, \"missing\": true, \"values\": []}, \"bridge\": {\"ambiguous\": false, \"missing\": true, \"values\": []}, \"highway\": {\"ambiguous\": false, \"missing\": false, \"values\": [\"service\"]}, \"layer\": {\"ambiguous\": false, \"missing\": true, \"values\": []}, \"motor_vehicle\": {\"ambiguous\": false, \"missing\": true, \"values\": []}, \"service\": {\"ambiguous\": false, \"missing\": true, \"values\": []}, \"tunnel\": {\"ambiguous\": false, \"missing\": true, \"values\": []}, \"vehicle\": {\"ambiguous\": false, \"missing\": true, \"values\": []}}}",
+        "endpoint_u": 5540641224,
+        "endpoint_v": 5540641233,
+        "feature_type": "candidate_connection",
+        "heading_compatible": false,
+        "heading_deviation_degrees": 155.068669,
+        "heading_u_degrees": 120.867912,
+        "heading_v_degrees": 95.936581,
+        "reasons": [
+          "access",
+          "bridge",
+          "heading_incompatible",
+          "layer",
+          "missing_semantic_attributes",
+          "motor_vehicle",
+          "service",
+          "tunnel",
+          "vehicle"
+        ],
+        "semantic_conflicts": [],
+        "semantic_missing_attributes": [
+          "access",
+          "bridge",
+          "layer",
+          "motor_vehicle",
+          "service",
+          "tunnel",
+          "vehicle"
+        ],
+        "status": "rejected"
+      },
+      "type": "Feature"
+    },
+    {
+      "geometry": {
+        "coordinates": [
+          80.2598922,
+          7.0275107
+        ],
+        "type": "Point"
+      },
+      "properties": {
+        "candidate_id": "candidate-387721c7724fb553",
+        "endpoint": 5540641224,
+        "feature_type": "endpoint_u",
+        "reasons": "[\"access\", \"bridge\", \"heading_incompatible\", \"layer\", \"missing_semantic_attributes\", \"motor_vehicle\", \"service\", \"tunnel\", \"vehicle\"]",
+        "status": "rejected"
+      },
+      "type": "Feature"
+    },
+    {
+      "geometry": {
+        "coordinates": [
+          80.2597796,
+          7.0274934
+        ],
+        "type": "Point"
+      },
+      "properties": {
+        "candidate_id": "candidate-387721c7724fb553",
+        "endpoint": 5540641233,
+        "feature_type": "endpoint_v",
+        "reasons": "[\"access\", \"bridge\", \"heading_incompatible\", \"layer\", \"missing_semantic_attributes\", \"motor_vehicle\", \"service\", \"tunnel\", \"vehicle\"]",
+        "status": "rejected"
+      },
+      "type": "Feature"
+    },
+    {
+      "geometry": {
+        "coordinates": [
+          [
+            80.3454148,
+            6.6937218
+          ],
+          [
+            80.3453437,
+            6.6937618
+          ]
+        ],
+        "type": "LineString"
+      },
+      "properties": {
+        "already_connected": false,
+        "candidate_id": "candidate-4088aa20ed75d188",
+        "distance_m": 9.017331,
+        "endpoint_semantics": "{\"u\": {\"access\": {\"ambiguous\": false, \"missing\": true, \"values\": []}, \"bridge\": {\"ambiguous\": false, \"missing\": true, \"values\": []}, \"highway\": {\"ambiguous\": false, \"missing\": false, \"values\": [\"residential\"]}, \"layer\": {\"ambiguous\": false, \"missing\": true, \"values\": []}, \"motor_vehicle\": {\"ambiguous\": false, \"missing\": true, \"values\": []}, \"service\": {\"ambiguous\": false, \"missing\": true, \"values\": []}, \"tunnel\": {\"ambiguous\": false, \"missing\": true, \"values\": []}, \"vehicle\": {\"ambiguous\": false, \"missing\": true, \"values\": []}}, \"v\": {\"access\": {\"ambiguous\": false, \"missing\": true, \"values\": []}, \"bridge\": {\"ambiguous\": false, \"missing\": true, \"values\": []}, \"highway\": {\"ambiguous\": false, \"missing\": false, \"values\": [\"residential\"]}, \"layer\": {\"ambiguous\": false, \"missing\": true, \"values\": []}, \"motor_vehicle\": {\"ambiguous\": false, \"missing\": true, \"values\": []}, \"service\": {\"ambiguous\": false, \"missing\": true, \"values\": []}, \"tunnel\": {\"ambiguous\": false, \"missing\": true, \"values\": []}, \"vehicle\": {\"ambiguous\": false, \"missing\": true, \"values\": []}}}",
+        "endpoint_u": 7688238651,
+        "endpoint_v": 7688238652,
+        "feature_type": "candidate_connection",
+        "heading_compatible": true,
+        "heading_deviation_degrees": 23.722595,
+        "heading_u_degrees": 253.978868,
+        "heading_v_degrees": 97.701464,
+        "reasons": [
+          "access",
+          "bridge",
+          "layer",
+          "missing_semantic_attributes",
+          "motor_vehicle",
+          "service",
+          "tunnel",
+          "vehicle"
+        ],
+        "semantic_conflicts": [],
+        "semantic_missing_attributes": [
+          "access",
+          "bridge",
+          "layer",
+          "motor_vehicle",
+          "service",
+          "tunnel",
+          "vehicle"
+        ],
+        "status": "needs_review"
+      },
+      "type": "Feature"
+    },
+    {
+      "geometry": {
+        "coordinates": [
+          80.3454148,
+          6.6937218
+        ],
+        "type": "Point"
+      },
+      "properties": {
+        "candidate_id": "candidate-4088aa20ed75d188",
+        "endpoint": 7688238651,
+        "feature_type": "endpoint_u",
+        "reasons": "[\"access\", \"bridge\", \"layer\", \"missing_semantic_attributes\", \"motor_vehicle\", \"service\", \"tunnel\", \"vehicle\"]",
+        "status": "needs_review"
+      },
+      "type": "Feature"
+    },
+    {
+      "geometry": {
+        "coordinates": [
+          80.3453437,
+          6.6937618
+        ],
+        "type": "Point"
+      },
+      "properties": {
+        "candidate_id": "candidate-4088aa20ed75d188",
+        "endpoint": 7688238652,
+        "feature_type": "endpoint_v",
+        "reasons": "[\"access\", \"bridge\", \"layer\", \"missing_semantic_attributes\", \"motor_vehicle\", \"service\", \"tunnel\", \"vehicle\"]",
+        "status": "needs_review"
+      },
+      "type": "Feature"
+    },
+    {
+      "geometry": {
+        "coordinates": [
+          [
+            80.2077731,
+            6.7414733
+          ],
+          [
+            80.2076418,
+            6.7414843
+          ]
+        ],
+        "type": "LineString"
+      },
+      "properties": {
+        "already_connected": false,
+        "candidate_id": "candidate-42211c0bdb44e4fd",
+        "distance_m": 14.5623,
+        "endpoint_semantics": "{\"u\": {\"access\": {\"ambiguous\": false, \"missing\": true, \"values\": []}, \"bridge\": {\"ambiguous\": false, \"missing\": true, \"values\": []}, \"highway\": {\"ambiguous\": false, \"missing\": false, \"values\": [\"unclassified\"]}, \"layer\": {\"ambiguous\": false, \"missing\": true, \"values\": []}, \"motor_vehicle\": {\"ambiguous\": false, \"missing\": true, \"values\": []}, \"service\": {\"ambiguous\": false, \"missing\": true, \"values\": []}, \"tunnel\": {\"ambiguous\": false, \"missing\": true, \"values\": []}, \"vehicle\": {\"ambiguous\": false, \"missing\": true, \"values\": []}}, \"v\": {\"access\": {\"ambiguous\": false, \"missing\": true, \"values\": []}, \"bridge\": {\"ambiguous\": false, \"missing\": true, \"values\": []}, \"highway\": {\"ambiguous\": false, \"missing\": false, \"values\": [\"unclassified\"]}, \"layer\": {\"ambiguous\": false, \"missing\": true, \"values\": []}, \"motor_vehicle\": {\"ambiguous\": false, \"missing\": true, \"values\": []}, \"service\": {\"ambiguous\": false, \"missing\": true, \"values\": []}, \"tunnel\": {\"ambiguous\": false, \"missing\": true, \"values\": []}, \"vehicle\": {\"ambiguous\": false, \"missing\": true, \"values\": []}}}",
+        "endpoint_u": 11011865926,
+        "endpoint_v": 11011865932,
+        "feature_type": "candidate_connection",
+        "heading_compatible": false,
+        "heading_deviation_degrees": 52.202527,
+        "heading_u_degrees": 274.424129,
+        "heading_v_degrees": 146.626656,
+        "reasons": [
+          "access",
+          "bridge",
+          "heading_incompatible",
+          "layer",
+          "missing_semantic_attributes",
+          "motor_vehicle",
+          "service",
+          "tunnel",
+          "vehicle"
+        ],
+        "semantic_conflicts": [],
+        "semantic_missing_attributes": [
+          "access",
+          "bridge",
+          "layer",
+          "motor_vehicle",
+          "service",
+          "tunnel",
+          "vehicle"
+        ],
+        "status": "rejected"
+      },
+      "type": "Feature"
+    },
+    {
+      "geometry": {
+        "coordinates": [
+          80.2077731,
+          6.7414733
+        ],
+        "type": "Point"
+      },
+      "properties": {
+        "candidate_id": "candidate-42211c0bdb44e4fd",
+        "endpoint": 11011865926,
+        "feature_type": "endpoint_u",
+        "reasons": "[\"access\", \"bridge\", \"heading_incompatible\", \"layer\", \"missing_semantic_attributes\", \"motor_vehicle\", \"service\", \"tunnel\", \"vehicle\"]",
+        "status": "rejected"
+      },
+      "type": "Feature"
+    },
+    {
+      "geometry": {
+        "coordinates": [
+          80.2076418,
+          6.7414843
+        ],
+        "type": "Point"
+      },
+      "properties": {
+        "candidate_id": "candidate-42211c0bdb44e4fd",
+        "endpoint": 11011865932,
+        "feature_type": "endpoint_v",
+        "reasons": "[\"access\", \"bridge\", \"heading_incompatible\", \"layer\", \"missing_semantic_attributes\", \"motor_vehicle\", \"service\", \"tunnel\", \"vehicle\"]",
+        "status": "rejected"
+      },
+      "type": "Feature"
+    },
+    {
+      "geometry": {
+        "coordinates": [
+          [
+            80.404074,
+            6.6624523
+          ],
+          [
+            80.4040378,
+            6.6622911
+          ]
+        ],
+        "type": "LineString"
+      },
+      "properties": {
+        "already_connected": false,
+        "candidate_id": "candidate-44b58c53b9775589",
+        "distance_m": 18.264502,
+        "endpoint_semantics": "{\"u\": {\"access\": {\"ambiguous\": false, \"missing\": true, \"values\": []}, \"bridge\": {\"ambiguous\": false, \"missing\": true, \"values\": []}, \"highway\": {\"ambiguous\": false, \"missing\": false, \"values\": [\"residential\"]}, \"layer\": {\"ambiguous\": false, \"missing\": true, \"values\": []}, \"motor_vehicle\": {\"ambiguous\": false, \"missing\": true, \"values\": []}, \"service\": {\"ambiguous\": false, \"missing\": true, \"values\": []}, \"tunnel\": {\"ambiguous\": false, \"missing\": true, \"values\": []}, \"vehicle\": {\"ambiguous\": false, \"missing\": true, \"values\": []}}, \"v\": {\"access\": {\"ambiguous\": false, \"missing\": true, \"values\": []}, \"bridge\": {\"ambiguous\": false, \"missing\": true, \"values\": []}, \"highway\": {\"ambiguous\": false, \"missing\": false, \"values\": [\"residential\"]}, \"layer\": {\"ambiguous\": false, \"missing\": true, \"values\": []}, \"motor_vehicle\": {\"ambiguous\": false, \"missing\": true, \"values\": []}, \"service\": {\"ambiguous\": false, \"missing\": true, \"values\": []}, \"tunnel\": {\"ambiguous\": false, \"missing\": true, \"values\": []}, \"vehicle\": {\"ambiguous\": false, \"missing\": true, \"values\": []}}}",
+        "endpoint_u": 7725207215,
+        "endpoint_v": 7725207217,
+        "feature_type": "candidate_connection",
+        "heading_compatible": false,
+        "heading_deviation_degrees": 170.268499,
+        "heading_u_degrees": 131.87787,
+        "heading_v_degrees": 122.146368,
+        "reasons": [
+          "access",
+          "bridge",
+          "heading_incompatible",
+          "layer",
+          "missing_semantic_attributes",
+          "motor_vehicle",
+          "service",
+          "tunnel",
+          "vehicle"
+        ],
+        "semantic_conflicts": [],
+        "semantic_missing_attributes": [
+          "access",
+          "bridge",
+          "layer",
+          "motor_vehicle",
+          "service",
+          "tunnel",
+          "vehicle"
+        ],
+        "status": "rejected"
+      },
+      "type": "Feature"
+    },
+    {
+      "geometry": {
+        "coordinates": [
+          80.404074,
+          6.6624523
+        ],
+        "type": "Point"
+      },
+      "properties": {
+        "candidate_id": "candidate-44b58c53b9775589",
+        "endpoint": 7725207215,
+        "feature_type": "endpoint_u",
+        "reasons": "[\"access\", \"bridge\", \"heading_incompatible\", \"layer\", \"missing_semantic_attributes\", \"motor_vehicle\", \"service\", \"tunnel\", \"vehicle\"]",
+        "status": "rejected"
+      },
+      "type": "Feature"
+    },
+    {
+      "geometry": {
+        "coordinates": [
+          80.4040378,
+          6.6622911
+        ],
+        "type": "Point"
+      },
+      "properties": {
+        "candidate_id": "candidate-44b58c53b9775589",
+        "endpoint": 7725207217,
+        "feature_type": "endpoint_v",
+        "reasons": "[\"access\", \"bridge\", \"heading_incompatible\", \"layer\", \"missing_semantic_attributes\", \"motor_vehicle\", \"service\", \"tunnel\", \"vehicle\"]",
+        "status": "rejected"
+      },
+      "type": "Feature"
+    },
+    {
+      "geometry": {
+        "coordinates": [
+          [
+            80.93403028206637,
+            6.236144388387771
+          ],
+          [
+            80.93405457712005,
+            6.23599292993813
+          ]
+        ],
+        "type": "LineString"
+      },
+      "properties": {
+        "already_connected": false,
+        "candidate_id": "candidate-4574c5d87f3a9dae",
+        "distance_m": 16.957035,
+        "endpoint_semantics": "{\"u\": {\"access\": {\"ambiguous\": false, \"missing\": true, \"values\": []}, \"bridge\": {\"ambiguous\": false, \"missing\": true, \"values\": []}, \"highway\": {\"ambiguous\": false, \"missing\": false, \"values\": [\"motorway\"]}, \"layer\": {\"ambiguous\": false, \"missing\": true, \"values\": []}, \"motor_vehicle\": {\"ambiguous\": false, \"missing\": false, \"values\": [\"designated\"]}, \"service\": {\"ambiguous\": false, \"missing\": true, \"values\": []}, \"tunnel\": {\"ambiguous\": false, \"missing\": true, \"values\": []}, \"vehicle\": {\"ambiguous\": false, \"missing\": true, \"values\": []}}, \"v\": {\"access\": {\"ambiguous\": false, \"missing\": true, \"values\": []}, \"bridge\": {\"ambiguous\": false, \"missing\": true, \"values\": []}, \"highway\": {\"ambiguous\": false, \"missing\": false, \"values\": [\"motorway\"]}, \"layer\": {\"ambiguous\": false, \"missing\": true, \"values\": []}, \"motor_vehicle\": {\"ambiguous\": false, \"missing\": false, \"values\": [\"designated\"]}, \"service\": {\"ambiguous\": false, \"missing\": true, \"values\": []}, \"tunnel\": {\"ambiguous\": false, \"missing\": true, \"values\": []}, \"vehicle\": {\"ambiguous\": false, \"missing\": true, \"values\": []}}}",
+        "endpoint_u": -200563434504244562,
+        "endpoint_v": -52623867482470155,
+        "feature_type": "candidate_connection",
+        "heading_compatible": false,
+        "heading_deviation_degrees": 179.114584,
+        "heading_u_degrees": 38.605613,
+        "heading_v_degrees": 37.720197,
+        "reasons": [
+          "access",
+          "bridge",
+          "heading_incompatible",
+          "layer",
+          "missing_semantic_attributes",
+          "service",
+          "tunnel",
+          "vehicle"
+        ],
+        "semantic_conflicts": [],
+        "semantic_missing_attributes": [
+          "access",
+          "bridge",
+          "layer",
+          "service",
+          "tunnel",
+          "vehicle"
+        ],
+        "status": "rejected"
+      },
+      "type": "Feature"
+    },
+    {
+      "geometry": {
+        "coordinates": [
+          80.93403028206637,
+          6.236144388387771
+        ],
+        "type": "Point"
+      },
+      "properties": {
+        "candidate_id": "candidate-4574c5d87f3a9dae",
+        "endpoint": -200563434504244562,
+        "feature_type": "endpoint_u",
+        "reasons": "[\"access\", \"bridge\", \"heading_incompatible\", \"layer\", \"missing_semantic_attributes\", \"service\", \"tunnel\", \"vehicle\"]",
+        "status": "rejected"
+      },
+      "type": "Feature"
+    },
+    {
+      "geometry": {
+        "coordinates": [
+          80.93405457712005,
+          6.23599292993813
+        ],
+        "type": "Point"
+      },
+      "properties": {
+        "candidate_id": "candidate-4574c5d87f3a9dae",
+        "endpoint": -52623867482470155,
+        "feature_type": "endpoint_v",
+        "reasons": "[\"access\", \"bridge\", \"heading_incompatible\", \"layer\", \"missing_semantic_attributes\", \"service\", \"tunnel\", \"vehicle\"]",
+        "status": "rejected"
+      },
+      "type": "Feature"
+    },
+    {
+      "geometry": {
+        "coordinates": [
+          [
+            80.8265364,
+            6.2783558
+          ],
+          [
+            80.8265109,
+            6.2783388
+          ]
+        ],
+        "type": "LineString"
+      },
+      "properties": {
+        "already_connected": false,
+        "candidate_id": "candidate-490a9fa4c46b6838",
+        "distance_m": 3.389315,
+        "endpoint_semantics": "{\"u\": {\"access\": {\"ambiguous\": false, \"missing\": true, \"values\": []}, \"bridge\": {\"ambiguous\": false, \"missing\": true, \"values\": []}, \"highway\": {\"ambiguous\": false, \"missing\": false, \"values\": [\"living_street\"]}, \"layer\": {\"ambiguous\": false, \"missing\": true, \"values\": []}, \"motor_vehicle\": {\"ambiguous\": false, \"missing\": true, \"values\": []}, \"service\": {\"ambiguous\": false, \"missing\": true, \"values\": []}, \"tunnel\": {\"ambiguous\": false, \"missing\": true, \"values\": []}, \"vehicle\": {\"ambiguous\": false, \"missing\": true, \"values\": []}}, \"v\": {\"access\": {\"ambiguous\": false, \"missing\": true, \"values\": []}, \"bridge\": {\"ambiguous\": false, \"missing\": true, \"values\": []}, \"highway\": {\"ambiguous\": false, \"missing\": false, \"values\": [\"living_street\"]}, \"layer\": {\"ambiguous\": false, \"missing\": true, \"values\": []}, \"motor_vehicle\": {\"ambiguous\": false, \"missing\": true, \"values\": []}, \"service\": {\"ambiguous\": false, \"missing\": true, \"values\": []}, \"tunnel\": {\"ambiguous\": false, \"missing\": true, \"values\": []}, \"vehicle\": {\"ambiguous\": false, \"missing\": true, \"values\": []}}}",
+        "endpoint_u": 10129826025,
+        "endpoint_v": 10129826026,
+        "feature_type": "candidate_connection",
+        "heading_compatible": true,
+        "heading_deviation_degrees": 0.388097,
+        "heading_u_degrees": 38.686232,
+        "heading_v_degrees": 218.298135,
+        "reasons": [
+          "access",
+          "bridge",
+          "layer",
+          "missing_semantic_attributes",
+          "motor_vehicle",
+          "service",
+          "tunnel",
+          "vehicle"
+        ],
+        "semantic_conflicts": [],
+        "semantic_missing_attributes": [
+          "access",
+          "bridge",
+          "layer",
+          "motor_vehicle",
+          "service",
+          "tunnel",
+          "vehicle"
+        ],
+        "status": "needs_review"
+      },
+      "type": "Feature"
+    },
+    {
+      "geometry": {
+        "coordinates": [
+          80.8265364,
+          6.2783558
+        ],
+        "type": "Point"
+      },
+      "properties": {
+        "candidate_id": "candidate-490a9fa4c46b6838",
+        "endpoint": 10129826025,
+        "feature_type": "endpoint_u",
+        "reasons": "[\"access\", \"bridge\", \"layer\", \"missing_semantic_attributes\", \"motor_vehicle\", \"service\", \"tunnel\", \"vehicle\"]",
+        "status": "needs_review"
+      },
+      "type": "Feature"
+    },
+    {
+      "geometry": {
+        "coordinates": [
+          80.8265109,
+          6.2783388
+        ],
+        "type": "Point"
+      },
+      "properties": {
+        "candidate_id": "candidate-490a9fa4c46b6838",
+        "endpoint": 10129826026,
+        "feature_type": "endpoint_v",
+        "reasons": "[\"access\", \"bridge\", \"layer\", \"missing_semantic_attributes\", \"motor_vehicle\", \"service\", \"tunnel\", \"vehicle\"]",
+        "status": "needs_review"
+      },
+      "type": "Feature"
+    },
+    {
+      "geometry": {
+        "coordinates": [
+          [
+            80.8408443,
+            6.3003131
+          ],
+          [
+            80.8408595,
+            6.3003676
+          ]
+        ],
+        "type": "LineString"
+      },
+      "properties": {
+        "already_connected": false,
+        "candidate_id": "candidate-4ba327be27970d7b",
+        "distance_m": 6.254825,
+        "endpoint_semantics": "{\"u\": {\"access\": {\"ambiguous\": false, \"missing\": true, \"values\": []}, \"bridge\": {\"ambiguous\": false, \"missing\": true, \"values\": []}, \"highway\": {\"ambiguous\": false, \"missing\": false, \"values\": [\"residential\"]}, \"layer\": {\"ambiguous\": false, \"missing\": true, \"values\": []}, \"motor_vehicle\": {\"ambiguous\": false, \"missing\": true, \"values\": []}, \"service\": {\"ambiguous\": false, \"missing\": true, \"values\": []}, \"tunnel\": {\"ambiguous\": false, \"missing\": true, \"values\": []}, \"vehicle\": {\"ambiguous\": false, \"missing\": true, \"values\": []}}, \"v\": {\"access\": {\"ambiguous\": false, \"missing\": true, \"values\": []}, \"bridge\": {\"ambiguous\": false, \"missing\": true, \"values\": []}, \"highway\": {\"ambiguous\": false, \"missing\": false, \"values\": [\"residential\"]}, \"layer\": {\"ambiguous\": false, \"missing\": true, \"values\": []}, \"motor_vehicle\": {\"ambiguous\": false, \"missing\": true, \"values\": []}, \"service\": {\"ambiguous\": false, \"missing\": true, \"values\": []}, \"tunnel\": {\"ambiguous\": false, \"missing\": true, \"values\": []}, \"vehicle\": {\"ambiguous\": false, \"missing\": true, \"values\": []}}}",
+        "endpoint_u": 6435334418,
+        "endpoint_v": 7596105117,
+        "feature_type": "candidate_connection",
+        "heading_compatible": true,
+        "heading_deviation_degrees": 8.030852,
+        "heading_u_degrees": 339.040906,
+        "heading_v_degrees": 151.010053,
+        "reasons": [
+          "access",
+          "bridge",
+          "layer",
+          "missing_semantic_attributes",
+          "motor_vehicle",
+          "service",
+          "tunnel",
+          "vehicle"
+        ],
+        "semantic_conflicts": [],
+        "semantic_missing_attributes": [
+          "access",
+          "bridge",
+          "layer",
+          "motor_vehicle",
+          "service",
+          "tunnel",
+          "vehicle"
+        ],
+        "status": "needs_review"
+      },
+      "type": "Feature"
+    },
+    {
+      "geometry": {
+        "coordinates": [
+          80.8408443,
+          6.3003131
+        ],
+        "type": "Point"
+      },
+      "properties": {
+        "candidate_id": "candidate-4ba327be27970d7b",
+        "endpoint": 6435334418,
+        "feature_type": "endpoint_u",
+        "reasons": "[\"access\", \"bridge\", \"layer\", \"missing_semantic_attributes\", \"motor_vehicle\", \"service\", \"tunnel\", \"vehicle\"]",
+        "status": "needs_review"
+      },
+      "type": "Feature"
+    },
+    {
+      "geometry": {
+        "coordinates": [
+          80.8408595,
+          6.3003676
+        ],
+        "type": "Point"
+      },
+      "properties": {
+        "candidate_id": "candidate-4ba327be27970d7b",
+        "endpoint": 7596105117,
+        "feature_type": "endpoint_v",
+        "reasons": "[\"access\", \"bridge\", \"layer\", \"missing_semantic_attributes\", \"motor_vehicle\", \"service\", \"tunnel\", \"vehicle\"]",
+        "status": "needs_review"
+      },
+      "type": "Feature"
+    },
+    {
+      "geometry": {
+        "coordinates": [
+          [
+            80.3817165,
+            6.6625043
+          ],
+          [
+            80.3815877,
+            6.6626202
+          ]
+        ],
+        "type": "LineString"
+      },
+      "properties": {
+        "already_connected": false,
+        "candidate_id": "candidate-50b35f904a6c5c7e",
+        "distance_m": 19.153579,
+        "endpoint_semantics": "{\"u\": {\"access\": {\"ambiguous\": false, \"missing\": true, \"values\": []}, \"bridge\": {\"ambiguous\": false, \"missing\": true, \"values\": []}, \"highway\": {\"ambiguous\": false, \"missing\": false, \"values\": [\"service\"]}, \"layer\": {\"ambiguous\": false, \"missing\": true, \"values\": []}, \"motor_vehicle\": {\"ambiguous\": false, \"missing\": true, \"values\": []}, \"service\": {\"ambiguous\": false, \"missing\": false, \"values\": [\"driveway\"]}, \"tunnel\": {\"ambiguous\": false, \"missing\": true, \"values\": []}, \"vehicle\": {\"ambiguous\": false, \"missing\": true, \"values\": []}}, \"v\": {\"access\": {\"ambiguous\": false, \"missing\": true, \"values\": []}, \"bridge\": {\"ambiguous\": false, \"missing\": true, \"values\": []}, \"highway\": {\"ambiguous\": false, \"missing\": false, \"values\": [\"living_street\"]}, \"layer\": {\"ambiguous\": false, \"missing\": true, \"values\": []}, \"motor_vehicle\": {\"ambiguous\": false, \"missing\": true, \"values\": []}, \"service\": {\"ambiguous\": false, \"missing\": true, \"values\": []}, \"tunnel\": {\"ambiguous\": false, \"missing\": true, \"values\": []}, \"vehicle\": {\"ambiguous\": false, \"missing\": true, \"values\": []}}}",
+        "endpoint_u": 8008555994,
+        "endpoint_v": 8008556001,
+        "feature_type": "candidate_connection",
+        "heading_compatible": false,
+        "heading_deviation_degrees": 136.28732,
+        "heading_u_degrees": 120.990329,
+        "heading_v_degrees": 77.27765,
+        "reasons": [
+          "access",
+          "bridge",
+          "heading_incompatible",
+          "layer",
+          "missing_semantic_attributes",
+          "motor_vehicle",
+          "service",
+          "tunnel",
+          "vehicle"
+        ],
+        "semantic_conflicts": [],
+        "semantic_missing_attributes": [
+          "access",
+          "bridge",
+          "layer",
+          "motor_vehicle",
+          "service",
+          "tunnel",
+          "vehicle"
+        ],
+        "status": "rejected"
+      },
+      "type": "Feature"
+    },
+    {
+      "geometry": {
+        "coordinates": [
+          80.3817165,
+          6.6625043
+        ],
+        "type": "Point"
+      },
+      "properties": {
+        "candidate_id": "candidate-50b35f904a6c5c7e",
+        "endpoint": 8008555994,
+        "feature_type": "endpoint_u",
+        "reasons": "[\"access\", \"bridge\", \"heading_incompatible\", \"layer\", \"missing_semantic_attributes\", \"motor_vehicle\", \"service\", \"tunnel\", \"vehicle\"]",
+        "status": "rejected"
+      },
+      "type": "Feature"
+    },
+    {
+      "geometry": {
+        "coordinates": [
+          80.3815877,
+          6.6626202
+        ],
+        "type": "Point"
+      },
+      "properties": {
+        "candidate_id": "candidate-50b35f904a6c5c7e",
+        "endpoint": 8008556001,
+        "feature_type": "endpoint_v",
+        "reasons": "[\"access\", \"bridge\", \"heading_incompatible\", \"layer\", \"missing_semantic_attributes\", \"motor_vehicle\", \"service\", \"tunnel\", \"vehicle\"]",
+        "status": "rejected"
+      },
+      "type": "Feature"
+    },
+    {
+      "geometry": {
+        "coordinates": [
+          [
+            80.2850658,
+            6.6984349
+          ],
+          [
+            80.2849907,
+            6.6983204
+          ]
+        ],
+        "type": "LineString"
+      },
+      "properties": {
+        "already_connected": false,
+        "candidate_id": "candidate-53ee47d9b6e6b8e6",
+        "distance_m": 15.137275,
+        "endpoint_semantics": "{\"u\": {\"access\": {\"ambiguous\": false, \"missing\": true, \"values\": []}, \"bridge\": {\"ambiguous\": false, \"missing\": true, \"values\": []}, \"highway\": {\"ambiguous\": false, \"missing\": false, \"values\": [\"residential\"]}, \"layer\": {\"ambiguous\": false, \"missing\": true, \"values\": []}, \"motor_vehicle\": {\"ambiguous\": false, \"missing\": true, \"values\": []}, \"service\": {\"ambiguous\": false, \"missing\": true, \"values\": []}, \"tunnel\": {\"ambiguous\": false, \"missing\": true, \"values\": []}, \"vehicle\": {\"ambiguous\": false, \"missing\": true, \"values\": []}}, \"v\": {\"access\": {\"ambiguous\": false, \"missing\": true, \"values\": []}, \"bridge\": {\"ambiguous\": false, \"missing\": true, \"values\": []}, \"highway\": {\"ambiguous\": false, \"missing\": false, \"values\": [\"residential\"]}, \"layer\": {\"ambiguous\": false, \"missing\": true, \"values\": []}, \"motor_vehicle\": {\"ambiguous\": false, \"missing\": true, \"values\": []}, \"service\": {\"ambiguous\": false, \"missing\": true, \"values\": []}, \"tunnel\": {\"ambiguous\": false, \"missing\": true, \"values\": []}, \"vehicle\": {\"ambiguous\": false, \"missing\": true, \"values\": []}}}",
+        "endpoint_u": 8015533680,
+        "endpoint_v": 8015533681,
+        "feature_type": "candidate_connection",
+        "heading_compatible": false,
+        "heading_deviation_degrees": 84.515756,
+        "heading_u_degrees": 326.502384,
+        "heading_v_degrees": 61.986628,
+        "reasons": [
+          "access",
+          "bridge",
+          "heading_incompatible",
+          "layer",
+          "missing_semantic_attributes",
+          "motor_vehicle",
+          "service",
+          "tunnel",
+          "vehicle"
+        ],
+        "semantic_conflicts": [],
+        "semantic_missing_attributes": [
+          "access",
+          "bridge",
+          "layer",
+          "motor_vehicle",
+          "service",
+          "tunnel",
+          "vehicle"
+        ],
+        "status": "rejected"
+      },
+      "type": "Feature"
+    },
+    {
+      "geometry": {
+        "coordinates": [
+          80.2850658,
+          6.6984349
+        ],
+        "type": "Point"
+      },
+      "properties": {
+        "candidate_id": "candidate-53ee47d9b6e6b8e6",
+        "endpoint": 8015533680,
+        "feature_type": "endpoint_u",
+        "reasons": "[\"access\", \"bridge\", \"heading_incompatible\", \"layer\", \"missing_semantic_attributes\", \"motor_vehicle\", \"service\", \"tunnel\", \"vehicle\"]",
+        "status": "rejected"
+      },
+      "type": "Feature"
+    },
+    {
+      "geometry": {
+        "coordinates": [
+          80.2849907,
+          6.6983204
+        ],
+        "type": "Point"
+      },
+      "properties": {
+        "candidate_id": "candidate-53ee47d9b6e6b8e6",
+        "endpoint": 8015533681,
+        "feature_type": "endpoint_v",
+        "reasons": "[\"access\", \"bridge\", \"heading_incompatible\", \"layer\", \"missing_semantic_attributes\", \"motor_vehicle\", \"service\", \"tunnel\", \"vehicle\"]",
+        "status": "rejected"
+      },
+      "type": "Feature"
+    },
+    {
+      "geometry": {
+        "coordinates": [
+          [
+            80.4417705,
+            6.6519764
+          ],
+          [
+            80.4417171,
+            6.6519101
+          ]
+        ],
+        "type": "LineString"
+      },
+      "properties": {
+        "already_connected": false,
+        "candidate_id": "candidate-5e547e00d5a1e3ad",
+        "distance_m": 9.410749,
+        "endpoint_semantics": "{\"u\": {\"access\": {\"ambiguous\": false, \"missing\": true, \"values\": []}, \"bridge\": {\"ambiguous\": false, \"missing\": true, \"values\": []}, \"highway\": {\"ambiguous\": false, \"missing\": false, \"values\": [\"residential\"]}, \"layer\": {\"ambiguous\": false, \"missing\": true, \"values\": []}, \"motor_vehicle\": {\"ambiguous\": false, \"missing\": true, \"values\": []}, \"service\": {\"ambiguous\": false, \"missing\": true, \"values\": []}, \"tunnel\": {\"ambiguous\": false, \"missing\": true, \"values\": []}, \"vehicle\": {\"ambiguous\": false, \"missing\": true, \"values\": []}}, \"v\": {\"access\": {\"ambiguous\": false, \"missing\": true, \"values\": []}, \"bridge\": {\"ambiguous\": false, \"missing\": true, \"values\": []}, \"highway\": {\"ambiguous\": false, \"missing\": false, \"values\": [\"service\"]}, \"layer\": {\"ambiguous\": false, \"missing\": true, \"values\": []}, \"motor_vehicle\": {\"ambiguous\": false, \"missing\": true, \"values\": []}, \"service\": {\"ambiguous\": false, \"missing\": false, \"values\": [\"driveway\"]}, \"tunnel\": {\"ambiguous\": false, \"missing\": true, \"values\": []}, \"vehicle\": {\"ambiguous\": false, \"missing\": true, \"values\": []}}}",
+        "endpoint_u": 5167524593,
+        "endpoint_v": 5167524594,
+        "feature_type": "candidate_connection",
+        "heading_compatible": false,
+        "heading_deviation_degrees": 143.220905,
+        "heading_u_degrees": 129.25076,
+        "heading_v_degrees": 92.471665,
+        "reasons": [
+          "access",
+          "bridge",
+          "heading_incompatible",
+          "layer",
+          "missing_semantic_attributes",
+          "motor_vehicle",
+          "service",
+          "tunnel",
+          "vehicle"
+        ],
+        "semantic_conflicts": [],
+        "semantic_missing_attributes": [
+          "access",
+          "bridge",
+          "layer",
+          "motor_vehicle",
+          "service",
+          "tunnel",
+          "vehicle"
+        ],
+        "status": "rejected"
+      },
+      "type": "Feature"
+    },
+    {
+      "geometry": {
+        "coordinates": [
+          80.4417705,
+          6.6519764
+        ],
+        "type": "Point"
+      },
+      "properties": {
+        "candidate_id": "candidate-5e547e00d5a1e3ad",
+        "endpoint": 5167524593,
+        "feature_type": "endpoint_u",
+        "reasons": "[\"access\", \"bridge\", \"heading_incompatible\", \"layer\", \"missing_semantic_attributes\", \"motor_vehicle\", \"service\", \"tunnel\", \"vehicle\"]",
+        "status": "rejected"
+      },
+      "type": "Feature"
+    },
+    {
+      "geometry": {
+        "coordinates": [
+          80.4417171,
+          6.6519101
+        ],
+        "type": "Point"
+      },
+      "properties": {
+        "candidate_id": "candidate-5e547e00d5a1e3ad",
+        "endpoint": 5167524594,
+        "feature_type": "endpoint_v",
+        "reasons": "[\"access\", \"bridge\", \"heading_incompatible\", \"layer\", \"missing_semantic_attributes\", \"motor_vehicle\", \"service\", \"tunnel\", \"vehicle\"]",
+        "status": "rejected"
+      },
+      "type": "Feature"
+    },
+    {
+      "geometry": {
+        "coordinates": [
+          [
+            80.8463743,
+            6.2822519
+          ],
+          [
+            80.846346,
+            6.2821018
+          ]
+        ],
+        "type": "LineString"
+      },
+      "properties": {
+        "already_connected": false,
+        "candidate_id": "candidate-678977a7c88a7b2b",
+        "distance_m": 16.885309,
+        "endpoint_semantics": "{\"u\": {\"access\": {\"ambiguous\": false, \"missing\": true, \"values\": []}, \"bridge\": {\"ambiguous\": false, \"missing\": true, \"values\": []}, \"highway\": {\"ambiguous\": false, \"missing\": false, \"values\": [\"living_street\"]}, \"layer\": {\"ambiguous\": false, \"missing\": true, \"values\": []}, \"motor_vehicle\": {\"ambiguous\": false, \"missing\": true, \"values\": []}, \"service\": {\"ambiguous\": false, \"missing\": true, \"values\": []}, \"tunnel\": {\"ambiguous\": false, \"missing\": true, \"values\": []}, \"vehicle\": {\"ambiguous\": false, \"missing\": true, \"values\": []}}, \"v\": {\"access\": {\"ambiguous\": false, \"missing\": true, \"values\": []}, \"bridge\": {\"ambiguous\": false, \"missing\": true, \"values\": []}, \"highway\": {\"ambiguous\": false, \"missing\": false, \"values\": [\"living_street\"]}, \"layer\": {\"ambiguous\": false, \"missing\": true, \"values\": []}, \"motor_vehicle\": {\"ambiguous\": false, \"missing\": true, \"values\": []}, \"service\": {\"ambiguous\": false, \"missing\": true, \"values\": []}, \"tunnel\": {\"ambiguous\": false, \"missing\": true, \"values\": []}, \"vehicle\": {\"ambiguous\": false, \"missing\": true, \"values\": []}}}",
+        "endpoint_u": 10129599872,
+        "endpoint_v": 10129599878,
+        "feature_type": "candidate_connection",
+        "heading_compatible": false,
+        "heading_deviation_degrees": 124.181704,
+        "heading_u_degrees": 209.389427,
+        "heading_v_degrees": 265.207724,
+        "reasons": [
+          "access",
+          "bridge",
+          "heading_incompatible",
+          "layer",
+          "missing_semantic_attributes",
+          "motor_vehicle",
+          "service",
+          "tunnel",
+          "vehicle"
+        ],
+        "semantic_conflicts": [],
+        "semantic_missing_attributes": [
+          "access",
+          "bridge",
+          "layer",
+          "motor_vehicle",
+          "service",
+          "tunnel",
+          "vehicle"
+        ],
+        "status": "rejected"
+      },
+      "type": "Feature"
+    },
+    {
+      "geometry": {
+        "coordinates": [
+          80.8463743,
+          6.2822519
+        ],
+        "type": "Point"
+      },
+      "properties": {
+        "candidate_id": "candidate-678977a7c88a7b2b",
+        "endpoint": 10129599872,
+        "feature_type": "endpoint_u",
+        "reasons": "[\"access\", \"bridge\", \"heading_incompatible\", \"layer\", \"missing_semantic_attributes\", \"motor_vehicle\", \"service\", \"tunnel\", \"vehicle\"]",
+        "status": "rejected"
+      },
+      "type": "Feature"
+    },
+    {
+      "geometry": {
+        "coordinates": [
+          80.846346,
+          6.2821018
+        ],
+        "type": "Point"
+      },
+      "properties": {
+        "candidate_id": "candidate-678977a7c88a7b2b",
+        "endpoint": 10129599878,
+        "feature_type": "endpoint_v",
+        "reasons": "[\"access\", \"bridge\", \"heading_incompatible\", \"layer\", \"missing_semantic_attributes\", \"motor_vehicle\", \"service\", \"tunnel\", \"vehicle\"]",
+        "status": "rejected"
+      },
+      "type": "Feature"
+    },
+    {
+      "geometry": {
+        "coordinates": [
+          [
+            80.3623509,
+            6.6939383
+          ],
+          [
+            80.3623134,
+            6.6940421
+          ]
+        ],
+        "type": "LineString"
+      },
+      "properties": {
+        "already_connected": false,
+        "candidate_id": "candidate-69729ef945ef029b",
+        "distance_m": 12.20089,
+        "endpoint_semantics": "{\"u\": {\"access\": {\"ambiguous\": false, \"missing\": true, \"values\": []}, \"bridge\": {\"ambiguous\": false, \"missing\": true, \"values\": []}, \"highway\": {\"ambiguous\": false, \"missing\": false, \"values\": [\"residential\"]}, \"layer\": {\"ambiguous\": false, \"missing\": true, \"values\": []}, \"motor_vehicle\": {\"ambiguous\": false, \"missing\": true, \"values\": []}, \"service\": {\"ambiguous\": false, \"missing\": true, \"values\": []}, \"tunnel\": {\"ambiguous\": false, \"missing\": true, \"values\": []}, \"vehicle\": {\"ambiguous\": false, \"missing\": true, \"values\": []}}, \"v\": {\"access\": {\"ambiguous\": false, \"missing\": true, \"values\": []}, \"bridge\": {\"ambiguous\": false, \"missing\": true, \"values\": []}, \"highway\": {\"ambiguous\": false, \"missing\": false, \"values\": [\"residential\"]}, \"layer\": {\"ambiguous\": false, \"missing\": true, \"values\": []}, \"motor_vehicle\": {\"ambiguous\": false, \"missing\": true, \"values\": []}, \"service\": {\"ambiguous\": false, \"missing\": true, \"values\": []}, \"tunnel\": {\"ambiguous\": false, \"missing\": true, \"values\": []}, \"vehicle\": {\"ambiguous\": false, \"missing\": true, \"values\": []}}}",
+        "endpoint_u": 8038884529,
+        "endpoint_v": 8038884530,
+        "feature_type": "candidate_connection",
+        "heading_compatible": true,
+        "heading_deviation_degrees": 26.236343,
+        "heading_u_degrees": 102.136824,
+        "heading_v_degrees": 255.900481,
+        "reasons": [
+          "access",
+          "bridge",
+          "layer",
+          "missing_semantic_attributes",
+          "motor_vehicle",
+          "service",
+          "tunnel",
+          "vehicle"
+        ],
+        "semantic_conflicts": [],
+        "semantic_missing_attributes": [
+          "access",
+          "bridge",
+          "layer",
+          "motor_vehicle",
+          "service",
+          "tunnel",
+          "vehicle"
+        ],
+        "status": "needs_review"
+      },
+      "type": "Feature"
+    },
+    {
+      "geometry": {
+        "coordinates": [
+          80.3623509,
+          6.6939383
+        ],
+        "type": "Point"
+      },
+      "properties": {
+        "candidate_id": "candidate-69729ef945ef029b",
+        "endpoint": 8038884529,
+        "feature_type": "endpoint_u",
+        "reasons": "[\"access\", \"bridge\", \"layer\", \"missing_semantic_attributes\", \"motor_vehicle\", \"service\", \"tunnel\", \"vehicle\"]",
+        "status": "needs_review"
+      },
+      "type": "Feature"
+    },
+    {
+      "geometry": {
+        "coordinates": [
+          80.3623134,
+          6.6940421
+        ],
+        "type": "Point"
+      },
+      "properties": {
+        "candidate_id": "candidate-69729ef945ef029b",
+        "endpoint": 8038884530,
+        "feature_type": "endpoint_v",
+        "reasons": "[\"access\", \"bridge\", \"layer\", \"missing_semantic_attributes\", \"motor_vehicle\", \"service\", \"tunnel\", \"vehicle\"]",
+        "status": "needs_review"
+      },
+      "type": "Feature"
+    },
+    {
+      "geometry": {
+        "coordinates": [
+          [
+            80.3656809,
+            6.6553711
+          ],
+          [
+            80.3658029,
+            6.6554417
+          ]
+        ],
+        "type": "LineString"
+      },
+      "properties": {
+        "already_connected": false,
+        "candidate_id": "candidate-6c6e233ae24da57a",
+        "distance_m": 15.581259,
+        "endpoint_semantics": "{\"u\": {\"access\": {\"ambiguous\": false, \"missing\": true, \"values\": []}, \"bridge\": {\"ambiguous\": false, \"missing\": true, \"values\": []}, \"highway\": {\"ambiguous\": false, \"missing\": false, \"values\": [\"service\"]}, \"layer\": {\"ambiguous\": false, \"missing\": true, \"values\": []}, \"motor_vehicle\": {\"ambiguous\": false, \"missing\": true, \"values\": []}, \"service\": {\"ambiguous\": false, \"missing\": false, \"values\": [\"driveway\"]}, \"tunnel\": {\"ambiguous\": false, \"missing\": true, \"values\": []}, \"vehicle\": {\"ambiguous\": false, \"missing\": true, \"values\": []}}, \"v\": {\"access\": {\"ambiguous\": false, \"missing\": true, \"values\": []}, \"bridge\": {\"ambiguous\": false, \"missing\": true, \"values\": []}, \"highway\": {\"ambiguous\": false, \"missing\": false, \"values\": [\"service\"]}, \"layer\": {\"ambiguous\": false, \"missing\": true, \"values\": []}, \"motor_vehicle\": {\"ambiguous\": false, \"missing\": true, \"values\": []}, \"service\": {\"ambiguous\": false, \"missing\": false, \"values\": [\"driveway\"]}, \"tunnel\": {\"ambiguous\": false, \"missing\": true, \"values\": []}, \"vehicle\": {\"ambiguous\": false, \"missing\": true, \"values\": []}}}",
+        "endpoint_u": 8034935808,
+        "endpoint_v": 8034935812,
+        "feature_type": "candidate_connection",
+        "heading_compatible": false,
+        "heading_deviation_degrees": 170.470908,
+        "heading_u_degrees": 88.097887,
+        "heading_v_degrees": 78.568795,
+        "reasons": [
+          "access",
+          "bridge",
+          "heading_incompatible",
+          "layer",
+          "missing_semantic_attributes",
+          "motor_vehicle",
+          "tunnel",
+          "vehicle"
+        ],
+        "semantic_conflicts": [],
+        "semantic_missing_attributes": [
+          "access",
+          "bridge",
+          "layer",
+          "motor_vehicle",
+          "tunnel",
+          "vehicle"
+        ],
+        "status": "rejected"
+      },
+      "type": "Feature"
+    },
+    {
+      "geometry": {
+        "coordinates": [
+          80.3656809,
+          6.6553711
+        ],
+        "type": "Point"
+      },
+      "properties": {
+        "candidate_id": "candidate-6c6e233ae24da57a",
+        "endpoint": 8034935808,
+        "feature_type": "endpoint_u",
+        "reasons": "[\"access\", \"bridge\", \"heading_incompatible\", \"layer\", \"missing_semantic_attributes\", \"motor_vehicle\", \"tunnel\", \"vehicle\"]",
+        "status": "rejected"
+      },
+      "type": "Feature"
+    },
+    {
+      "geometry": {
+        "coordinates": [
+          80.3658029,
+          6.6554417
+        ],
+        "type": "Point"
+      },
+      "properties": {
+        "candidate_id": "candidate-6c6e233ae24da57a",
+        "endpoint": 8034935812,
+        "feature_type": "endpoint_v",
+        "reasons": "[\"access\", \"bridge\", \"heading_incompatible\", \"layer\", \"missing_semantic_attributes\", \"motor_vehicle\", \"tunnel\", \"vehicle\"]",
+        "status": "rejected"
+      },
+      "type": "Feature"
+    },
+    {
+      "geometry": {
+        "coordinates": [
+          [
+            80.3640966,
+            6.6952898
+          ],
+          [
+            80.3642084,
+            6.6952982
+          ]
+        ],
+        "type": "LineString"
+      },
+      "properties": {
+        "already_connected": false,
+        "candidate_id": "candidate-74d4f652cf38ec98",
+        "distance_m": 12.391862,
+        "endpoint_semantics": "{\"u\": {\"access\": {\"ambiguous\": false, \"missing\": true, \"values\": []}, \"bridge\": {\"ambiguous\": false, \"missing\": true, \"values\": []}, \"highway\": {\"ambiguous\": false, \"missing\": false, \"values\": [\"residential\"]}, \"layer\": {\"ambiguous\": false, \"missing\": true, \"values\": []}, \"motor_vehicle\": {\"ambiguous\": false, \"missing\": true, \"values\": []}, \"service\": {\"ambiguous\": false, \"missing\": true, \"values\": []}, \"tunnel\": {\"ambiguous\": false, \"missing\": true, \"values\": []}, \"vehicle\": {\"ambiguous\": false, \"missing\": true, \"values\": []}}, \"v\": {\"access\": {\"ambiguous\": false, \"missing\": true, \"values\": []}, \"bridge\": {\"ambiguous\": false, \"missing\": true, \"values\": []}, \"highway\": {\"ambiguous\": false, \"missing\": false, \"values\": [\"residential\"]}, \"layer\": {\"ambiguous\": false, \"missing\": true, \"values\": []}, \"motor_vehicle\": {\"ambiguous\": false, \"missing\": true, \"values\": []}, \"service\": {\"ambiguous\": false, \"missing\": true, \"values\": []}, \"tunnel\": {\"ambiguous\": false, \"missing\": true, \"values\": []}, \"vehicle\": {\"ambiguous\": false, \"missing\": true, \"values\": []}}}",
+        "endpoint_u": 8038884406,
+        "endpoint_v": 8038884408,
+        "feature_type": "candidate_connection",
+        "heading_compatible": false,
+        "heading_deviation_degrees": 126.582817,
+        "heading_u_degrees": 71.565051,
+        "heading_v_degrees": 124.982234,
+        "reasons": [
+          "access",
+          "bridge",
+          "heading_incompatible",
+          "layer",
+          "missing_semantic_attributes",
+          "motor_vehicle",
+          "service",
+          "tunnel",
+          "vehicle"
+        ],
+        "semantic_conflicts": [],
+        "semantic_missing_attributes": [
+          "access",
+          "bridge",
+          "layer",
+          "motor_vehicle",
+          "service",
+          "tunnel",
+          "vehicle"
+        ],
+        "status": "rejected"
+      },
+      "type": "Feature"
+    },
+    {
+      "geometry": {
+        "coordinates": [
+          80.3640966,
+          6.6952898
+        ],
+        "type": "Point"
+      },
+      "properties": {
+        "candidate_id": "candidate-74d4f652cf38ec98",
+        "endpoint": 8038884406,
+        "feature_type": "endpoint_u",
+        "reasons": "[\"access\", \"bridge\", \"heading_incompatible\", \"layer\", \"missing_semantic_attributes\", \"motor_vehicle\", \"service\", \"tunnel\", \"vehicle\"]",
+        "status": "rejected"
+      },
+      "type": "Feature"
+    },
+    {
+      "geometry": {
+        "coordinates": [
+          80.3642084,
+          6.6952982
+        ],
+        "type": "Point"
+      },
+      "properties": {
+        "candidate_id": "candidate-74d4f652cf38ec98",
+        "endpoint": 8038884408,
+        "feature_type": "endpoint_v",
+        "reasons": "[\"access\", \"bridge\", \"heading_incompatible\", \"layer\", \"missing_semantic_attributes\", \"motor_vehicle\", \"service\", \"tunnel\", \"vehicle\"]",
+        "status": "rejected"
+      },
+      "type": "Feature"
+    },
+    {
+      "geometry": {
+        "coordinates": [
+          [
+            80.5006966,
+            6.6037654
+          ],
+          [
+            80.5006135,
+            6.6038427
+          ]
+        ],
+        "type": "LineString"
+      },
+      "properties": {
+        "already_connected": false,
+        "candidate_id": "candidate-7c9f674524090dd6",
+        "distance_m": 12.54645,
+        "endpoint_semantics": "{\"u\": {\"access\": {\"ambiguous\": false, \"missing\": true, \"values\": []}, \"bridge\": {\"ambiguous\": false, \"missing\": true, \"values\": []}, \"highway\": {\"ambiguous\": false, \"missing\": false, \"values\": [\"service\"]}, \"layer\": {\"ambiguous\": false, \"missing\": true, \"values\": []}, \"motor_vehicle\": {\"ambiguous\": false, \"missing\": true, \"values\": []}, \"service\": {\"ambiguous\": false, \"missing\": true, \"values\": []}, \"tunnel\": {\"ambiguous\": false, \"missing\": true, \"values\": []}, \"vehicle\": {\"ambiguous\": false, \"missing\": true, \"values\": []}}, \"v\": {\"access\": {\"ambiguous\": false, \"missing\": true, \"values\": []}, \"bridge\": {\"ambiguous\": false, \"missing\": true, \"values\": []}, \"highway\": {\"ambiguous\": false, \"missing\": false, \"values\": [\"service\"]}, \"layer\": {\"ambiguous\": false, \"missing\": true, \"values\": []}, \"motor_vehicle\": {\"ambiguous\": false, \"missing\": true, \"values\": []}, \"service\": {\"ambiguous\": false, \"missing\": true, \"values\": []}, \"tunnel\": {\"ambiguous\": false, \"missing\": true, \"values\": []}, \"vehicle\": {\"ambiguous\": false, \"missing\": true, \"values\": []}}}",
+        "endpoint_u": 10262625207,
+        "endpoint_v": 10262645918,
+        "feature_type": "candidate_connection",
+        "heading_compatible": false,
+        "heading_deviation_degrees": 129.689896,
+        "heading_u_degrees": 265.093933,
+        "heading_v_degrees": 214.783829,
+        "reasons": [
+          "access",
+          "bridge",
+          "heading_incompatible",
+          "layer",
+          "missing_semantic_attributes",
+          "motor_vehicle",
+          "service",
+          "tunnel",
+          "vehicle"
+        ],
+        "semantic_conflicts": [],
+        "semantic_missing_attributes": [
+          "access",
+          "bridge",
+          "layer",
+          "motor_vehicle",
+          "service",
+          "tunnel",
+          "vehicle"
+        ],
+        "status": "rejected"
+      },
+      "type": "Feature"
+    },
+    {
+      "geometry": {
+        "coordinates": [
+          80.5006966,
+          6.6037654
+        ],
+        "type": "Point"
+      },
+      "properties": {
+        "candidate_id": "candidate-7c9f674524090dd6",
+        "endpoint": 10262625207,
+        "feature_type": "endpoint_u",
+        "reasons": "[\"access\", \"bridge\", \"heading_incompatible\", \"layer\", \"missing_semantic_attributes\", \"motor_vehicle\", \"service\", \"tunnel\", \"vehicle\"]",
+        "status": "rejected"
+      },
+      "type": "Feature"
+    },
+    {
+      "geometry": {
+        "coordinates": [
+          80.5006135,
+          6.6038427
+        ],
+        "type": "Point"
+      },
+      "properties": {
+        "candidate_id": "candidate-7c9f674524090dd6",
+        "endpoint": 10262645918,
+        "feature_type": "endpoint_v",
+        "reasons": "[\"access\", \"bridge\", \"heading_incompatible\", \"layer\", \"missing_semantic_attributes\", \"motor_vehicle\", \"service\", \"tunnel\", \"vehicle\"]",
+        "status": "rejected"
+      },
+      "type": "Feature"
+    },
+    {
+      "geometry": {
+        "coordinates": [
+          [
+            80.2402595,
+            6.6745671
+          ],
+          [
+            80.2404191,
+            6.6745912
+          ]
+        ],
+        "type": "LineString"
+      },
+      "properties": {
+        "already_connected": false,
+        "candidate_id": "candidate-7d97bf36d9b91ad0",
+        "distance_m": 17.841517,
+        "endpoint_semantics": "{\"u\": {\"access\": {\"ambiguous\": false, \"missing\": true, \"values\": []}, \"bridge\": {\"ambiguous\": false, \"missing\": true, \"values\": []}, \"highway\": {\"ambiguous\": false, \"missing\": false, \"values\": [\"residential\"]}, \"layer\": {\"ambiguous\": false, \"missing\": true, \"values\": []}, \"motor_vehicle\": {\"ambiguous\": false, \"missing\": true, \"values\": []}, \"service\": {\"ambiguous\": false, \"missing\": true, \"values\": []}, \"tunnel\": {\"ambiguous\": false, \"missing\": true, \"values\": []}, \"vehicle\": {\"ambiguous\": false, \"missing\": true, \"values\": []}}, \"v\": {\"access\": {\"ambiguous\": false, \"missing\": true, \"values\": []}, \"bridge\": {\"ambiguous\": false, \"missing\": true, \"values\": []}, \"highway\": {\"ambiguous\": false, \"missing\": false, \"values\": [\"residential\"]}, \"layer\": {\"ambiguous\": false, \"missing\": true, \"values\": []}, \"motor_vehicle\": {\"ambiguous\": false, \"missing\": true, \"values\": []}, \"service\": {\"ambiguous\": false, \"missing\": true, \"values\": []}, \"tunnel\": {\"ambiguous\": false, \"missing\": true, \"values\": []}, \"vehicle\": {\"ambiguous\": false, \"missing\": true, \"values\": []}}}",
+        "endpoint_u": 7731734556,
+        "endpoint_v": 7731734565,
+        "feature_type": "candidate_connection",
+        "heading_compatible": false,
+        "heading_deviation_degrees": 96.110561,
+        "heading_u_degrees": 191.229776,
+        "heading_v_degrees": 275.119215,
+        "reasons": [
+          "access",
+          "bridge",
+          "heading_incompatible",
+          "layer",
+          "missing_semantic_attributes",
+          "motor_vehicle",
+          "service",
+          "tunnel",
+          "vehicle"
+        ],
+        "semantic_conflicts": [],
+        "semantic_missing_attributes": [
+          "access",
+          "bridge",
+          "layer",
+          "motor_vehicle",
+          "service",
+          "tunnel",
+          "vehicle"
+        ],
+        "status": "rejected"
+      },
+      "type": "Feature"
+    },
+    {
+      "geometry": {
+        "coordinates": [
+          80.2402595,
+          6.6745671
+        ],
+        "type": "Point"
+      },
+      "properties": {
+        "candidate_id": "candidate-7d97bf36d9b91ad0",
+        "endpoint": 7731734556,
+        "feature_type": "endpoint_u",
+        "reasons": "[\"access\", \"bridge\", \"heading_incompatible\", \"layer\", \"missing_semantic_attributes\", \"motor_vehicle\", \"service\", \"tunnel\", \"vehicle\"]",
+        "status": "rejected"
+      },
+      "type": "Feature"
+    },
+    {
+      "geometry": {
+        "coordinates": [
+          80.2404191,
+          6.6745912
+        ],
+        "type": "Point"
+      },
+      "properties": {
+        "candidate_id": "candidate-7d97bf36d9b91ad0",
+        "endpoint": 7731734565,
+        "feature_type": "endpoint_v",
+        "reasons": "[\"access\", \"bridge\", \"heading_incompatible\", \"layer\", \"missing_semantic_attributes\", \"motor_vehicle\", \"service\", \"tunnel\", \"vehicle\"]",
+        "status": "rejected"
+      },
+      "type": "Feature"
+    },
+    {
+      "geometry": {
+        "coordinates": [
+          [
+            80.18986338028294,
+            6.8922333733161345
+          ],
+          [
+            80.18990862337671,
+            6.892303484005506
+          ]
+        ],
+        "type": "LineString"
+      },
+      "properties": {
+        "already_connected": false,
+        "candidate_id": "candidate-7f53bfcc1ffb6020",
+        "distance_m": 9.223303,
+        "endpoint_semantics": "{\"u\": {\"access\": {\"ambiguous\": false, \"missing\": true, \"values\": []}, \"bridge\": {\"ambiguous\": false, \"missing\": true, \"values\": []}, \"highway\": {\"ambiguous\": false, \"missing\": false, \"values\": [\"unclassified\"]}, \"layer\": {\"ambiguous\": false, \"missing\": true, \"values\": []}, \"motor_vehicle\": {\"ambiguous\": false, \"missing\": true, \"values\": []}, \"service\": {\"ambiguous\": false, \"missing\": true, \"values\": []}, \"tunnel\": {\"ambiguous\": false, \"missing\": true, \"values\": []}, \"vehicle\": {\"ambiguous\": false, \"missing\": true, \"values\": []}}, \"v\": {\"access\": {\"ambiguous\": false, \"missing\": true, \"values\": []}, \"bridge\": {\"ambiguous\": false, \"missing\": true, \"values\": []}, \"highway\": {\"ambiguous\": false, \"missing\": false, \"values\": [\"unclassified\"]}, \"layer\": {\"ambiguous\": false, \"missing\": true, \"values\": []}, \"motor_vehicle\": {\"ambiguous\": false, \"missing\": true, \"values\": []}, \"service\": {\"ambiguous\": false, \"missing\": true, \"values\": []}, \"tunnel\": {\"ambiguous\": false, \"missing\": true, \"values\": []}, \"vehicle\": {\"ambiguous\": false, \"missing\": true, \"values\": []}}}",
+        "endpoint_u": -243580291660896138,
+        "endpoint_v": -729266923081614321,
+        "feature_type": "candidate_connection",
+        "heading_compatible": false,
+        "heading_deviation_degrees": 96.00957,
+        "heading_u_degrees": 274.414661,
+        "heading_v_degrees": 358.405091,
+        "reasons": [
+          "access",
+          "bridge",
+          "heading_incompatible",
+          "layer",
+          "missing_semantic_attributes",
+          "motor_vehicle",
+          "service",
+          "tunnel",
+          "vehicle"
+        ],
+        "semantic_conflicts": [],
+        "semantic_missing_attributes": [
+          "access",
+          "bridge",
+          "layer",
+          "motor_vehicle",
+          "service",
+          "tunnel",
+          "vehicle"
+        ],
+        "status": "rejected"
+      },
+      "type": "Feature"
+    },
+    {
+      "geometry": {
+        "coordinates": [
+          80.18986338028294,
+          6.8922333733161345
+        ],
+        "type": "Point"
+      },
+      "properties": {
+        "candidate_id": "candidate-7f53bfcc1ffb6020",
+        "endpoint": -243580291660896138,
+        "feature_type": "endpoint_u",
+        "reasons": "[\"access\", \"bridge\", \"heading_incompatible\", \"layer\", \"missing_semantic_attributes\", \"motor_vehicle\", \"service\", \"tunnel\", \"vehicle\"]",
+        "status": "rejected"
+      },
+      "type": "Feature"
+    },
+    {
+      "geometry": {
+        "coordinates": [
+          80.18990862337671,
+          6.892303484005506
+        ],
+        "type": "Point"
+      },
+      "properties": {
+        "candidate_id": "candidate-7f53bfcc1ffb6020",
+        "endpoint": -729266923081614321,
+        "feature_type": "endpoint_v",
+        "reasons": "[\"access\", \"bridge\", \"heading_incompatible\", \"layer\", \"missing_semantic_attributes\", \"motor_vehicle\", \"service\", \"tunnel\", \"vehicle\"]",
+        "status": "rejected"
+      },
+      "type": "Feature"
+    },
+    {
+      "geometry": {
+        "coordinates": [
+          [
+            80.3835525,
+            6.6229928
+          ],
+          [
+            80.3834948,
+            6.6231087
+          ]
+        ],
+        "type": "LineString"
+      },
+      "properties": {
+        "already_connected": false,
+        "candidate_id": "candidate-845ae7eb617a8722",
+        "distance_m": 14.312704,
+        "endpoint_semantics": "{\"u\": {\"access\": {\"ambiguous\": false, \"missing\": true, \"values\": []}, \"bridge\": {\"ambiguous\": false, \"missing\": true, \"values\": []}, \"highway\": {\"ambiguous\": false, \"missing\": false, \"values\": [\"residential\"]}, \"layer\": {\"ambiguous\": false, \"missing\": true, \"values\": []}, \"motor_vehicle\": {\"ambiguous\": false, \"missing\": true, \"values\": []}, \"service\": {\"ambiguous\": false, \"missing\": true, \"values\": []}, \"tunnel\": {\"ambiguous\": false, \"missing\": true, \"values\": []}, \"vehicle\": {\"ambiguous\": false, \"missing\": true, \"values\": []}}, \"v\": {\"access\": {\"ambiguous\": false, \"missing\": true, \"values\": []}, \"bridge\": {\"ambiguous\": false, \"missing\": true, \"values\": []}, \"highway\": {\"ambiguous\": false, \"missing\": false, \"values\": [\"residential\"]}, \"layer\": {\"ambiguous\": false, \"missing\": true, \"values\": []}, \"motor_vehicle\": {\"ambiguous\": false, \"missing\": true, \"values\": []}, \"service\": {\"ambiguous\": false, \"missing\": true, \"values\": []}, \"tunnel\": {\"ambiguous\": false, \"missing\": true, \"values\": []}, \"vehicle\": {\"ambiguous\": false, \"missing\": true, \"values\": []}}}",
+        "endpoint_u": 7697829446,
+        "endpoint_v": 7697829450,
+        "feature_type": "candidate_connection",
+        "heading_compatible": false,
+        "heading_deviation_degrees": 165.585987,
+        "heading_u_degrees": 25.420039,
+        "heading_v_degrees": 11.006026,
+        "reasons": [
+          "access",
+          "bridge",
+          "heading_incompatible",
+          "layer",
+          "missing_semantic_attributes",
+          "motor_vehicle",
+          "service",
+          "tunnel",
+          "vehicle"
+        ],
+        "semantic_conflicts": [],
+        "semantic_missing_attributes": [
+          "access",
+          "bridge",
+          "layer",
+          "motor_vehicle",
+          "service",
+          "tunnel",
+          "vehicle"
+        ],
+        "status": "rejected"
+      },
+      "type": "Feature"
+    },
+    {
+      "geometry": {
+        "coordinates": [
+          80.3835525,
+          6.6229928
+        ],
+        "type": "Point"
+      },
+      "properties": {
+        "candidate_id": "candidate-845ae7eb617a8722",
+        "endpoint": 7697829446,
+        "feature_type": "endpoint_u",
+        "reasons": "[\"access\", \"bridge\", \"heading_incompatible\", \"layer\", \"missing_semantic_attributes\", \"motor_vehicle\", \"service\", \"tunnel\", \"vehicle\"]",
+        "status": "rejected"
+      },
+      "type": "Feature"
+    },
+    {
+      "geometry": {
+        "coordinates": [
+          80.3834948,
+          6.6231087
+        ],
+        "type": "Point"
+      },
+      "properties": {
+        "candidate_id": "candidate-845ae7eb617a8722",
+        "endpoint": 7697829450,
+        "feature_type": "endpoint_v",
+        "reasons": "[\"access\", \"bridge\", \"heading_incompatible\", \"layer\", \"missing_semantic_attributes\", \"motor_vehicle\", \"service\", \"tunnel\", \"vehicle\"]",
+        "status": "rejected"
+      },
+      "type": "Feature"
+    },
+    {
+      "geometry": {
+        "coordinates": [
+          [
+            80.54382564284158,
+            7.166518921323536
+          ],
+          [
+            80.54393695495627,
+            7.166566845437992
+          ]
+        ],
+        "type": "LineString"
+      },
+      "properties": {
+        "already_connected": false,
+        "candidate_id": "candidate-86857aafd01774a0",
+        "distance_m": 13.383797,
+        "endpoint_semantics": "{\"u\": {\"access\": {\"ambiguous\": false, \"missing\": false, \"values\": [\"yes\"]}, \"bridge\": {\"ambiguous\": false, \"missing\": true, \"values\": []}, \"highway\": {\"ambiguous\": false, \"missing\": false, \"values\": [\"primary\"]}, \"layer\": {\"ambiguous\": false, \"missing\": true, \"values\": []}, \"motor_vehicle\": {\"ambiguous\": false, \"missing\": false, \"values\": [\"yes\"]}, \"service\": {\"ambiguous\": false, \"missing\": true, \"values\": []}, \"tunnel\": {\"ambiguous\": false, \"missing\": true, \"values\": []}, \"vehicle\": {\"ambiguous\": false, \"missing\": true, \"values\": []}}, \"v\": {\"access\": {\"ambiguous\": false, \"missing\": false, \"values\": [\"yes\"]}, \"bridge\": {\"ambiguous\": false, \"missing\": true, \"values\": []}, \"highway\": {\"ambiguous\": false, \"missing\": false, \"values\": [\"primary\"]}, \"layer\": {\"ambiguous\": false, \"missing\": true, \"values\": []}, \"motor_vehicle\": {\"ambiguous\": false, \"missing\": false, \"values\": [\"yes\"]}, \"service\": {\"ambiguous\": false, \"missing\": true, \"values\": []}, \"tunnel\": {\"ambiguous\": false, \"missing\": true, \"values\": []}, \"vehicle\": {\"ambiguous\": false, \"missing\": true, \"values\": []}}}",
+        "endpoint_u": -495535541177654567,
+        "endpoint_v": -864164900325871242,
+        "feature_type": "candidate_connection",
+        "heading_compatible": false,
+        "heading_deviation_degrees": 57.222635,
+        "heading_u_degrees": 176.794031,
+        "heading_v_degrees": 54.016666,
+        "reasons": [
+          "bridge",
+          "heading_incompatible",
+          "layer",
+          "missing_semantic_attributes",
+          "service",
+          "tunnel",
+          "vehicle"
+        ],
+        "semantic_conflicts": [],
+        "semantic_missing_attributes": [
+          "bridge",
+          "layer",
+          "service",
+          "tunnel",
+          "vehicle"
+        ],
+        "status": "rejected"
+      },
+      "type": "Feature"
+    },
+    {
+      "geometry": {
+        "coordinates": [
+          80.54382564284158,
+          7.166518921323536
+        ],
+        "type": "Point"
+      },
+      "properties": {
+        "candidate_id": "candidate-86857aafd01774a0",
+        "endpoint": -495535541177654567,
+        "feature_type": "endpoint_u",
+        "reasons": "[\"bridge\", \"heading_incompatible\", \"layer\", \"missing_semantic_attributes\", \"service\", \"tunnel\", \"vehicle\"]",
+        "status": "rejected"
+      },
+      "type": "Feature"
+    },
+    {
+      "geometry": {
+        "coordinates": [
+          80.54393695495627,
+          7.166566845437992
+        ],
+        "type": "Point"
+      },
+      "properties": {
+        "candidate_id": "candidate-86857aafd01774a0",
+        "endpoint": -864164900325871242,
+        "feature_type": "endpoint_v",
+        "reasons": "[\"bridge\", \"heading_incompatible\", \"layer\", \"missing_semantic_attributes\", \"service\", \"tunnel\", \"vehicle\"]",
+        "status": "rejected"
+      },
+      "type": "Feature"
+    },
+    {
+      "geometry": {
+        "coordinates": [
+          [
+            80.7905923,
+            6.7149801
+          ],
+          [
+            80.7904613,
+            6.7149136
+          ]
+        ],
+        "type": "LineString"
+      },
+      "properties": {
+        "already_connected": false,
+        "candidate_id": "candidate-8f33660321875be2",
+        "distance_m": 16.237238,
+        "endpoint_semantics": "{\"u\": {\"access\": {\"ambiguous\": false, \"missing\": true, \"values\": []}, \"bridge\": {\"ambiguous\": false, \"missing\": true, \"values\": []}, \"highway\": {\"ambiguous\": false, \"missing\": false, \"values\": [\"service\"]}, \"layer\": {\"ambiguous\": false, \"missing\": true, \"values\": []}, \"motor_vehicle\": {\"ambiguous\": false, \"missing\": true, \"values\": []}, \"service\": {\"ambiguous\": false, \"missing\": true, \"values\": []}, \"tunnel\": {\"ambiguous\": false, \"missing\": true, \"values\": []}, \"vehicle\": {\"ambiguous\": false, \"missing\": true, \"values\": []}}, \"v\": {\"access\": {\"ambiguous\": false, \"missing\": true, \"values\": []}, \"bridge\": {\"ambiguous\": false, \"missing\": true, \"values\": []}, \"highway\": {\"ambiguous\": false, \"missing\": false, \"values\": [\"service\"]}, \"layer\": {\"ambiguous\": false, \"missing\": true, \"values\": []}, \"motor_vehicle\": {\"ambiguous\": false, \"missing\": true, \"values\": []}, \"service\": {\"ambiguous\": false, \"missing\": true, \"values\": []}, \"tunnel\": {\"ambiguous\": false, \"missing\": true, \"values\": []}, \"vehicle\": {\"ambiguous\": false, \"missing\": true, \"values\": []}}}",
+        "endpoint_u": 2384956413,
+        "endpoint_v": 2384957838,
+        "feature_type": "candidate_connection",
+        "heading_compatible": true,
+        "heading_deviation_degrees": 2.749399,
+        "heading_u_degrees": 113.683406,
+        "heading_v_degrees": 296.432805,
+        "reasons": [
+          "access",
+          "bridge",
+          "layer",
+          "missing_semantic_attributes",
+          "motor_vehicle",
+          "service",
+          "tunnel",
+          "vehicle"
+        ],
+        "semantic_conflicts": [],
+        "semantic_missing_attributes": [
+          "access",
+          "bridge",
+          "layer",
+          "motor_vehicle",
+          "service",
+          "tunnel",
+          "vehicle"
+        ],
+        "status": "needs_review"
+      },
+      "type": "Feature"
+    },
+    {
+      "geometry": {
+        "coordinates": [
+          80.7905923,
+          6.7149801
+        ],
+        "type": "Point"
+      },
+      "properties": {
+        "candidate_id": "candidate-8f33660321875be2",
+        "endpoint": 2384956413,
+        "feature_type": "endpoint_u",
+        "reasons": "[\"access\", \"bridge\", \"layer\", \"missing_semantic_attributes\", \"motor_vehicle\", \"service\", \"tunnel\", \"vehicle\"]",
+        "status": "needs_review"
+      },
+      "type": "Feature"
+    },
+    {
+      "geometry": {
+        "coordinates": [
+          80.7904613,
+          6.7149136
+        ],
+        "type": "Point"
+      },
+      "properties": {
+        "candidate_id": "candidate-8f33660321875be2",
+        "endpoint": 2384957838,
+        "feature_type": "endpoint_v",
+        "reasons": "[\"access\", \"bridge\", \"layer\", \"missing_semantic_attributes\", \"motor_vehicle\", \"service\", \"tunnel\", \"vehicle\"]",
+        "status": "needs_review"
+      },
+      "type": "Feature"
+    },
+    {
+      "geometry": {
+        "coordinates": [
+          [
+            80.4043543,
+            6.6575091
+          ],
+          [
+            80.4042162,
+            6.6574584
+          ]
+        ],
+        "type": "LineString"
+      },
+      "properties": {
+        "already_connected": false,
+        "candidate_id": "candidate-99f1184259d6cb87",
+        "distance_m": 16.261432,
+        "endpoint_semantics": "{\"u\": {\"access\": {\"ambiguous\": false, \"missing\": true, \"values\": []}, \"bridge\": {\"ambiguous\": false, \"missing\": true, \"values\": []}, \"highway\": {\"ambiguous\": false, \"missing\": false, \"values\": [\"unclassified\"]}, \"layer\": {\"ambiguous\": false, \"missing\": true, \"values\": []}, \"motor_vehicle\": {\"ambiguous\": false, \"missing\": true, \"values\": []}, \"service\": {\"ambiguous\": false, \"missing\": true, \"values\": []}, \"tunnel\": {\"ambiguous\": false, \"missing\": true, \"values\": []}, \"vehicle\": {\"ambiguous\": false, \"missing\": true, \"values\": []}}, \"v\": {\"access\": {\"ambiguous\": false, \"missing\": true, \"values\": []}, \"bridge\": {\"ambiguous\": false, \"missing\": true, \"values\": []}, \"highway\": {\"ambiguous\": false, \"missing\": false, \"values\": [\"unclassified\"]}, \"layer\": {\"ambiguous\": false, \"missing\": true, \"values\": []}, \"motor_vehicle\": {\"ambiguous\": false, \"missing\": true, \"values\": []}, \"service\": {\"ambiguous\": false, \"missing\": true, \"values\": []}, \"tunnel\": {\"ambiguous\": false, \"missing\": true, \"values\": []}, \"vehicle\": {\"ambiguous\": false, \"missing\": true, \"values\": []}}}",
+        "endpoint_u": 7692447628,
+        "endpoint_v": 7692447632,
+        "feature_type": "candidate_connection",
+        "heading_compatible": false,
+        "heading_deviation_degrees": 162.173991,
+        "heading_u_degrees": 141.661302,
+        "heading_v_degrees": 159.48731,
+        "reasons": [
+          "access",
+          "bridge",
+          "heading_incompatible",
+          "layer",
+          "missing_semantic_attributes",
+          "motor_vehicle",
+          "service",
+          "tunnel",
+          "vehicle"
+        ],
+        "semantic_conflicts": [],
+        "semantic_missing_attributes": [
+          "access",
+          "bridge",
+          "layer",
+          "motor_vehicle",
+          "service",
+          "tunnel",
+          "vehicle"
+        ],
+        "status": "rejected"
+      },
+      "type": "Feature"
+    },
+    {
+      "geometry": {
+        "coordinates": [
+          80.4043543,
+          6.6575091
+        ],
+        "type": "Point"
+      },
+      "properties": {
+        "candidate_id": "candidate-99f1184259d6cb87",
+        "endpoint": 7692447628,
+        "feature_type": "endpoint_u",
+        "reasons": "[\"access\", \"bridge\", \"heading_incompatible\", \"layer\", \"missing_semantic_attributes\", \"motor_vehicle\", \"service\", \"tunnel\", \"vehicle\"]",
+        "status": "rejected"
+      },
+      "type": "Feature"
+    },
+    {
+      "geometry": {
+        "coordinates": [
+          80.4042162,
+          6.6574584
+        ],
+        "type": "Point"
+      },
+      "properties": {
+        "candidate_id": "candidate-99f1184259d6cb87",
+        "endpoint": 7692447632,
+        "feature_type": "endpoint_v",
+        "reasons": "[\"access\", \"bridge\", \"heading_incompatible\", \"layer\", \"missing_semantic_attributes\", \"motor_vehicle\", \"service\", \"tunnel\", \"vehicle\"]",
+        "status": "rejected"
+      },
+      "type": "Feature"
+    },
+    {
+      "geometry": {
+        "coordinates": [
+          [
+            80.3630751,
+            6.6822701
+          ],
+          [
+            80.3630698,
+            6.6822035
+          ]
+        ],
+        "type": "LineString"
+      },
+      "properties": {
+        "already_connected": false,
+        "candidate_id": "candidate-9c95b85a49179601",
+        "distance_m": 7.386022,
+        "endpoint_semantics": "{\"u\": {\"access\": {\"ambiguous\": false, \"missing\": true, \"values\": []}, \"bridge\": {\"ambiguous\": false, \"missing\": true, \"values\": []}, \"highway\": {\"ambiguous\": false, \"missing\": false, \"values\": [\"living_street\"]}, \"layer\": {\"ambiguous\": false, \"missing\": true, \"values\": []}, \"motor_vehicle\": {\"ambiguous\": false, \"missing\": true, \"values\": []}, \"service\": {\"ambiguous\": false, \"missing\": true, \"values\": []}, \"tunnel\": {\"ambiguous\": false, \"missing\": true, \"values\": []}, \"vehicle\": {\"ambiguous\": false, \"missing\": true, \"values\": []}}, \"v\": {\"access\": {\"ambiguous\": false, \"missing\": true, \"values\": []}, \"bridge\": {\"ambiguous\": false, \"missing\": true, \"values\": []}, \"highway\": {\"ambiguous\": false, \"missing\": false, \"values\": [\"living_street\"]}, \"layer\": {\"ambiguous\": false, \"missing\": true, \"values\": []}, \"motor_vehicle\": {\"ambiguous\": false, \"missing\": true, \"values\": []}, \"service\": {\"ambiguous\": false, \"missing\": true, \"values\": []}, \"tunnel\": {\"ambiguous\": false, \"missing\": true, \"values\": []}, \"vehicle\": {\"ambiguous\": false, \"missing\": true, \"values\": []}}}",
+        "endpoint_u": 7984268489,
+        "endpoint_v": 7984268497,
+        "feature_type": "candidate_connection",
+        "heading_compatible": false,
+        "heading_deviation_degrees": 175.426198,
+        "heading_u_degrees": 210.571443,
+        "heading_v_degrees": 205.997641,
+        "reasons": [
+          "access",
+          "bridge",
+          "heading_incompatible",
+          "layer",
+          "missing_semantic_attributes",
+          "motor_vehicle",
+          "service",
+          "tunnel",
+          "vehicle"
+        ],
+        "semantic_conflicts": [],
+        "semantic_missing_attributes": [
+          "access",
+          "bridge",
+          "layer",
+          "motor_vehicle",
+          "service",
+          "tunnel",
+          "vehicle"
+        ],
+        "status": "rejected"
+      },
+      "type": "Feature"
+    },
+    {
+      "geometry": {
+        "coordinates": [
+          80.3630751,
+          6.6822701
+        ],
+        "type": "Point"
+      },
+      "properties": {
+        "candidate_id": "candidate-9c95b85a49179601",
+        "endpoint": 7984268489,
+        "feature_type": "endpoint_u",
+        "reasons": "[\"access\", \"bridge\", \"heading_incompatible\", \"layer\", \"missing_semantic_attributes\", \"motor_vehicle\", \"service\", \"tunnel\", \"vehicle\"]",
+        "status": "rejected"
+      },
+      "type": "Feature"
+    },
+    {
+      "geometry": {
+        "coordinates": [
+          80.3630698,
+          6.6822035
+        ],
+        "type": "Point"
+      },
+      "properties": {
+        "candidate_id": "candidate-9c95b85a49179601",
+        "endpoint": 7984268497,
+        "feature_type": "endpoint_v",
+        "reasons": "[\"access\", \"bridge\", \"heading_incompatible\", \"layer\", \"missing_semantic_attributes\", \"motor_vehicle\", \"service\", \"tunnel\", \"vehicle\"]",
+        "status": "rejected"
+      },
+      "type": "Feature"
+    },
+    {
+      "geometry": {
+        "coordinates": [
+          [
+            80.3638677,
+            6.6960809
+          ],
+          [
+            80.3637062,
+            6.696108
+          ]
+        ],
+        "type": "LineString"
+      },
+      "properties": {
+        "already_connected": false,
+        "candidate_id": "candidate-9e29d69b6bad5283",
+        "distance_m": 18.099897,
+        "endpoint_semantics": "{\"u\": {\"access\": {\"ambiguous\": false, \"missing\": true, \"values\": []}, \"bridge\": {\"ambiguous\": false, \"missing\": true, \"values\": []}, \"highway\": {\"ambiguous\": false, \"missing\": false, \"values\": [\"residential\"]}, \"layer\": {\"ambiguous\": false, \"missing\": true, \"values\": []}, \"motor_vehicle\": {\"ambiguous\": false, \"missing\": true, \"values\": []}, \"service\": {\"ambiguous\": false, \"missing\": true, \"values\": []}, \"tunnel\": {\"ambiguous\": false, \"missing\": true, \"values\": []}, \"vehicle\": {\"ambiguous\": false, \"missing\": true, \"values\": []}}, \"v\": {\"access\": {\"ambiguous\": false, \"missing\": true, \"values\": []}, \"bridge\": {\"ambiguous\": false, \"missing\": true, \"values\": []}, \"highway\": {\"ambiguous\": false, \"missing\": false, \"values\": [\"residential\"]}, \"layer\": {\"ambiguous\": false, \"missing\": true, \"values\": []}, \"motor_vehicle\": {\"ambiguous\": false, \"missing\": true, \"values\": []}, \"service\": {\"ambiguous\": false, \"missing\": true, \"values\": []}, \"tunnel\": {\"ambiguous\": false, \"missing\": true, \"values\": []}, \"vehicle\": {\"ambiguous\": false, \"missing\": true, \"values\": []}}}",
+        "endpoint_u": 8038884399,
+        "endpoint_v": 8038884401,
+        "feature_type": "candidate_connection",
+        "heading_compatible": false,
+        "heading_deviation_degrees": 112.39814,
+        "heading_u_degrees": 251.331736,
+        "heading_v_degrees": 318.933596,
+        "reasons": [
+          "access",
+          "bridge",
+          "heading_incompatible",
+          "layer",
+          "missing_semantic_attributes",
+          "motor_vehicle",
+          "service",
+          "tunnel",
+          "vehicle"
+        ],
+        "semantic_conflicts": [],
+        "semantic_missing_attributes": [
+          "access",
+          "bridge",
+          "layer",
+          "motor_vehicle",
+          "service",
+          "tunnel",
+          "vehicle"
+        ],
+        "status": "rejected"
+      },
+      "type": "Feature"
+    },
+    {
+      "geometry": {
+        "coordinates": [
+          80.3638677,
+          6.6960809
+        ],
+        "type": "Point"
+      },
+      "properties": {
+        "candidate_id": "candidate-9e29d69b6bad5283",
+        "endpoint": 8038884399,
+        "feature_type": "endpoint_u",
+        "reasons": "[\"access\", \"bridge\", \"heading_incompatible\", \"layer\", \"missing_semantic_attributes\", \"motor_vehicle\", \"service\", \"tunnel\", \"vehicle\"]",
+        "status": "rejected"
+      },
+      "type": "Feature"
+    },
+    {
+      "geometry": {
+        "coordinates": [
+          80.3637062,
+          6.696108
+        ],
+        "type": "Point"
+      },
+      "properties": {
+        "candidate_id": "candidate-9e29d69b6bad5283",
+        "endpoint": 8038884401,
+        "feature_type": "endpoint_v",
+        "reasons": "[\"access\", \"bridge\", \"heading_incompatible\", \"layer\", \"missing_semantic_attributes\", \"motor_vehicle\", \"service\", \"tunnel\", \"vehicle\"]",
+        "status": "rejected"
+      },
+      "type": "Feature"
+    },
+    {
+      "geometry": {
+        "coordinates": [
+          [
+            80.3816964,
+            6.6627174
+          ],
+          [
+            80.3815877,
+            6.6626202
+          ]
+        ],
+        "type": "LineString"
+      },
+      "properties": {
+        "already_connected": false,
+        "candidate_id": "candidate-a196d02daee34f7d",
+        "distance_m": 16.119284,
+        "endpoint_semantics": "{\"u\": {\"access\": {\"ambiguous\": false, \"missing\": true, \"values\": []}, \"bridge\": {\"ambiguous\": false, \"missing\": true, \"values\": []}, \"highway\": {\"ambiguous\": false, \"missing\": false, \"values\": [\"service\"]}, \"layer\": {\"ambiguous\": false, \"missing\": true, \"values\": []}, \"motor_vehicle\": {\"ambiguous\": false, \"missing\": true, \"values\": []}, \"service\": {\"ambiguous\": false, \"missing\": false, \"values\": [\"driveway\"]}, \"tunnel\": {\"ambiguous\": false, \"missing\": true, \"values\": []}, \"vehicle\": {\"ambiguous\": false, \"missing\": true, \"values\": []}}, \"v\": {\"access\": {\"ambiguous\": false, \"missing\": true, \"values\": []}, \"bridge\": {\"ambiguous\": false, \"missing\": true, \"values\": []}, \"highway\": {\"ambiguous\": false, \"missing\": false, \"values\": [\"living_street\"]}, \"layer\": {\"ambiguous\": false, \"missing\": true, \"values\": []}, \"motor_vehicle\": {\"ambiguous\": false, \"missing\": true, \"values\": []}, \"service\": {\"ambiguous\": false, \"missing\": true, \"values\": []}, \"tunnel\": {\"ambiguous\": false, \"missing\": true, \"values\": []}, \"vehicle\": {\"ambiguous\": false, \"missing\": true, \"values\": []}}}",
+        "endpoint_u": 8008555999,
+        "endpoint_v": 8008556001,
+        "feature_type": "candidate_connection",
+        "heading_compatible": false,
+        "heading_deviation_degrees": 86.641101,
+        "heading_u_degrees": 170.636549,
+        "heading_v_degrees": 77.27765,
+        "reasons": [
+          "access",
+          "bridge",
+          "heading_incompatible",
+          "layer",
+          "missing_semantic_attributes",
+          "motor_vehicle",
+          "service",
+          "tunnel",
+          "vehicle"
+        ],
+        "semantic_conflicts": [],
+        "semantic_missing_attributes": [
+          "access",
+          "bridge",
+          "layer",
+          "motor_vehicle",
+          "service",
+          "tunnel",
+          "vehicle"
+        ],
+        "status": "rejected"
+      },
+      "type": "Feature"
+    },
+    {
+      "geometry": {
+        "coordinates": [
+          80.3816964,
+          6.6627174
+        ],
+        "type": "Point"
+      },
+      "properties": {
+        "candidate_id": "candidate-a196d02daee34f7d",
+        "endpoint": 8008555999,
+        "feature_type": "endpoint_u",
+        "reasons": "[\"access\", \"bridge\", \"heading_incompatible\", \"layer\", \"missing_semantic_attributes\", \"motor_vehicle\", \"service\", \"tunnel\", \"vehicle\"]",
+        "status": "rejected"
+      },
+      "type": "Feature"
+    },
+    {
+      "geometry": {
+        "coordinates": [
+          80.3815877,
+          6.6626202
+        ],
+        "type": "Point"
+      },
+      "properties": {
+        "candidate_id": "candidate-a196d02daee34f7d",
+        "endpoint": 8008556001,
+        "feature_type": "endpoint_v",
+        "reasons": "[\"access\", \"bridge\", \"heading_incompatible\", \"layer\", \"missing_semantic_attributes\", \"motor_vehicle\", \"service\", \"tunnel\", \"vehicle\"]",
+        "status": "rejected"
+      },
+      "type": "Feature"
+    },
+    {
+      "geometry": {
+        "coordinates": [
+          [
+            80.3776422,
+            6.6769261
+          ],
+          [
+            80.3776479,
+            6.6767527
+          ]
+        ],
+        "type": "LineString"
+      },
+      "properties": {
+        "already_connected": false,
+        "candidate_id": "candidate-a7b4083a52d4a012",
+        "distance_m": 19.179986,
+        "endpoint_semantics": "{\"u\": {\"access\": {\"ambiguous\": false, \"missing\": true, \"values\": []}, \"bridge\": {\"ambiguous\": false, \"missing\": true, \"values\": []}, \"highway\": {\"ambiguous\": false, \"missing\": false, \"values\": [\"living_street\"]}, \"layer\": {\"ambiguous\": false, \"missing\": true, \"values\": []}, \"motor_vehicle\": {\"ambiguous\": false, \"missing\": true, \"values\": []}, \"service\": {\"ambiguous\": false, \"missing\": true, \"values\": []}, \"tunnel\": {\"ambiguous\": false, \"missing\": true, \"values\": []}, \"vehicle\": {\"ambiguous\": false, \"missing\": true, \"values\": []}}, \"v\": {\"access\": {\"ambiguous\": false, \"missing\": true, \"values\": []}, \"bridge\": {\"ambiguous\": false, \"missing\": true, \"values\": []}, \"highway\": {\"ambiguous\": false, \"missing\": false, \"values\": [\"living_street\"]}, \"layer\": {\"ambiguous\": false, \"missing\": true, \"values\": []}, \"motor_vehicle\": {\"ambiguous\": false, \"missing\": true, \"values\": []}, \"service\": {\"ambiguous\": false, \"missing\": true, \"values\": []}, \"tunnel\": {\"ambiguous\": false, \"missing\": true, \"values\": []}, \"vehicle\": {\"ambiguous\": false, \"missing\": true, \"values\": []}}}",
+        "endpoint_u": 7828755910,
+        "endpoint_v": 7984606605,
+        "feature_type": "candidate_connection",
+        "heading_compatible": false,
+        "heading_deviation_degrees": 171.848827,
+        "heading_u_degrees": 34.763851,
+        "heading_v_degrees": 26.612679,
+        "reasons": [
+          "access",
+          "bridge",
+          "heading_incompatible",
+          "layer",
+          "missing_semantic_attributes",
+          "motor_vehicle",
+          "service",
+          "tunnel",
+          "vehicle"
+        ],
+        "semantic_conflicts": [],
+        "semantic_missing_attributes": [
+          "access",
+          "bridge",
+          "layer",
+          "motor_vehicle",
+          "service",
+          "tunnel",
+          "vehicle"
+        ],
+        "status": "rejected"
+      },
+      "type": "Feature"
+    },
+    {
+      "geometry": {
+        "coordinates": [
+          80.3776422,
+          6.6769261
+        ],
+        "type": "Point"
+      },
+      "properties": {
+        "candidate_id": "candidate-a7b4083a52d4a012",
+        "endpoint": 7828755910,
+        "feature_type": "endpoint_u",
+        "reasons": "[\"access\", \"bridge\", \"heading_incompatible\", \"layer\", \"missing_semantic_attributes\", \"motor_vehicle\", \"service\", \"tunnel\", \"vehicle\"]",
+        "status": "rejected"
+      },
+      "type": "Feature"
+    },
+    {
+      "geometry": {
+        "coordinates": [
+          80.3776479,
+          6.6767527
+        ],
+        "type": "Point"
+      },
+      "properties": {
+        "candidate_id": "candidate-a7b4083a52d4a012",
+        "endpoint": 7984606605,
+        "feature_type": "endpoint_v",
+        "reasons": "[\"access\", \"bridge\", \"heading_incompatible\", \"layer\", \"missing_semantic_attributes\", \"motor_vehicle\", \"service\", \"tunnel\", \"vehicle\"]",
+        "status": "rejected"
+      },
+      "type": "Feature"
+    },
+    {
+      "geometry": {
+        "coordinates": [
+          [
+            80.3060916,
+            6.7229608
+          ],
+          [
+            80.3060621,
+            6.7231047
+          ]
+        ],
+        "type": "LineString"
+      },
+      "properties": {
+        "already_connected": false,
+        "candidate_id": "candidate-aa0097db3a370d9f",
+        "distance_m": 16.239292,
+        "endpoint_semantics": "{\"u\": {\"access\": {\"ambiguous\": false, \"missing\": true, \"values\": []}, \"bridge\": {\"ambiguous\": false, \"missing\": true, \"values\": []}, \"highway\": {\"ambiguous\": false, \"missing\": false, \"values\": [\"living_street\"]}, \"layer\": {\"ambiguous\": false, \"missing\": true, \"values\": []}, \"motor_vehicle\": {\"ambiguous\": false, \"missing\": true, \"values\": []}, \"service\": {\"ambiguous\": false, \"missing\": true, \"values\": []}, \"tunnel\": {\"ambiguous\": false, \"missing\": true, \"values\": []}, \"vehicle\": {\"ambiguous\": false, \"missing\": true, \"values\": []}}, \"v\": {\"access\": {\"ambiguous\": false, \"missing\": true, \"values\": []}, \"bridge\": {\"ambiguous\": false, \"missing\": true, \"values\": []}, \"highway\": {\"ambiguous\": false, \"missing\": false, \"values\": [\"living_street\"]}, \"layer\": {\"ambiguous\": false, \"missing\": true, \"values\": []}, \"motor_vehicle\": {\"ambiguous\": false, \"missing\": true, \"values\": []}, \"service\": {\"ambiguous\": false, \"missing\": true, \"values\": []}, \"tunnel\": {\"ambiguous\": false, \"missing\": true, \"values\": []}, \"vehicle\": {\"ambiguous\": false, \"missing\": true, \"values\": []}}}",
+        "endpoint_u": 7684697483,
+        "endpoint_v": 7816487662,
+        "feature_type": "candidate_connection",
+        "heading_compatible": false,
+        "heading_deviation_degrees": 144.967168,
+        "heading_u_degrees": 356.94328,
+        "heading_v_degrees": 31.976111,
+        "reasons": [
+          "access",
+          "bridge",
+          "heading_incompatible",
+          "layer",
+          "missing_semantic_attributes",
+          "motor_vehicle",
+          "service",
+          "tunnel",
+          "vehicle"
+        ],
+        "semantic_conflicts": [],
+        "semantic_missing_attributes": [
+          "access",
+          "bridge",
+          "layer",
+          "motor_vehicle",
+          "service",
+          "tunnel",
+          "vehicle"
+        ],
+        "status": "rejected"
+      },
+      "type": "Feature"
+    },
+    {
+      "geometry": {
+        "coordinates": [
+          80.3060916,
+          6.7229608
+        ],
+        "type": "Point"
+      },
+      "properties": {
+        "candidate_id": "candidate-aa0097db3a370d9f",
+        "endpoint": 7684697483,
+        "feature_type": "endpoint_u",
+        "reasons": "[\"access\", \"bridge\", \"heading_incompatible\", \"layer\", \"missing_semantic_attributes\", \"motor_vehicle\", \"service\", \"tunnel\", \"vehicle\"]",
+        "status": "rejected"
+      },
+      "type": "Feature"
+    },
+    {
+      "geometry": {
+        "coordinates": [
+          80.3060621,
+          6.7231047
+        ],
+        "type": "Point"
+      },
+      "properties": {
+        "candidate_id": "candidate-aa0097db3a370d9f",
+        "endpoint": 7816487662,
+        "feature_type": "endpoint_v",
+        "reasons": "[\"access\", \"bridge\", \"heading_incompatible\", \"layer\", \"missing_semantic_attributes\", \"motor_vehicle\", \"service\", \"tunnel\", \"vehicle\"]",
+        "status": "rejected"
+      },
+      "type": "Feature"
+    },
+    {
+      "geometry": {
+        "coordinates": [
+          [
+            80.3646925,
+            6.65515
+          ],
+          [
+            80.3647757,
+            6.6552326
+          ]
+        ],
+        "type": "LineString"
+      },
+      "properties": {
+        "already_connected": false,
+        "candidate_id": "candidate-b16ebc0b46fde81e",
+        "distance_m": 12.960103,
+        "endpoint_semantics": "{\"u\": {\"access\": {\"ambiguous\": false, \"missing\": true, \"values\": []}, \"bridge\": {\"ambiguous\": false, \"missing\": true, \"values\": []}, \"highway\": {\"ambiguous\": false, \"missing\": false, \"values\": [\"service\"]}, \"layer\": {\"ambiguous\": false, \"missing\": true, \"values\": []}, \"motor_vehicle\": {\"ambiguous\": false, \"missing\": true, \"values\": []}, \"service\": {\"ambiguous\": false, \"missing\": false, \"values\": [\"driveway\"]}, \"tunnel\": {\"ambiguous\": false, \"missing\": true, \"values\": []}, \"vehicle\": {\"ambiguous\": false, \"missing\": true, \"values\": []}}, \"v\": {\"access\": {\"ambiguous\": false, \"missing\": true, \"values\": []}, \"bridge\": {\"ambiguous\": false, \"missing\": true, \"values\": []}, \"highway\": {\"ambiguous\": false, \"missing\": false, \"values\": [\"service\"]}, \"layer\": {\"ambiguous\": false, \"missing\": true, \"values\": []}, \"motor_vehicle\": {\"ambiguous\": false, \"missing\": true, \"values\": []}, \"service\": {\"ambiguous\": false, \"missing\": false, \"values\": [\"driveway\"]}, \"tunnel\": {\"ambiguous\": false, \"missing\": true, \"values\": []}, \"vehicle\": {\"ambiguous\": false, \"missing\": true, \"values\": []}}}",
+        "endpoint_u": 8034935799,
+        "endpoint_v": 8034935800,
+        "feature_type": "candidate_connection",
+        "heading_compatible": false,
+        "heading_deviation_degrees": 160.487031,
+        "heading_u_degrees": 316.645977,
+        "heading_v_degrees": 336.158947,
+        "reasons": [
+          "access",
+          "bridge",
+          "heading_incompatible",
+          "layer",
+          "missing_semantic_attributes",
+          "motor_vehicle",
+          "tunnel",
+          "vehicle"
+        ],
+        "semantic_conflicts": [],
+        "semantic_missing_attributes": [
+          "access",
+          "bridge",
+          "layer",
+          "motor_vehicle",
+          "tunnel",
+          "vehicle"
+        ],
+        "status": "rejected"
+      },
+      "type": "Feature"
+    },
+    {
+      "geometry": {
+        "coordinates": [
+          80.3646925,
+          6.65515
+        ],
+        "type": "Point"
+      },
+      "properties": {
+        "candidate_id": "candidate-b16ebc0b46fde81e",
+        "endpoint": 8034935799,
+        "feature_type": "endpoint_u",
+        "reasons": "[\"access\", \"bridge\", \"heading_incompatible\", \"layer\", \"missing_semantic_attributes\", \"motor_vehicle\", \"tunnel\", \"vehicle\"]",
+        "status": "rejected"
+      },
+      "type": "Feature"
+    },
+    {
+      "geometry": {
+        "coordinates": [
+          80.3647757,
+          6.6552326
+        ],
+        "type": "Point"
+      },
+      "properties": {
+        "candidate_id": "candidate-b16ebc0b46fde81e",
+        "endpoint": 8034935800,
+        "feature_type": "endpoint_v",
+        "reasons": "[\"access\", \"bridge\", \"heading_incompatible\", \"layer\", \"missing_semantic_attributes\", \"motor_vehicle\", \"tunnel\", \"vehicle\"]",
+        "status": "rejected"
+      },
+      "type": "Feature"
+    },
+    {
+      "geometry": {
+        "coordinates": [
+          [
+            80.3902695,
+            6.6724151
+          ],
+          [
+            80.3901829,
+            6.6722881
+          ]
+        ],
+        "type": "LineString"
+      },
+      "properties": {
+        "already_connected": false,
+        "candidate_id": "candidate-ca70a9675ece166b",
+        "distance_m": 16.992563,
+        "endpoint_semantics": "{\"u\": {\"access\": {\"ambiguous\": false, \"missing\": true, \"values\": []}, \"bridge\": {\"ambiguous\": false, \"missing\": true, \"values\": []}, \"highway\": {\"ambiguous\": false, \"missing\": false, \"values\": [\"service\"]}, \"layer\": {\"ambiguous\": false, \"missing\": true, \"values\": []}, \"motor_vehicle\": {\"ambiguous\": false, \"missing\": true, \"values\": []}, \"service\": {\"ambiguous\": false, \"missing\": true, \"values\": []}, \"tunnel\": {\"ambiguous\": false, \"missing\": true, \"values\": []}, \"vehicle\": {\"ambiguous\": false, \"missing\": true, \"values\": []}}, \"v\": {\"access\": {\"ambiguous\": false, \"missing\": true, \"values\": []}, \"bridge\": {\"ambiguous\": false, \"missing\": true, \"values\": []}, \"highway\": {\"ambiguous\": false, \"missing\": false, \"values\": [\"residential\"]}, \"layer\": {\"ambiguous\": false, \"missing\": true, \"values\": []}, \"motor_vehicle\": {\"ambiguous\": false, \"missing\": true, \"values\": []}, \"service\": {\"ambiguous\": false, \"missing\": true, \"values\": []}, \"tunnel\": {\"ambiguous\": false, \"missing\": true, \"values\": []}, \"vehicle\": {\"ambiguous\": false, \"missing\": true, \"values\": []}}}",
+        "endpoint_u": 5155424291,
+        "endpoint_v": 7822452099,
+        "feature_type": "candidate_connection",
+        "heading_compatible": true,
+        "heading_deviation_degrees": 18.381546,
+        "heading_u_degrees": 30.34063,
+        "heading_v_degrees": 228.722175,
+        "reasons": [
+          "access",
+          "bridge",
+          "layer",
+          "missing_semantic_attributes",
+          "motor_vehicle",
+          "service",
+          "tunnel",
+          "vehicle"
+        ],
+        "semantic_conflicts": [],
+        "semantic_missing_attributes": [
+          "access",
+          "bridge",
+          "layer",
+          "motor_vehicle",
+          "service",
+          "tunnel",
+          "vehicle"
+        ],
+        "status": "needs_review"
+      },
+      "type": "Feature"
+    },
+    {
+      "geometry": {
+        "coordinates": [
+          80.3902695,
+          6.6724151
+        ],
+        "type": "Point"
+      },
+      "properties": {
+        "candidate_id": "candidate-ca70a9675ece166b",
+        "endpoint": 5155424291,
+        "feature_type": "endpoint_u",
+        "reasons": "[\"access\", \"bridge\", \"layer\", \"missing_semantic_attributes\", \"motor_vehicle\", \"service\", \"tunnel\", \"vehicle\"]",
+        "status": "needs_review"
+      },
+      "type": "Feature"
+    },
+    {
+      "geometry": {
+        "coordinates": [
+          80.3901829,
+          6.6722881
+        ],
+        "type": "Point"
+      },
+      "properties": {
+        "candidate_id": "candidate-ca70a9675ece166b",
+        "endpoint": 7822452099,
+        "feature_type": "endpoint_v",
+        "reasons": "[\"access\", \"bridge\", \"layer\", \"missing_semantic_attributes\", \"motor_vehicle\", \"service\", \"tunnel\", \"vehicle\"]",
+        "status": "needs_review"
+      },
+      "type": "Feature"
+    },
+    {
+      "geometry": {
+        "coordinates": [
+          [
+            80.362772,
+            6.6941407
+          ],
+          [
+            80.362757,
+            6.6939694
+          ]
+        ],
+        "type": "LineString"
+      },
+      "properties": {
+        "already_connected": false,
+        "candidate_id": "candidate-d04a8de730415b92",
+        "distance_m": 19.009978,
+        "endpoint_semantics": "{\"u\": {\"access\": {\"ambiguous\": false, \"missing\": true, \"values\": []}, \"bridge\": {\"ambiguous\": false, \"missing\": true, \"values\": []}, \"highway\": {\"ambiguous\": false, \"missing\": false, \"values\": [\"residential\"]}, \"layer\": {\"ambiguous\": false, \"missing\": true, \"values\": []}, \"motor_vehicle\": {\"ambiguous\": false, \"missing\": true, \"values\": []}, \"service\": {\"ambiguous\": false, \"missing\": true, \"values\": []}, \"tunnel\": {\"ambiguous\": false, \"missing\": true, \"values\": []}, \"vehicle\": {\"ambiguous\": false, \"missing\": true, \"values\": []}}, \"v\": {\"access\": {\"ambiguous\": false, \"missing\": true, \"values\": []}, \"bridge\": {\"ambiguous\": false, \"missing\": true, \"values\": []}, \"highway\": {\"ambiguous\": false, \"missing\": false, \"values\": [\"residential\"]}, \"layer\": {\"ambiguous\": false, \"missing\": true, \"values\": []}, \"motor_vehicle\": {\"ambiguous\": false, \"missing\": true, \"values\": []}, \"service\": {\"ambiguous\": false, \"missing\": true, \"values\": []}, \"tunnel\": {\"ambiguous\": false, \"missing\": true, \"values\": []}, \"vehicle\": {\"ambiguous\": false, \"missing\": true, \"values\": []}}}",
+        "endpoint_u": 8038884532,
+        "endpoint_v": 8038884535,
+        "feature_type": "candidate_connection",
+        "heading_compatible": false,
+        "heading_deviation_degrees": 87.173036,
+        "heading_u_degrees": 236.124109,
+        "heading_v_degrees": 143.297145,
+        "reasons": [
+          "access",
+          "bridge",
+          "heading_incompatible",
+          "layer",
+          "missing_semantic_attributes",
+          "motor_vehicle",
+          "service",
+          "tunnel",
+          "vehicle"
+        ],
+        "semantic_conflicts": [],
+        "semantic_missing_attributes": [
+          "access",
+          "bridge",
+          "layer",
+          "motor_vehicle",
+          "service",
+          "tunnel",
+          "vehicle"
+        ],
+        "status": "rejected"
+      },
+      "type": "Feature"
+    },
+    {
+      "geometry": {
+        "coordinates": [
+          80.362772,
+          6.6941407
+        ],
+        "type": "Point"
+      },
+      "properties": {
+        "candidate_id": "candidate-d04a8de730415b92",
+        "endpoint": 8038884532,
+        "feature_type": "endpoint_u",
+        "reasons": "[\"access\", \"bridge\", \"heading_incompatible\", \"layer\", \"missing_semantic_attributes\", \"motor_vehicle\", \"service\", \"tunnel\", \"vehicle\"]",
+        "status": "rejected"
+      },
+      "type": "Feature"
+    },
+    {
+      "geometry": {
+        "coordinates": [
+          80.362757,
+          6.6939694
+        ],
+        "type": "Point"
+      },
+      "properties": {
+        "candidate_id": "candidate-d04a8de730415b92",
+        "endpoint": 8038884535,
+        "feature_type": "endpoint_v",
+        "reasons": "[\"access\", \"bridge\", \"heading_incompatible\", \"layer\", \"missing_semantic_attributes\", \"motor_vehicle\", \"service\", \"tunnel\", \"vehicle\"]",
+        "status": "rejected"
+      },
+      "type": "Feature"
+    },
+    {
+      "geometry": {
+        "coordinates": [
+          [
+            80.4746228,
+            6.7082327
+          ],
+          [
+            80.4745772,
+            6.708194
+          ]
+        ],
+        "type": "LineString"
+      },
+      "properties": {
+        "already_connected": false,
+        "candidate_id": "candidate-d8d49f0fbae385b6",
+        "distance_m": 6.610874,
+        "endpoint_semantics": "{\"u\": {\"access\": {\"ambiguous\": false, \"missing\": true, \"values\": []}, \"bridge\": {\"ambiguous\": false, \"missing\": true, \"values\": []}, \"highway\": {\"ambiguous\": false, \"missing\": false, \"values\": [\"unclassified\"]}, \"layer\": {\"ambiguous\": false, \"missing\": true, \"values\": []}, \"motor_vehicle\": {\"ambiguous\": false, \"missing\": true, \"values\": []}, \"service\": {\"ambiguous\": false, \"missing\": true, \"values\": []}, \"tunnel\": {\"ambiguous\": false, \"missing\": true, \"values\": []}, \"vehicle\": {\"ambiguous\": false, \"missing\": true, \"values\": []}}, \"v\": {\"access\": {\"ambiguous\": false, \"missing\": true, \"values\": []}, \"bridge\": {\"ambiguous\": false, \"missing\": true, \"values\": []}, \"highway\": {\"ambiguous\": false, \"missing\": false, \"values\": [\"unclassified\"]}, \"layer\": {\"ambiguous\": false, \"missing\": true, \"values\": []}, \"motor_vehicle\": {\"ambiguous\": false, \"missing\": true, \"values\": []}, \"service\": {\"ambiguous\": false, \"missing\": true, \"values\": []}, \"tunnel\": {\"ambiguous\": false, \"missing\": true, \"values\": []}, \"vehicle\": {\"ambiguous\": false, \"missing\": true, \"values\": []}}}",
+        "endpoint_u": 7539851914,
+        "endpoint_v": 7827693508,
+        "feature_type": "candidate_connection",
+        "heading_compatible": false,
+        "heading_deviation_degrees": 84.445654,
+        "heading_u_degrees": 313.137598,
+        "heading_v_degrees": 217.583253,
+        "reasons": [
+          "access",
+          "bridge",
+          "heading_incompatible",
+          "layer",
+          "missing_semantic_attributes",
+          "motor_vehicle",
+          "service",
+          "tunnel",
+          "vehicle"
+        ],
+        "semantic_conflicts": [],
+        "semantic_missing_attributes": [
+          "access",
+          "bridge",
+          "layer",
+          "motor_vehicle",
+          "service",
+          "tunnel",
+          "vehicle"
+        ],
+        "status": "rejected"
+      },
+      "type": "Feature"
+    },
+    {
+      "geometry": {
+        "coordinates": [
+          80.4746228,
+          6.7082327
+        ],
+        "type": "Point"
+      },
+      "properties": {
+        "candidate_id": "candidate-d8d49f0fbae385b6",
+        "endpoint": 7539851914,
+        "feature_type": "endpoint_u",
+        "reasons": "[\"access\", \"bridge\", \"heading_incompatible\", \"layer\", \"missing_semantic_attributes\", \"motor_vehicle\", \"service\", \"tunnel\", \"vehicle\"]",
+        "status": "rejected"
+      },
+      "type": "Feature"
+    },
+    {
+      "geometry": {
+        "coordinates": [
+          80.4745772,
+          6.708194
+        ],
+        "type": "Point"
+      },
+      "properties": {
+        "candidate_id": "candidate-d8d49f0fbae385b6",
+        "endpoint": 7827693508,
+        "feature_type": "endpoint_v",
+        "reasons": "[\"access\", \"bridge\", \"heading_incompatible\", \"layer\", \"missing_semantic_attributes\", \"motor_vehicle\", \"service\", \"tunnel\", \"vehicle\"]",
+        "status": "rejected"
+      },
+      "type": "Feature"
+    },
+    {
+      "geometry": {
+        "coordinates": [
+          [
+            80.316744,
+            6.6218751
+          ],
+          [
+            80.316866,
+            6.6219471
+          ]
+        ],
+        "type": "LineString"
+      },
+      "properties": {
+        "already_connected": false,
+        "candidate_id": "candidate-e3771c35e8764d33",
+        "distance_m": 15.660293,
+        "endpoint_semantics": "{\"u\": {\"access\": {\"ambiguous\": false, \"missing\": true, \"values\": []}, \"bridge\": {\"ambiguous\": false, \"missing\": true, \"values\": []}, \"highway\": {\"ambiguous\": false, \"missing\": false, \"values\": [\"residential\"]}, \"layer\": {\"ambiguous\": false, \"missing\": true, \"values\": []}, \"motor_vehicle\": {\"ambiguous\": false, \"missing\": true, \"values\": []}, \"service\": {\"ambiguous\": false, \"missing\": true, \"values\": []}, \"tunnel\": {\"ambiguous\": false, \"missing\": true, \"values\": []}, \"vehicle\": {\"ambiguous\": false, \"missing\": true, \"values\": []}}, \"v\": {\"access\": {\"ambiguous\": false, \"missing\": true, \"values\": []}, \"bridge\": {\"ambiguous\": false, \"missing\": false, \"values\": [\"yes\"]}, \"highway\": {\"ambiguous\": false, \"missing\": false, \"values\": [\"residential\"]}, \"layer\": {\"ambiguous\": false, \"missing\": false, \"values\": [\"1\"]}, \"motor_vehicle\": {\"ambiguous\": false, \"missing\": true, \"values\": []}, \"service\": {\"ambiguous\": false, \"missing\": true, \"values\": []}, \"tunnel\": {\"ambiguous\": false, \"missing\": true, \"values\": []}, \"vehicle\": {\"ambiguous\": false, \"missing\": true, \"values\": []}}}",
+        "endpoint_u": 7517690473,
+        "endpoint_v": 7517690475,
+        "feature_type": "candidate_connection",
+        "heading_compatible": false,
+        "heading_deviation_degrees": 71.263664,
+        "heading_u_degrees": 142.769945,
+        "heading_v_degrees": 34.033609,
+        "reasons": [
+          "access",
+          "bridge",
+          "bridge_context_requires_review",
+          "heading_incompatible",
+          "layer",
+          "layer_context_requires_review",
+          "missing_semantic_attributes",
+          "motor_vehicle",
+          "service",
+          "tunnel",
+          "vehicle"
+        ],
+        "semantic_conflicts": [],
+        "semantic_missing_attributes": [
+          "access",
+          "bridge",
+          "layer",
+          "motor_vehicle",
+          "service",
+          "tunnel",
+          "vehicle"
+        ],
+        "status": "rejected"
+      },
+      "type": "Feature"
+    },
+    {
+      "geometry": {
+        "coordinates": [
+          80.316744,
+          6.6218751
+        ],
+        "type": "Point"
+      },
+      "properties": {
+        "candidate_id": "candidate-e3771c35e8764d33",
+        "endpoint": 7517690473,
+        "feature_type": "endpoint_u",
+        "reasons": "[\"access\", \"bridge\", \"bridge_context_requires_review\", \"heading_incompatible\", \"layer\", \"layer_context_requires_review\", \"missing_semantic_attributes\", \"motor_vehicle\", \"service\", \"tunnel\", \"vehicle\"]",
+        "status": "rejected"
+      },
+      "type": "Feature"
+    },
+    {
+      "geometry": {
+        "coordinates": [
+          80.316866,
+          6.6219471
+        ],
+        "type": "Point"
+      },
+      "properties": {
+        "candidate_id": "candidate-e3771c35e8764d33",
+        "endpoint": 7517690475,
+        "feature_type": "endpoint_v",
+        "reasons": "[\"access\", \"bridge\", \"bridge_context_requires_review\", \"heading_incompatible\", \"layer\", \"layer_context_requires_review\", \"missing_semantic_attributes\", \"motor_vehicle\", \"service\", \"tunnel\", \"vehicle\"]",
+        "status": "rejected"
+      },
+      "type": "Feature"
+    },
+    {
+      "geometry": {
+        "coordinates": [
+          [
+            80.2092696467544,
+            6.709712053196414
+          ],
+          [
+            80.20931568235662,
+            6.709607260045892
+          ]
+        ],
+        "type": "LineString"
+      },
+      "properties": {
+        "already_connected": false,
+        "candidate_id": "candidate-ec9afd28afba9f64",
+        "distance_m": 12.653593,
+        "endpoint_semantics": "{\"u\": {\"access\": {\"ambiguous\": false, \"missing\": true, \"values\": []}, \"bridge\": {\"ambiguous\": false, \"missing\": true, \"values\": []}, \"highway\": {\"ambiguous\": false, \"missing\": false, \"values\": [\"residential\"]}, \"layer\": {\"ambiguous\": false, \"missing\": true, \"values\": []}, \"motor_vehicle\": {\"ambiguous\": false, \"missing\": true, \"values\": []}, \"service\": {\"ambiguous\": false, \"missing\": true, \"values\": []}, \"tunnel\": {\"ambiguous\": false, \"missing\": true, \"values\": []}, \"vehicle\": {\"ambiguous\": false, \"missing\": true, \"values\": []}}, \"v\": {\"access\": {\"ambiguous\": false, \"missing\": true, \"values\": []}, \"bridge\": {\"ambiguous\": false, \"missing\": true, \"values\": []}, \"highway\": {\"ambiguous\": false, \"missing\": false, \"values\": [\"residential\"]}, \"layer\": {\"ambiguous\": false, \"missing\": true, \"values\": []}, \"motor_vehicle\": {\"ambiguous\": false, \"missing\": true, \"values\": []}, \"service\": {\"ambiguous\": false, \"missing\": true, \"values\": []}, \"tunnel\": {\"ambiguous\": false, \"missing\": true, \"values\": []}, \"vehicle\": {\"ambiguous\": false, \"missing\": true, \"values\": []}}}",
+        "endpoint_u": -653902654968259224,
+        "endpoint_v": -937851896392589107,
+        "feature_type": "candidate_connection",
+        "heading_compatible": false,
+        "heading_deviation_degrees": 165.855505,
+        "heading_u_degrees": 3.35368,
+        "heading_v_degrees": 349.209185,
+        "reasons": [
+          "access",
+          "bridge",
+          "heading_incompatible",
+          "layer",
+          "missing_semantic_attributes",
+          "motor_vehicle",
+          "service",
+          "tunnel",
+          "vehicle"
+        ],
+        "semantic_conflicts": [],
+        "semantic_missing_attributes": [
+          "access",
+          "bridge",
+          "layer",
+          "motor_vehicle",
+          "service",
+          "tunnel",
+          "vehicle"
+        ],
+        "status": "rejected"
+      },
+      "type": "Feature"
+    },
+    {
+      "geometry": {
+        "coordinates": [
+          80.2092696467544,
+          6.709712053196414
+        ],
+        "type": "Point"
+      },
+      "properties": {
+        "candidate_id": "candidate-ec9afd28afba9f64",
+        "endpoint": -653902654968259224,
+        "feature_type": "endpoint_u",
+        "reasons": "[\"access\", \"bridge\", \"heading_incompatible\", \"layer\", \"missing_semantic_attributes\", \"motor_vehicle\", \"service\", \"tunnel\", \"vehicle\"]",
+        "status": "rejected"
+      },
+      "type": "Feature"
+    },
+    {
+      "geometry": {
+        "coordinates": [
+          80.20931568235662,
+          6.709607260045892
+        ],
+        "type": "Point"
+      },
+      "properties": {
+        "candidate_id": "candidate-ec9afd28afba9f64",
+        "endpoint": -937851896392589107,
+        "feature_type": "endpoint_v",
+        "reasons": "[\"access\", \"bridge\", \"heading_incompatible\", \"layer\", \"missing_semantic_attributes\", \"motor_vehicle\", \"service\", \"tunnel\", \"vehicle\"]",
+        "status": "rejected"
+      },
+      "type": "Feature"
+    },
+    {
+      "geometry": {
+        "coordinates": [
+          [
+            80.34683234916261,
+            7.387574418934373
+          ],
+          [
+            80.34689897841751,
+            7.387634307675132
+          ]
+        ],
+        "type": "LineString"
+      },
+      "properties": {
+        "already_connected": false,
+        "candidate_id": "candidate-fb32c3156d1da78b",
+        "distance_m": 9.895052,
+        "endpoint_semantics": "{\"u\": {\"access\": {\"ambiguous\": false, \"missing\": false, \"values\": [\"yes\"]}, \"bridge\": {\"ambiguous\": false, \"missing\": true, \"values\": []}, \"highway\": {\"ambiguous\": false, \"missing\": false, \"values\": [\"primary\"]}, \"layer\": {\"ambiguous\": false, \"missing\": true, \"values\": []}, \"motor_vehicle\": {\"ambiguous\": false, \"missing\": false, \"values\": [\"yes\"]}, \"service\": {\"ambiguous\": false, \"missing\": true, \"values\": []}, \"tunnel\": {\"ambiguous\": false, \"missing\": true, \"values\": []}, \"vehicle\": {\"ambiguous\": false, \"missing\": true, \"values\": []}}, \"v\": {\"access\": {\"ambiguous\": false, \"missing\": false, \"values\": [\"yes\"]}, \"bridge\": {\"ambiguous\": false, \"missing\": true, \"values\": []}, \"highway\": {\"ambiguous\": false, \"missing\": false, \"values\": [\"primary\"]}, \"layer\": {\"ambiguous\": false, \"missing\": true, \"values\": []}, \"motor_vehicle\": {\"ambiguous\": false, \"missing\": false, \"values\": [\"yes\"]}, \"service\": {\"ambiguous\": false, \"missing\": true, \"values\": []}, \"tunnel\": {\"ambiguous\": false, \"missing\": true, \"values\": []}, \"vehicle\": {\"ambiguous\": false, \"missing\": true, \"values\": []}}}",
+        "endpoint_u": -467414038942128076,
+        "endpoint_v": -591932740699791753,
+        "feature_type": "candidate_connection",
+        "heading_compatible": false,
+        "heading_deviation_degrees": 78.611324,
+        "heading_u_degrees": 248.673265,
+        "heading_v_degrees": 350.061941,
+        "reasons": [
+          "bridge",
+          "heading_incompatible",
+          "layer",
+          "missing_semantic_attributes",
+          "service",
+          "tunnel",
+          "vehicle"
+        ],
+        "semantic_conflicts": [],
+        "semantic_missing_attributes": [
+          "bridge",
+          "layer",
+          "service",
+          "tunnel",
+          "vehicle"
+        ],
+        "status": "rejected"
+      },
+      "type": "Feature"
+    },
+    {
+      "geometry": {
+        "coordinates": [
+          80.34683234916261,
+          7.387574418934373
+        ],
+        "type": "Point"
+      },
+      "properties": {
+        "candidate_id": "candidate-fb32c3156d1da78b",
+        "endpoint": -467414038942128076,
+        "feature_type": "endpoint_u",
+        "reasons": "[\"bridge\", \"heading_incompatible\", \"layer\", \"missing_semantic_attributes\", \"service\", \"tunnel\", \"vehicle\"]",
+        "status": "rejected"
+      },
+      "type": "Feature"
+    },
+    {
+      "geometry": {
+        "coordinates": [
+          80.34689897841751,
+          7.387634307675132
+        ],
+        "type": "Point"
+      },
+      "properties": {
+        "candidate_id": "candidate-fb32c3156d1da78b",
+        "endpoint": -591932740699791753,
+        "feature_type": "endpoint_v",
+        "reasons": "[\"bridge\", \"heading_incompatible\", \"layer\", \"missing_semantic_attributes\", \"service\", \"tunnel\", \"vehicle\"]",
+        "status": "rejected"
+      },
+      "type": "Feature"
+    }
+  ],
+  "type": "FeatureCollection"
+}
