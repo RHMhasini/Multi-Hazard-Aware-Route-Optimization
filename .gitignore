@@ -48,6 +48,12 @@ outputs/maps/*
 outputs/evaluation/*
 !outputs/evaluation/.gitkeep
 
+# React / Vite frontend
+frontend/node_modules/
+frontend/dist/
+frontend/.env
+frontend/.env.*
+frontend/.vite/
+
 # Jupyter Notebook checkpoints
 .ipynb_checkpoints/
-
