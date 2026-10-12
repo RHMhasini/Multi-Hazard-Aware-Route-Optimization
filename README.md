@@ -65,3 +65,28 @@ road_network_graph/
    ```bash
    python scripts/verify_environment.py
    ```
+
+### Frontend Environment
+
+The React frontend is isolated under `frontend/` and does not share dependencies
+with the Python backend. It uses React, TypeScript, Vite, Tailwind CSS, and
+Leaflet/React-Leaflet for the future map surface:
+
+```bash
+cd frontend
+npm install
+npm run dev
+```
+
+Run the read-only Component 2 API from the repository root in a second terminal:
+
+```bash
+python scripts/c2_api.py
+```
+
+The API serves `/api/health`, `/api/summary`, `/api/candidates`, and bounded
+`/api/roads?bbox=minLon,minLat,maxLon,maxLat` requests. Roads are derived from
+the direction-normalized OSM graph using real endpoint coordinates; the full
+GraphML file is never sent to the browser. The frontend displays candidate
+evidence and repair counts from the existing reports, and cannot approve or
+apply repairs. The API rejects malformed or overly broad road requests.
