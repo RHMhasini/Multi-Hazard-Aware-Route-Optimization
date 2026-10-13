@@ -33,6 +33,7 @@ data/raw/*
 !data/raw/.gitkeep
 !data/raw/c2_sabaragamuwa_osm_metadata.json
 !data/raw/c2_sabaragamuwa_boundary.geojson
+!data/raw/c2_sabaragamuwa_district_boundaries.geojson
 data/intermediate/*
 !data/intermediate/.gitkeep
 data/processed/*

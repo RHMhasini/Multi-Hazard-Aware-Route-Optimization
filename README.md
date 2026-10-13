@@ -91,6 +91,13 @@ the direction-normalized OSM graph using real endpoint coordinates; the full
 GraphML file is never sent to the browser. The frontend displays candidate
 evidence and repair counts from the existing reports, and cannot approve or
 apply repairs. The API rejects malformed or overly broad road requests.
+The normalized GraphML road network is a local generated artifact and is not
+included in a fresh checkout. The API and frontend can start using the commands
+above, but road requests need
+`data/intermediate/c2_sabaragamuwa_direction_normalized_graph.graphml`. The
+raw PBF cache is also excluded; provide it at `cache/sri-lanka-latest.osm.pbf`
+before running the extraction and graph-processing scripts to recreate the
+network.
 
 The dashboard initially selects Ratnapura and Kegalle. District road and
 candidate requests use the verified polygons in
@@ -103,6 +110,12 @@ It is attributed to geoBoundaries, with boundary source OpenStreetMap /
 Wambacher, boundary vintage 2017, and CRS EPSG:4326. Only these two district
 polygons are included for this prototype; the boundaries are administrative
 reference data and may not reflect later revisions.
+The geoBoundaries gbOpen release is provided under [CC BY 4.0](https://github.com/wmgeolab/geoBoundaries/blob/9469f09/LICENSE).
+The listed OpenStreetMap source data is available under the [ODbL 1.0](https://www.openstreetmap.org/copyright).
+Credit geoBoundaries and OpenStreetMap / Wambacher when reusing these boundaries.
+The unchanged province polygon was obtained through the project's OSM Nominatim
+geocoding step; its extraction date is recorded as 2026-10-07 in the OSM
+metadata file. It uses CRS84 coordinates and OpenStreetMap attribution.
 
 The map fits the authoritative province boundary on load and masks the
 surrounding basemap in the browser using a polygon with the province exterior
