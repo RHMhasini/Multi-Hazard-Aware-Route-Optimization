@@ -1,6 +1,7 @@
-import { useCallback, useEffect, useState } from 'react'
-import { MapContainer, TileLayer, GeoJSON, useMapEvents } from 'react-leaflet'
+import { useCallback, useEffect, useRef, useState } from 'react'
+import { MapContainer, TileLayer, GeoJSON, useMap, useMapEvents } from 'react-leaflet'
 import type { Feature, FeatureCollection, GeoJsonObject } from 'geojson'
+import { geoJSON } from 'leaflet'
 import type { Layer, PathOptions } from 'leaflet'
 import 'leaflet/dist/leaflet.css'
 
@@ -25,17 +26,76 @@ type CandidateProperties = {
 }
 
 type CandidateFeature = Feature & { properties?: CandidateProperties }
+type DistrictName = 'Ratnapura' | 'Kegalle'
+type BoundaryFeature = Feature & { properties?: { boundary_type?: string; district?: DistrictName; name?: string } }
+type BoundaryCollection = FeatureCollection & { features: BoundaryFeature[] }
 
-const API_BASE = import.meta.env.VITE_API_BASE ?? ''
-const initialBounds = '80.20,7.20,80.25,7.25'
+const districtNames: DistrictName[] = ['Ratnapura', 'Kegalle']
+
+function provinceMask(boundaries: BoundaryCollection | null): Feature | null {
+  const province = boundaries?.features.find((feature) => feature.properties?.boundary_type === 'province')
+  const geometry = province?.geometry
+  if (!geometry || (geometry.type !== 'Polygon' && geometry.type !== 'MultiPolygon')) return null
+  const polygons = geometry.type === 'Polygon' ? [geometry.coordinates] : geometry.coordinates
+  if (polygons.some((polygon) => polygon.length === 0 || polygon[0].length < 4)) return null
+  const exteriorRings = polygons.map((polygon) => polygon[0])
+  const interiorRings = polygons.flatMap((polygon) => polygon.slice(1))
+  const world: number[][] = [[-180, -85], [180, -85], [180, 85], [-180, 85], [-180, -85]]
+  return {
+    type: 'Feature',
+    properties: {},
+    geometry: {
+      type: 'MultiPolygon',
+      coordinates: [[world, ...exteriorRings], ...interiorRings.map((ring) => [ring])],
+    },
+  }
+}
 
 async function getJson<T>(path: string): Promise<T> {
-  const response = await fetch(`${API_BASE}${path}`)
-  if (!response.ok) {
-    const error = (await response.json().catch(() => ({}))) as { error?: string }
-    throw new Error(error.error ?? `Request failed (${response.status})`)
+  const response = await fetch(path)
+  const body = await response.text()
+  const contentType = response.headers.get('content-type') ?? ''
+  let payload: unknown
+
+  try {
+    payload = JSON.parse(body)
+  } catch {
+    const preview = body.replace(/\s+/g, ' ').slice(0, 120)
+    throw new Error(
+      `API returned a non-JSON response for ${path} (${response.status}, ${contentType || 'unknown content type'}): ${preview || 'empty response'}`,
+    )
   }
-  return response.json() as Promise<T>
+
+  if (!response.ok) {
+    const error = payload as { error?: string }
+    throw new Error(error.error ?? `API request failed for ${path} (${response.status})`)
+  }
+
+  if (!contentType.toLowerCase().includes('application/json')) {
+    throw new Error(`API returned JSON with an unexpected content type for ${path}: ${contentType || 'missing content type'}`)
+  }
+
+  return payload as T
+}
+
+async function getRoadsForBounds(bounds: number[], districts: string, depth = 0): Promise<FeatureCollection> {
+  const bbox = bounds.join(',')
+  try {
+    return await getJson<FeatureCollection>(`/api/roads?districts=${districts}&bbox=${encodeURIComponent(bbox)}`)
+  } catch (reason) {
+    if (!(reason instanceof Error) || !reason.message.includes('too many road segments') || depth >= 6) throw reason
+    const [minLon, minLat, maxLon, maxLat] = bounds
+    const midLon = (minLon + maxLon) / 2
+    const midLat = (minLat + maxLat) / 2
+    const quadrants = [
+      [minLon, minLat, midLon, midLat],
+      [midLon, minLat, maxLon, midLat],
+      [minLon, midLat, midLon, maxLat],
+      [midLon, midLat, maxLon, maxLat],
+    ]
+    const collections = await Promise.all(quadrants.map((quadrant) => getRoadsForBounds(quadrant, districts, depth + 1)))
+    return { type: 'FeatureCollection', features: collections.flatMap((collection) => collection.features) }
+  }
 }
 
 function ViewportRoads({ onBounds }: { onBounds: (bbox: string) => void }) {
@@ -53,6 +113,25 @@ function ViewportRoads({ onBounds }: { onBounds: (bbox: string) => void }) {
   return null
 }
 
+function FitSelectedDistricts({ boundaries, selected }: { boundaries: BoundaryCollection | null; selected: DistrictName[] }) {
+  const map = useMap()
+  const initialFit = useRef(true)
+
+  useEffect(() => {
+    if (!boundaries) return
+    const features = initialFit.current
+      ? boundaries.features.filter((feature) => feature.properties?.boundary_type === 'province')
+      : boundaries.features.filter((feature) => selected.includes(feature.properties?.district as DistrictName))
+    initialFit.current = false
+    if (features.length === 0) return
+    const selectedFeatures: FeatureCollection = { type: 'FeatureCollection', features }
+    const bounds = geoJSON(selectedFeatures).getBounds()
+    if (bounds.isValid()) map.fitBounds(bounds, { padding: [20, 20] })
+  }, [boundaries, map, selected])
+
+  return null
+}
+
 function candidateStyle(feature?: Feature): PathOptions {
   const status = (feature as CandidateFeature | undefined)?.properties?.status
   if (status === 'eligible') return { color: '#16a34a', weight: 4 }
@@ -67,34 +146,48 @@ function App() {
   const [roadError, setRoadError] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [loadingRoads, setLoadingRoads] = useState(true)
+  const [boundaries, setBoundaries] = useState<BoundaryCollection | null>(null)
+  const [boundaryError, setBoundaryError] = useState<string | null>(null)
+  const [selectedDistricts, setSelectedDistricts] = useState<DistrictName[]>(districtNames)
 
   useEffect(() => {
-    Promise.all([
-      getJson<Summary>('/api/summary'),
-      getJson<FeatureCollection>('/api/candidates'),
-    ]).then(([nextSummary, nextCandidates]) => {
-      setSummary(nextSummary)
-      setCandidates(nextCandidates)
-    }).catch((reason: unknown) => {
-      setError(reason instanceof Error ? reason.message : 'Could not load research data')
+    getJson<Summary>('/api/summary').then(setSummary).catch((reason: unknown) => {
+      const message = reason instanceof Error ? reason.message : 'Could not load research data'
+      setError(message)
+    })
+    getJson<BoundaryCollection>('/api/boundaries').then(setBoundaries).catch((reason: unknown) => {
+      const message = reason instanceof Error ? reason.message : 'Could not load boundary data'
+      setBoundaryError(message)
     })
   }, [])
 
+  useEffect(() => {
+    if (selectedDistricts.length === 0) {
+      return
+    }
+    const districts = encodeURIComponent(selectedDistricts.join(','))
+    getJson<FeatureCollection>(`/api/candidates?districts=${districts}`)
+      .then(setCandidates)
+      .catch((reason: unknown) => setError(reason instanceof Error ? reason.message : 'Could not load district candidates'))
+  }, [selectedDistricts])
+
   const loadRoads = useCallback((bbox: string) => {
+    if (selectedDistricts.length === 0) {
+      setRoads(null)
+      setLoadingRoads(false)
+      return
+    }
     setLoadingRoads(true)
     setRoadError(null)
-    getJson<FeatureCollection>(`/api/roads?bbox=${encodeURIComponent(bbox)}`)
+    const districts = encodeURIComponent(selectedDistricts.join(','))
+    getRoadsForBounds(bbox.split(',').map(Number), districts)
       .then(setRoads)
       .catch((reason: unknown) => {
         setRoadError(reason instanceof Error ? reason.message : 'Could not load roads')
         setRoads(null)
       })
       .finally(() => setLoadingRoads(false))
-  }, [])
-
-  useEffect(() => {
-    loadRoads(initialBounds)
-  }, [loadRoads])
+  }, [selectedDistricts])
 
   const onEachCandidate = (feature: Feature, layer: Layer) => {
     const properties = (feature as CandidateFeature).properties ?? {}
@@ -109,6 +202,16 @@ function App() {
 
   const roadData = roads as GeoJsonObject | null
   const candidateData = candidates as GeoJsonObject | null
+  const selectedBoundaryData = boundaries
+    ? {
+        ...boundaries,
+        features: boundaries.features.filter((feature) =>
+          feature.properties?.boundary_type === 'province'
+          || selectedDistricts.includes(feature.properties?.district as DistrictName),
+        ),
+      }
+    : null
+  const mask = provinceMask(boundaries)
 
   return (
     <main className="min-h-screen">
@@ -121,6 +224,39 @@ function App() {
       </header>
       <section className="mx-auto max-w-7xl px-6 py-8">
         {error && <p className="mb-5 rounded-lg bg-red-50 p-4 text-sm text-red-800">{error}</p>}
+        <section className="mb-6 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+          <div className="flex flex-wrap items-center justify-between gap-4">
+            <div>
+              <h2 className="font-semibold text-slate-900">Select districts</h2>
+              <p className="mt-1 text-sm text-slate-600">Roads and candidate overlays are filtered to the selected verified boundaries.</p>
+            </div>
+            <div className="flex flex-wrap gap-5">
+              {districtNames.map((district) => (
+                <label className="flex items-center gap-2 text-sm font-medium text-slate-800" key={district}>
+                  <input
+                    checked={selectedDistricts.includes(district)}
+                    className="h-4 w-4 accent-blue-700"
+                    onChange={() => {
+                      const next = selectedDistricts.includes(district)
+                        ? selectedDistricts.filter((name) => name !== district)
+                        : [...selectedDistricts, district]
+                      if (next.length === 0) {
+                        setCandidates(null)
+                        setRoads(null)
+                        setLoadingRoads(false)
+                        setRoadError(null)
+                      }
+                      setSelectedDistricts(next)
+                    }}
+                    type="checkbox"
+                  />
+                  {district}
+                </label>
+              ))}
+            </div>
+          </div>
+          {boundaryError && <p className="mt-3 text-sm text-red-700">Verified district boundaries are unavailable: {boundaryError}</p>}
+        </section>
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
           {[
             ['Nodes', summary?.graph.nodes],
@@ -140,11 +276,19 @@ function App() {
             <div className="relative h-[620px]">
               <MapContainer center={[7.225, 80.225]} zoom={12} className="h-full w-full">
                 <TileLayer attribution="&copy; OpenStreetMap contributors" url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
+                <FitSelectedDistricts boundaries={boundaries} selected={selectedDistricts} />
                 <ViewportRoads onBounds={loadRoads} />
+                {mask && <GeoJSON data={mask as GeoJsonObject} interactive={false} style={{ color: 'transparent', weight: 0, fillColor: '#f1f5f9', fillOpacity: 1 }} />}
+                {selectedBoundaryData && <GeoJSON data={selectedBoundaryData} style={(feature) =>
+                  feature?.properties?.boundary_type === 'province'
+                    ? { color: '#0f172a', weight: 2, fill: false }
+                    : { color: '#2563eb', weight: 3, fill: false }
+                } />}
                 {roadData && <GeoJSON data={roadData} style={{ color: '#2563eb', weight: 1.5, opacity: 0.7 }} />}
                 {candidateData && <GeoJSON data={candidateData} style={candidateStyle} onEachFeature={onEachCandidate} />}
               </MapContainer>
-              {loadingRoads && <p className="absolute left-4 top-4 z-[1000] rounded bg-white px-3 py-2 text-xs font-medium shadow">Loading bounded road view…</p>}
+              {selectedDistricts.length === 0 && <p className="absolute left-4 right-4 top-4 z-[1000] rounded bg-white px-3 py-3 text-sm font-medium text-slate-700 shadow">Select at least one district to display its roads and candidate overlays.</p>}
+              {loadingRoads && selectedDistricts.length > 0 && <p className="absolute left-4 top-4 z-[1000] rounded bg-white px-3 py-2 text-xs font-medium shadow">Loading bounded district road view…</p>}
               {roadError && <p className="absolute bottom-4 left-4 right-4 z-[1000] rounded bg-red-50 px-3 py-2 text-xs text-red-800">{roadError}</p>}
             </div>
             <div className="flex flex-wrap gap-4 border-t border-slate-200 px-4 py-3 text-xs text-slate-600">

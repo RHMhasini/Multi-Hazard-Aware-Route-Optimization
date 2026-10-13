@@ -84,9 +84,29 @@ Run the read-only Component 2 API from the repository root in a second terminal:
 python scripts/c2_api.py
 ```
 
-The API serves `/api/health`, `/api/summary`, `/api/candidates`, and bounded
-`/api/roads?bbox=minLon,minLat,maxLon,maxLat` requests. Roads are derived from
+The API serves `/api/health`, `/api/summary`, `/api/boundaries`,
+`/api/candidates`, and bounded `/api/roads?bbox=minLon,minLat,maxLon,maxLat`
+requests. Roads are derived from
 the direction-normalized OSM graph using real endpoint coordinates; the full
 GraphML file is never sent to the browser. The frontend displays candidate
 evidence and repair counts from the existing reports, and cannot approve or
 apply repairs. The API rejects malformed or overly broad road requests.
+
+The dashboard initially selects Ratnapura and Kegalle. District road and
+candidate requests use the verified polygons in
+`data/raw/c2_sabaragamuwa_district_boundaries.geojson`, while the existing
+Sabaragamuwa Province boundary remains the maximum study-area limit. The local
+dataset is a reproducible two-district subset of geoBoundaries `gbOpen LKA
+ADM2`, retrieved on 2026-10-13 from the pinned
+[source GeoJSON](https://github.com/wmgeolab/geoBoundaries/raw/9469f09/releaseData/gbOpen/LKA/ADM2/geoBoundaries-LKA-ADM2.geojson).
+It is attributed to geoBoundaries, with boundary source OpenStreetMap /
+Wambacher, boundary vintage 2017, and CRS EPSG:4326. Only these two district
+polygons are included for this prototype; the boundaries are administrative
+reference data and may not reflect later revisions.
+
+The map fits the authoritative province boundary on load and masks the
+surrounding basemap in the browser using a polygon with the province exterior
+rings as holes. This is a visual mask: the Leaflet tile layer may still request
+tiles outside the province viewport, and the source raster tiles are not
+server-clipped. Road and candidate vector geometries are intersected with the
+province and selected district polygons before they are returned by the API.

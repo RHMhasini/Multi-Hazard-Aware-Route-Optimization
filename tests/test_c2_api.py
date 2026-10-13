@@ -44,7 +44,22 @@ def _fixture(tmp_path: Path) -> Component2Data:
     repair = tmp_path / "repair.json"
     repair.write_text(json.dumps({"before": {"graph_statistics": stats}, "accepted_repair_count": 0,
                                   "skipped_candidate_count": 0, "approval_count": 0}), encoding="utf-8")
-    return Component2Data(graph_path, candidates_path, candidate_report, baseline, repair)
+    province_path = tmp_path / "province.geojson"
+    province_path.write_text(json.dumps({
+        "type": "FeatureCollection",
+        "features": [{"type": "Feature", "geometry": {"type": "Polygon", "coordinates": [[[80, 7], [81, 7], [81, 8], [80, 8], [80, 7]]]}, "properties": {}}],
+    }), encoding="utf-8")
+    district_path = tmp_path / "districts.geojson"
+    district_path.write_text(json.dumps({
+        "type": "FeatureCollection",
+        "features": [
+            {"type": "Feature", "geometry": {"type": "Polygon", "coordinates": [[[80, 7], [80.5, 7], [80.5, 8], [80, 8], [80, 7]]]}, "properties": {"district": "Ratnapura"}},
+            {"type": "Feature", "geometry": {"type": "Polygon", "coordinates": [[[80.5, 7], [80.8, 7], [80.8, 8], [80.5, 8], [80.5, 7]]]}, "properties": {"district": "Kegalle"}},
+        ],
+    }), encoding="utf-8")
+    return Component2Data(
+        graph_path, candidates_path, candidate_report, baseline, repair, province_path, district_path,
+    )
 
 
 def test_health_summary_candidates_and_cors(tmp_path):
@@ -88,6 +103,57 @@ def test_missing_candidate_file_is_explicit(tmp_path):
     try:
         status, payload, _ = _get(server, "/api/candidates")
         assert status == 404 and "missing" in payload["error"]
+    finally:
+        server.shutdown()
+        thread.join()
+
+
+def test_district_filtering_keeps_only_selected_roads_and_candidates(tmp_path):
+    data = _fixture(tmp_path)
+    graph = nx.read_graphml(data.graph_path, force_multigraph=True)
+    graph.add_node("c", x="80.6", y="7.1")
+    graph.add_node("d", x="80.7", y="7.2")
+    graph.add_node("e", x="80.9", y="7.9")
+    graph.add_node("f", x="80.95", y="7.95")
+    graph.add_edge("c", "d", 0, length="20")
+    graph.add_edge("e", "f", 0, length="30")
+    nx.write_graphml(graph, data.graph_path)
+    data.candidates_path.write_text(json.dumps({
+        "type": "FeatureCollection",
+        "features": [
+            {"type": "Feature", "geometry": {"type": "LineString", "coordinates": [[80.2, 7.2], [80.3, 7.3]]}, "properties": {"candidate_id": "rat"}},
+            {"type": "Feature", "geometry": {"type": "LineString", "coordinates": [[80.6, 7.1], [80.7, 7.2]]}, "properties": {"candidate_id": "keg"}},
+            {"type": "Feature", "geometry": {"type": "LineString", "coordinates": [[80.9, 7.9], [80.95, 7.95]]}, "properties": {"candidate_id": "outside"}},
+        ],
+    }), encoding="utf-8")
+    server, thread = _server(data)
+    try:
+        status, rat_roads, _ = _get(server, "/api/roads?districts=Ratnapura&bbox=80,7,81,8")
+        assert status == 200
+        assert {(f["properties"]["source"], f["properties"]["target"]) for f in rat_roads["features"]} == {("a", "b")}
+        status, rat_candidates, _ = _get(server, "/api/candidates?districts=Ratnapura")
+        assert status == 200 and [f["properties"]["candidate_id"] for f in rat_candidates["features"]] == ["rat"]
+        status, both_roads, _ = _get(server, "/api/roads?districts=Ratnapura,Kegalle&bbox=80,7,81,8")
+        assert status == 200 and len(both_roads["features"]) == 2
+        status, both_candidates, _ = _get(server, "/api/candidates?districts=Ratnapura,Kegalle")
+        assert status == 200
+        assert [feature["properties"]["candidate_id"] for feature in both_candidates["features"]] == ["rat", "keg"]
+        status, no_district_roads, _ = _get(server, "/api/roads?districts=&bbox=80,7,81,8")
+        assert status == 200 and no_district_roads["features"] == []
+        status, no_district_candidates, _ = _get(server, "/api/candidates?districts=")
+        assert status == 200 and no_district_candidates["features"] == []
+    finally:
+        server.shutdown()
+        thread.join()
+
+
+def test_invalid_or_missing_district_data_is_explicit(tmp_path):
+    data = _fixture(tmp_path)
+    data.district_boundaries_path = tmp_path / "missing-districts.geojson"
+    server, thread = _server(data)
+    try:
+        assert _get(server, "/api/roads?districts=Ratnapura&bbox=80,7,81,8")[0] == 404
+        assert _get(server, "/api/candidates?districts=Unknown")[0] == 400
     finally:
         server.shutdown()
         thread.join()

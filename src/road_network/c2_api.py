@@ -13,6 +13,10 @@ from typing import Any
 from urllib.parse import parse_qs, urlparse
 
 import networkx as nx
+from shapely.geometry import LineString, box, shape
+from shapely.errors import ShapelyError
+from shapely.ops import unary_union
+from shapely.strtree import STRtree
 
 ROOT = Path(__file__).resolve().parents[2]
 DEFAULT_GRAPH = ROOT / "data" / "intermediate" / "c2_sabaragamuwa_direction_normalized_graph.graphml"
@@ -20,8 +24,11 @@ DEFAULT_CANDIDATES = ROOT / "data" / "intermediate" / "c2_topology_candidates.ge
 DEFAULT_CANDIDATE_REPORT = ROOT / "outputs" / "component2_evaluation" / "c2_topology_candidates.json"
 DEFAULT_BASELINE = ROOT / "outputs" / "component2_evaluation" / "c2_raw_network_baseline.json"
 DEFAULT_REPAIR_REPORT = ROOT / "outputs" / "component2_evaluation" / "c2_topology_repair_report.json"
+DEFAULT_PROVINCE_BOUNDARY = ROOT / "data" / "raw" / "c2_sabaragamuwa_boundary.geojson"
+DEFAULT_DISTRICT_BOUNDARIES = ROOT / "data" / "raw" / "c2_sabaragamuwa_district_boundaries.geojson"
 MAX_FEATURES = 5000
 MAX_BBOX_AREA = 1.0
+DISTRICT_NAMES = frozenset({"Ratnapura", "Kegalle"})
 
 
 class ApiError(Exception):
@@ -93,10 +100,17 @@ class Component2Data:
     candidate_report_path: Path = DEFAULT_CANDIDATE_REPORT
     baseline_path: Path = DEFAULT_BASELINE
     repair_report_path: Path = DEFAULT_REPAIR_REPORT
+    province_boundary_path: Path = DEFAULT_PROVINCE_BOUNDARY
+    district_boundaries_path: Path = DEFAULT_DISTRICT_BOUNDARIES
 
     def __post_init__(self) -> None:
         self._graph: nx.MultiDiGraph | None = None
         self._lock = threading.Lock()
+        self._province_geometry = None
+        self._district_features: dict[str, dict[str, Any]] | None = None
+        self._road_tree: STRtree | None = None
+        self._road_geometries: list[LineString] = []
+        self._road_records: list[tuple[Any, Any, Any, dict[str, Any]]] = []
 
     def graph(self) -> nx.MultiDiGraph:
         with self._lock:
@@ -109,7 +123,72 @@ class Component2Data:
                 self._graph = loaded
             return self._graph
 
-    def candidates(self) -> dict[str, Any]:
+    def _boundaries(self) -> tuple[Any, dict[str, dict[str, Any]]]:
+        with self._lock:
+            if self._district_features is not None and self._province_geometry is not None:
+                return self._province_geometry, self._district_features
+            try:
+                with self.province_boundary_path.open(encoding="utf-8") as handle:
+                    province = json.load(handle)
+                with self.district_boundaries_path.open(encoding="utf-8") as handle:
+                    districts = json.load(handle)
+            except FileNotFoundError as exc:
+                raise ApiError(f"Required boundary file is missing: {exc.filename}", HTTPStatus.NOT_FOUND) from exc
+            except (OSError, json.JSONDecodeError) as exc:
+                raise ApiError("Could not read district or province boundary data", HTTPStatus.INTERNAL_SERVER_ERROR) from exc
+            if province.get("type") != "FeatureCollection" or len(province.get("features", [])) != 1:
+                raise ApiError("Province boundary data is invalid", HTTPStatus.INTERNAL_SERVER_ERROR)
+            if districts.get("type") != "FeatureCollection":
+                raise ApiError("District boundary data is invalid", HTTPStatus.INTERNAL_SERVER_ERROR)
+            try:
+                province_geometry = shape(province["features"][0]["geometry"])
+            except (KeyError, TypeError, ValueError, ShapelyError) as exc:
+                raise ApiError("Province boundary geometry is invalid", HTTPStatus.INTERNAL_SERVER_ERROR) from exc
+            if province_geometry.is_empty or not province_geometry.is_valid or province_geometry.geom_type not in {"Polygon", "MultiPolygon"}:
+                raise ApiError("Province boundary geometry is invalid", HTTPStatus.INTERNAL_SERVER_ERROR)
+            district_features: dict[str, dict[str, Any]] = {}
+            for feature in districts.get("features", []):
+                name = feature.get("properties", {}).get("district")
+                if name in DISTRICT_NAMES:
+                    try:
+                        district_geometry = shape(feature["geometry"])
+                    except (KeyError, TypeError, ValueError, ShapelyError) as exc:
+                        raise ApiError(f"{name} district boundary geometry is invalid", HTTPStatus.INTERNAL_SERVER_ERROR) from exc
+                    if district_geometry.is_empty or not district_geometry.is_valid or district_geometry.geom_type not in {"Polygon", "MultiPolygon"}:
+                        raise ApiError(f"{name} district boundary geometry is invalid", HTTPStatus.INTERNAL_SERVER_ERROR)
+                    district_features[name] = feature
+            if set(district_features) != DISTRICT_NAMES:
+                raise ApiError("District boundary data must contain Ratnapura and Kegalle", HTTPStatus.INTERNAL_SERVER_ERROR)
+            self._province_geometry = province_geometry
+            self._district_features = district_features
+            return province_geometry, district_features
+
+    @staticmethod
+    def _selected_names(query: dict[str, list[str]]) -> tuple[str, ...] | None:
+        values = query.get("districts", [])
+        if not values:
+            return None
+        if len(values) != 1:
+            raise ApiError("districts must be a comma-separated list")
+        if not values[0].strip():
+            return tuple()
+        names = tuple(dict.fromkeys(name.strip() for name in values[0].split(",") if name.strip()))
+        if not names or any(name not in DISTRICT_NAMES for name in names):
+            raise ApiError("districts must contain only Ratnapura and Kegalle")
+        return names
+
+    def boundaries(self) -> dict[str, Any]:
+        province, districts = self._boundaries()
+        return {
+            "type": "FeatureCollection",
+            "features": [
+                {"type": "Feature", "geometry": json.loads(json.dumps(province.__geo_interface__)),
+                 "properties": {"boundary_type": "province", "name": "Sabaragamuwa"}},
+                *[districts[name] for name in sorted(districts)],
+            ],
+        }
+
+    def candidates(self, selected: tuple[str, ...] | None = None) -> dict[str, Any]:
         try:
             with self.candidates_path.open(encoding="utf-8") as handle:
                 value = json.load(handle)
@@ -119,6 +198,23 @@ class Component2Data:
             raise ApiError("Could not read candidate GeoJSON", HTTPStatus.INTERNAL_SERVER_ERROR) from exc
         if not isinstance(value, dict) or value.get("type") != "FeatureCollection":
             raise ApiError("Candidate data is not a GeoJSON FeatureCollection", HTTPStatus.INTERNAL_SERVER_ERROR)
+        if selected == tuple():
+            value = {**value, "features": []}
+        elif selected:
+            province, districts = self._boundaries()
+            district_geometry = unary_union([shape(districts[name]["geometry"]) for name in selected])
+            filtered = []
+            for feature in value.get("features", []):
+                geometry = feature.get("geometry")
+                if not geometry:
+                    continue
+                try:
+                    clipped = shape(geometry).intersection(province).intersection(district_geometry)
+                except (TypeError, ValueError, ShapelyError) as exc:
+                    raise ApiError("Candidate data contains an invalid geometry", HTTPStatus.INTERNAL_SERVER_ERROR) from exc
+                if not clipped.is_empty:
+                    filtered.append({**feature, "geometry": json.loads(json.dumps(clipped.__geo_interface__))})
+            value = {**value, "features": filtered}
         return value
 
     def summary(self) -> dict[str, Any]:
@@ -142,26 +238,48 @@ class Component2Data:
             "study_area": "Sabaragamuwa Province, Sri Lanka",
         }
 
-    def roads(self, bbox: tuple[float, float, float, float]) -> dict[str, Any]:
+    def _road_spatial_index(self, graph: nx.MultiDiGraph) -> tuple[STRtree, list[LineString], list[tuple[Any, Any, Any, dict[str, Any]]]]:
+        with self._lock:
+            if self._road_tree is None:
+                geometries: list[LineString] = []
+                records: list[tuple[Any, Any, Any, dict[str, Any]]] = []
+                for source, target, key, attrs in graph.edges(keys=True, data=True):
+                    source_attrs = graph.nodes[source]
+                    target_attrs = graph.nodes[target]
+                    source_point = (_number(source_attrs.get("x")), _number(source_attrs.get("y")))
+                    target_point = (_number(target_attrs.get("x")), _number(target_attrs.get("y")))
+                    geometries.append(LineString([source_point, target_point]))
+                    records.append((source, target, key, attrs))
+                self._road_geometries = geometries
+                self._road_records = records
+                self._road_tree = STRtree(geometries)
+            return self._road_tree, self._road_geometries, self._road_records
+
+    def roads(self, bbox: tuple[float, float, float, float], selected: tuple[str, ...] | None = None) -> dict[str, Any]:
         min_lon, min_lat, max_lon, max_lat = bbox
         if (max_lon - min_lon) * (max_lat - min_lat) > MAX_BBOX_AREA:
             raise ApiError("Requested bbox is too broad; zoom in to request a bounded road view")
-        features: list[dict[str, Any]] = []
+        if selected == tuple():
+            return {"type": "FeatureCollection", "features": []}
         graph = self.graph()
-        for source, target, key, attrs in graph.edges(keys=True, data=True):
+        tree, geometries, records = self._road_spatial_index(graph)
+        province = district_geometry = None
+        if selected:
+            province, districts = self._boundaries()
+            district_geometry = unary_union([shape(districts[name]["geometry"]) for name in selected])
+        features: list[dict[str, Any]] = []
+        query_box = box(min_lon, min_lat, max_lon, max_lat)
+        for index in tree.query(query_box):
+            segment = geometries[index].intersection(query_box)
+            if segment.is_empty:
+                continue
+            if province is not None:
+                segment = segment.intersection(province).intersection(district_geometry)
+                if segment.is_empty:
+                    continue
             if len(features) >= MAX_FEATURES:
                 raise ApiError("Requested bbox contains too many road segments; zoom in further")
-            source_attrs = graph.nodes[source]
-            target_attrs = graph.nodes[target]
-            source_point = (_number(source_attrs.get("x")), _number(source_attrs.get("y")))
-            target_point = (_number(target_attrs.get("x")), _number(target_attrs.get("y")))
-            if not (
-                min_lon <= source_point[0] <= max_lon
-                and min_lat <= source_point[1] <= max_lat
-                and min_lon <= target_point[0] <= max_lon
-                and min_lat <= target_point[1] <= max_lat
-            ):
-                continue
+            source, target, key, attrs = records[index]
             properties = {
                 "source": str(source),
                 "target": str(target),
@@ -173,7 +291,7 @@ class Component2Data:
             }
             features.append({
                 "type": "Feature",
-                "geometry": {"type": "LineString", "coordinates": [source_point, target_point]},
+                "geometry": json.loads(json.dumps(segment.__geo_interface__)),
                 "properties": properties,
             })
         return {"type": "FeatureCollection", "features": features}
@@ -204,9 +322,12 @@ class Component2RequestHandler(BaseHTTPRequestHandler):
             elif parsed.path == "/api/summary":
                 self._send(self.data.summary())
             elif parsed.path == "/api/candidates":
-                self._send(self.data.candidates())
+                self._send(self.data.candidates(Component2Data._selected_names(parse_qs(parsed.query, keep_blank_values=True))))
+            elif parsed.path == "/api/boundaries":
+                self._send(self.data.boundaries())
             elif parsed.path == "/api/roads":
-                self._send(self.data.roads(self._parse_bbox(parse_qs(parsed.query))))
+                query = parse_qs(parsed.query, keep_blank_values=True)
+                self._send(self.data.roads(self._parse_bbox(query), Component2Data._selected_names(query)))
             else:
                 raise ApiError("Endpoint not found", HTTPStatus.NOT_FOUND)
         except ApiError as exc:
