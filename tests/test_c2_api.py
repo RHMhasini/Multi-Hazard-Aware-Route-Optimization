@@ -5,6 +5,7 @@ from pathlib import Path
 
 import networkx as nx
 
+from src.road_network.c2_candidate_review import create_unreviewed_dataset
 from src.road_network.c2_api import Component2Data, Component2RequestHandler, ThreadingHTTPServer
 
 
@@ -35,9 +36,13 @@ def _fixture(tmp_path: Path) -> Component2Data:
     nx.write_graphml(graph, graph_path)
     candidates_path = tmp_path / "candidates.geojson"
     candidates_path.write_text(json.dumps({"type": "FeatureCollection", "features": []}), encoding="utf-8")
-    report = {"candidate_count": 0, "status_counts": {}}
+    report = {"candidate_count": 0, "status_counts": {}, "candidates": []}
     candidate_report = tmp_path / "candidate.json"
     candidate_report.write_text(json.dumps(report), encoding="utf-8")
+    review_dataset = tmp_path / "reviews.json"
+    review_dataset.write_text(
+        json.dumps(create_unreviewed_dataset(candidate_report)), encoding="utf-8"
+    )
     stats = {"nodes": 2, "directed_edges": 1, "weak_components": 1, "strong_components": 2}
     baseline = tmp_path / "baseline.json"
     baseline.write_text(json.dumps({"graph_statistics": stats}), encoding="utf-8")
@@ -58,7 +63,8 @@ def _fixture(tmp_path: Path) -> Component2Data:
         ],
     }), encoding="utf-8")
     return Component2Data(
-        graph_path, candidates_path, candidate_report, baseline, repair, province_path, district_path,
+        graph_path, candidates_path, candidate_report, baseline, repair, province_path,
+        district_path, review_dataset,
     )
 
 
@@ -69,6 +75,26 @@ def test_health_summary_candidates_and_cors(tmp_path):
         status, payload, cors = _get(server, "/api/summary")
         assert status == 200 and payload["graph"]["nodes"] == 2 and cors == "http://localhost:5173"
         assert _get(server, "/api/candidates")[1]["type"] == "FeatureCollection"
+        status, reviews, _ = _get(server, "/api/reviews")
+        assert status == 200
+        assert reviews["schema_identifier"] == "c2-topology-candidate-reviews/v1"
+        assert reviews["reviews"] == []
+    finally:
+        server.shutdown()
+        thread.join()
+
+
+def test_reviews_endpoint_rejects_candidate_report_hash_mismatch(tmp_path):
+    data = _fixture(tmp_path)
+    data.candidate_report_path.write_text(json.dumps({"candidates": [{
+        "candidate_id": "changed", "status": "rejected",
+    }]}), encoding="utf-8")
+    server, thread = _server(data)
+    try:
+        status, payload, _ = _get(server, "/api/reviews")
+        assert status == 409
+        assert payload["code"] == "source_report_hash_mismatch"
+        assert "SHA-256 mismatch" in payload["error"]
     finally:
         server.shutdown()
         thread.join()
@@ -103,6 +129,46 @@ def test_missing_candidate_file_is_explicit(tmp_path):
     try:
         status, payload, _ = _get(server, "/api/candidates")
         assert status == 404 and "missing" in payload["error"]
+    finally:
+        server.shutdown()
+        thread.join()
+
+
+def test_reviews_endpoint_reports_missing_artifact_with_action(tmp_path):
+    data = _fixture(tmp_path)
+    data.review_dataset_path = tmp_path / "missing-reviews.json"
+    server, thread = _server(data)
+    try:
+        status, payload, _ = _get(server, "/api/reviews")
+        assert status == 404
+        assert payload["code"] == "review_artifact_missing"
+        assert "--init" in payload["error"]
+    finally:
+        server.shutdown()
+        thread.join()
+
+
+def test_reviews_endpoint_reports_malformed_artifact_as_validation_error(tmp_path):
+    data = _fixture(tmp_path)
+    data.review_dataset_path.write_text("{invalid json", encoding="utf-8")
+    server, thread = _server(data)
+    try:
+        status, payload, _ = _get(server, "/api/reviews")
+        assert status == 422
+        assert payload["code"] == "malformed_review_artifact"
+        assert "malformed" in payload["error"]
+    finally:
+        server.shutdown()
+        thread.join()
+
+
+def test_unknown_endpoint_is_distinct_from_review_errors(tmp_path):
+    server, thread = _server(_fixture(tmp_path))
+    try:
+        status, payload, _ = _get(server, "/api/not-a-route")
+        assert status == 404
+        assert payload["code"] == "endpoint_not_found"
+        assert payload["error"] == "Endpoint not found"
     finally:
         server.shutdown()
         thread.join()

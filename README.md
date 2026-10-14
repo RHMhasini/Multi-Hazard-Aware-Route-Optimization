@@ -78,14 +78,17 @@ npm install
 npm run dev
 ```
 
-Run the read-only Component 2 API from the repository root in a second terminal:
+Run the read-only Component 2 API from the repository root in a second terminal
+using the project virtual environment. Start it from this checkout so its
+source-relative data paths resolve to this repository:
 
 ```bash
-python scripts/c2_api.py
+\.venv\Scripts\python.exe scripts\c2_api.py
 ```
 
 The API serves `/api/health`, `/api/summary`, `/api/boundaries`,
-`/api/candidates`, and bounded `/api/roads?bbox=minLon,minLat,maxLon,maxLat`
+`/api/candidates`, `/api/reviews`, and bounded
+`/api/roads?bbox=minLon,minLat,maxLon,maxLat`
 requests. Roads are derived from
 the direction-normalized OSM graph using real endpoint coordinates; the full
 GraphML file is never sent to the browser. The frontend displays candidate
@@ -123,3 +126,41 @@ rings as holes. This is a visual mask: the Leaflet tile layer may still request
 tiles outside the province viewport, and the source raster tiles are not
 server-clipped. Road and candidate vector geometries are intersected with the
 province and selected district polygons before they are returned by the API.
+
+### Component 2 candidate review workflow
+
+`outputs/component2_evaluation/c2_topology_candidate_reviews.json` is a separate,
+versioned human-review dataset for the candidates in
+`c2_topology_candidates.json`. The initial artifact contains one record for each
+of the 40 candidates; all records are explicitly `unreviewed` with a null
+classification. It records the source report's exact-byte SHA-256 and preserves
+each candidate's automated status. It does not change the automated candidate
+report.
+
+To initialize a new review dataset for a candidate report, use
+`python -m src.road_network.c2_candidate_review --init --candidate-report
+<path> --output <new-path>`. Initialization refuses to overwrite an existing
+file. To validate an edited dataset against its source report, use
+`python -m src.road_network.c2_candidate_review --validate --candidate-report
+<path> --output <review-path>`. Keep the source candidate report unchanged while
+reviewing; any byte change invalidates the stored source hash and requires
+reinitializing or explicitly reconciling the review dataset.
+
+Each review record retains the stable candidate ID and original automated
+status separately from `review_state` and the optional human `classification`
+(`likely_gap`, `legitimate_endpoint`, or `uncertain`). Unreviewed records use a
+null classification. A reviewed record must include a non-empty decision,
+supporting evidence entries (`evidence_type`, `description`, `reference`), and
+recorded limitations. Reviewer ID and ISO 8601 review time are optional and are
+never filled by the system. The validation command rejects missing/duplicate
+candidate records, altered automated statuses, malformed evidence, invalid
+classifications, and source-report hash mismatches.
+
+The read-only dashboard endpoint `GET /api/reviews` validates and serves these
+records. Selecting a candidate connection displays its automated status and
+human review state separately, along with available evidence and limitations.
+Review records are annotations only: there is no review editing route, no
+conversion to repair approvals, and no graph mutation. A `likely_gap` label is
+not a confirmed defect or authorization to repair. The current dataset contains
+no independent review decisions; researchers must add them based on recorded
+evidence before using it as a ground-truth evaluation set.

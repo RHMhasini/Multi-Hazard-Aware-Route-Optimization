@@ -18,6 +18,12 @@ from shapely.errors import ShapelyError
 from shapely.ops import unary_union
 from shapely.strtree import STRtree
 
+from src.road_network.c2_candidate_review import (
+    DEFAULT_REVIEW_DATASET,
+    ReviewDatasetError,
+    load_review_dataset,
+)
+
 ROOT = Path(__file__).resolve().parents[2]
 DEFAULT_GRAPH = ROOT / "data" / "intermediate" / "c2_sabaragamuwa_direction_normalized_graph.graphml"
 DEFAULT_CANDIDATES = ROOT / "data" / "intermediate" / "c2_topology_candidates.geojson"
@@ -34,9 +40,15 @@ DISTRICT_NAMES = frozenset({"Ratnapura", "Kegalle"})
 class ApiError(Exception):
     """An expected client or data error with an HTTP status."""
 
-    def __init__(self, message: str, status: HTTPStatus = HTTPStatus.BAD_REQUEST) -> None:
+    def __init__(
+        self,
+        message: str,
+        status: HTTPStatus = HTTPStatus.BAD_REQUEST,
+        code: str = "bad_request",
+    ) -> None:
         super().__init__(message)
         self.status = status
+        self.code = code
 
 
 def _read_json(path: Path) -> dict[str, Any]:
@@ -102,6 +114,7 @@ class Component2Data:
     repair_report_path: Path = DEFAULT_REPAIR_REPORT
     province_boundary_path: Path = DEFAULT_PROVINCE_BOUNDARY
     district_boundaries_path: Path = DEFAULT_DISTRICT_BOUNDARIES
+    review_dataset_path: Path = DEFAULT_REVIEW_DATASET
 
     def __post_init__(self) -> None:
         self._graph: nx.MultiDiGraph | None = None
@@ -238,6 +251,13 @@ class Component2Data:
             "study_area": "Sabaragamuwa Province, Sri Lanka",
         }
 
+    def reviews(self) -> dict[str, Any]:
+        try:
+            dataset = load_review_dataset(self.review_dataset_path, self.candidate_report_path)
+        except ReviewDatasetError as exc:
+            raise ApiError(str(exc), HTTPStatus(exc.http_status), exc.code) from exc
+        return dataset
+
     def _road_spatial_index(self, graph: nx.MultiDiGraph) -> tuple[STRtree, list[LineString], list[tuple[Any, Any, Any, dict[str, Any]]]]:
         with self._lock:
             if self._road_tree is None:
@@ -323,15 +343,17 @@ class Component2RequestHandler(BaseHTTPRequestHandler):
                 self._send(self.data.summary())
             elif parsed.path == "/api/candidates":
                 self._send(self.data.candidates(Component2Data._selected_names(parse_qs(parsed.query, keep_blank_values=True))))
+            elif parsed.path == "/api/reviews":
+                self._send(self.data.reviews())
             elif parsed.path == "/api/boundaries":
                 self._send(self.data.boundaries())
             elif parsed.path == "/api/roads":
                 query = parse_qs(parsed.query, keep_blank_values=True)
                 self._send(self.data.roads(self._parse_bbox(query), Component2Data._selected_names(query)))
             else:
-                raise ApiError("Endpoint not found", HTTPStatus.NOT_FOUND)
+                raise ApiError("Endpoint not found", HTTPStatus.NOT_FOUND, "endpoint_not_found")
         except ApiError as exc:
-            self._send({"error": str(exc)}, exc.status)
+            self._send({"error": str(exc), "code": exc.code}, exc.status)
 
     @staticmethod
     def _parse_bbox(query: dict[str, list[str]]) -> tuple[float, float, float, float]:
@@ -362,7 +384,9 @@ def create_server(host: str = "127.0.0.1", port: int = 8000) -> ThreadingHTTPSer
 
 def main() -> None:
     server = create_server()
-    print("Component 2 API listening on http://127.0.0.1:8000")
+    print(f"Component 2 API listening on http://{server.server_address[0]}:{server.server_address[1]}")
+    print(f"Repository root: {ROOT}")
+    print("Review artifact: outputs/component2_evaluation/c2_topology_candidate_reviews.json")
     try:
         server.serve_forever()
     except KeyboardInterrupt:
