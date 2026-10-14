@@ -5,6 +5,7 @@ from __future__ import annotations
 import json
 import math
 import threading
+import xml.etree.ElementTree as ET
 from dataclasses import dataclass
 from http import HTTPStatus
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
@@ -13,8 +14,9 @@ from typing import Any
 from urllib.parse import parse_qs, urlparse
 
 import networkx as nx
-from shapely.geometry import LineString, box, shape
+from shapely.geometry import LineString, Point, box, shape
 from shapely.errors import ShapelyError
+from shapely.prepared import prep
 from shapely.ops import unary_union
 from shapely.strtree import STRtree
 
@@ -119,6 +121,8 @@ class Component2Data:
     def __post_init__(self) -> None:
         self._graph: nx.MultiDiGraph | None = None
         self._lock = threading.Lock()
+        self._metrics_lock = threading.Lock()
+        self._metrics_cache: dict[tuple[str, ...], dict[str, Any]] = {}
         self._province_geometry = None
         self._district_features: dict[str, dict[str, Any]] | None = None
         self._road_tree: STRtree | None = None
@@ -130,7 +134,14 @@ class Component2Data:
             if self._graph is None:
                 if not self.graph_path.exists():
                     raise ApiError(f"Required graph file is missing: {self.graph_path}", HTTPStatus.NOT_FOUND)
-                loaded = nx.read_graphml(self.graph_path, force_multigraph=True)
+                try:
+                    loaded = nx.read_graphml(self.graph_path, force_multigraph=True)
+                except (OSError, nx.NetworkXError, ET.ParseError, ValueError) as exc:
+                    raise ApiError(
+                        f"Required graph file is unavailable or invalid: {self.graph_path}",
+                        HTTPStatus.SERVICE_UNAVAILABLE,
+                        "graph_unavailable",
+                    ) from exc
                 if not isinstance(loaded, nx.MultiDiGraph):
                     raise ApiError("Direction-normalized graph is not a MultiDiGraph", HTTPStatus.INTERNAL_SERVER_ERROR)
                 self._graph = loaded
@@ -239,17 +250,77 @@ class Component2Data:
             graph_stats = baseline.get("graph_statistics")
         if not isinstance(graph_stats, dict):
             graph_stats = _graph_counts(self.graph())
+        repair_counts = repair.get("counts", {})
         return {
             "graph": graph_stats,
             "candidate_status_counts": _candidate_status_counts(candidates),
             "candidate_count": candidates.get("candidate_count", len(candidates.get("candidates", []))),
             "repairs": {
-                "accepted": repair.get("accepted_repair_count", 0),
-                "skipped": repair.get("skipped_candidate_count", 0),
-                "approval_count": repair.get("approval_count", 0),
+                "accepted": repair_counts.get("accepted_repair_count", 0),
+                "skipped": repair_counts.get("skipped_candidate_count", 0),
+                "approval_count": repair_counts.get("approval_count", 0),
             },
             "study_area": "Sabaragamuwa Province, Sri Lanka",
         }
+
+    def metrics(self, selected: tuple[str, ...] | None = None) -> dict[str, Any]:
+        """Return cached province totals and selected induced-subgraph metrics.
+
+        Node membership uses the district union's boundary-inclusive ``covers``
+        predicate. Edge membership requires both endpoints to be selected.
+        """
+        try:
+            graph = self.graph()
+        except ApiError as exc:
+            if exc.status == HTTPStatus.NOT_FOUND:
+                raise ApiError(str(exc), HTTPStatus.SERVICE_UNAVAILABLE, "graph_unavailable") from exc
+            raise
+        selected_names = tuple(sorted(DISTRICT_NAMES if selected is None else selected))
+        with self._metrics_lock:
+            if selected_names in self._metrics_cache:
+                return self._metrics_cache[selected_names]
+
+            if selected_names:
+                _, districts = self._boundaries()
+                area = unary_union([shape(districts[name]["geometry"]) for name in selected_names])
+                prepared_area = prep(area)
+                included_nodes = {
+                    node
+                    for node, attrs in graph.nodes(data=True)
+                    if prepared_area.covers(Point(_number(attrs.get("x")), _number(attrs.get("y"))))
+                }
+            else:
+                included_nodes = set()
+
+            selected_graph = graph.subgraph(included_nodes)
+            endpoint_split_edges = sum(
+                (source in included_nodes) != (target in included_nodes)
+                for source, target, _key in graph.edges(keys=True)
+            )
+            selected_metrics = {
+                "node_count": selected_graph.number_of_nodes(),
+                "induced_directed_edge_count": selected_graph.number_of_edges(),
+                "weakly_connected_component_count": nx.number_weakly_connected_components(selected_graph),
+                "endpoint_split_directed_edge_count": endpoint_split_edges,
+            }
+            response = {
+                "selected_districts": list(selected_names),
+                "spatial_policy": {
+                    "node_inclusion": "A node is included when its EPSG:4326 point is covered by the selected district polygon union; polygon boundaries are included.",
+                    "edge_inclusion": "The selected graph is induced: a directed edge is included only when both endpoint nodes are included. MultiDiGraph keys and parallel edges are preserved.",
+                    "geometric_boundary_crossing_directed_edge_count": None,
+                    "geometric_boundary_crossing_limitation": "GraphML has node coordinates but no edge geometry. Endpoint interpolation is not used to estimate spatial boundary crossings.",
+                    "endpoint_split_directed_edge_count": "Count of directed edge records with exactly one endpoint node included; this is not a geometric boundary-crossing count.",
+                },
+                "province_wide": {
+                    "node_count": graph.number_of_nodes(),
+                    "directed_edge_count": graph.number_of_edges(),
+                    "weakly_connected_component_count": nx.number_weakly_connected_components(graph),
+                },
+                "selected_area": selected_metrics,
+            }
+            self._metrics_cache[selected_names] = response
+            return response
 
     def reviews(self) -> dict[str, Any]:
         try:
@@ -345,6 +416,9 @@ class Component2RequestHandler(BaseHTTPRequestHandler):
                 self._send(self.data.candidates(Component2Data._selected_names(parse_qs(parsed.query, keep_blank_values=True))))
             elif parsed.path == "/api/reviews":
                 self._send(self.data.reviews())
+            elif parsed.path == "/api/metrics":
+                selected = Component2Data._selected_names(parse_qs(parsed.query, keep_blank_values=True))
+                self._send(self.data.metrics(selected))
             elif parsed.path == "/api/boundaries":
                 self._send(self.data.boundaries())
             elif parsed.path == "/api/roads":

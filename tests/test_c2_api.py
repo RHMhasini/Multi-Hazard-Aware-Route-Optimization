@@ -47,8 +47,10 @@ def _fixture(tmp_path: Path) -> Component2Data:
     baseline = tmp_path / "baseline.json"
     baseline.write_text(json.dumps({"graph_statistics": stats}), encoding="utf-8")
     repair = tmp_path / "repair.json"
-    repair.write_text(json.dumps({"before": {"graph_statistics": stats}, "accepted_repair_count": 0,
-                                  "skipped_candidate_count": 0, "approval_count": 0}), encoding="utf-8")
+    repair.write_text(json.dumps({
+        "counts": {"accepted_repair_count": 0, "skipped_candidate_count": 40, "approval_count": 0},
+        "before": {"node_count": 2, "edge_count": 1, "weak_component_count": 1, "strong_component_count": 2},
+    }), encoding="utf-8")
     province_path = tmp_path / "province.geojson"
     province_path.write_text(json.dumps({
         "type": "FeatureCollection",
@@ -79,6 +81,133 @@ def test_health_summary_candidates_and_cors(tmp_path):
         assert status == 200
         assert reviews["schema_identifier"] == "c2-topology-candidate-reviews/v1"
         assert reviews["reviews"] == []
+    finally:
+        server.shutdown()
+        thread.join()
+
+
+def test_summary_reads_repair_counts_from_actual_report_schema(tmp_path):
+    data = _fixture(tmp_path)
+    server, thread = _server(data)
+    try:
+        status, payload, _ = _get(server, "/api/summary")
+        assert status == 200
+        assert payload["repairs"] == {"accepted": 0, "skipped": 40, "approval_count": 0}
+    finally:
+        server.shutdown()
+        thread.join()
+
+
+def test_metrics_preserve_parallel_directed_edges_and_count_selected_components(tmp_path):
+    data = _fixture(tmp_path)
+    graph = nx.read_graphml(data.graph_path, force_multigraph=True)
+    graph.add_node("keg", x="80.6", y="7.2")
+    graph.add_node("outside", x="80.9", y="7.2")
+    graph.add_edge("a", "b", 1)
+    graph.add_edge("b", "a", 0)
+    graph.add_edge("keg", "outside", 0)
+    nx.write_graphml(graph, data.graph_path)
+
+    server, thread = _server(data)
+    try:
+        status, ratnapura, _ = _get(server, "/api/metrics?districts=Ratnapura")
+        assert status == 200
+        assert ratnapura["selected_area"] == {
+            "node_count": 2,
+            "induced_directed_edge_count": 3,
+            "weakly_connected_component_count": 1,
+            "endpoint_split_directed_edge_count": 0,
+        }
+        assert ratnapura["province_wide"] == {
+            "node_count": 4,
+            "directed_edge_count": 4,
+            "weakly_connected_component_count": 2,
+        }
+        assert ratnapura["spatial_policy"]["geometric_boundary_crossing_directed_edge_count"] is None
+
+        status, kegalle, _ = _get(server, "/api/metrics?districts=Kegalle")
+        assert status == 200
+        assert kegalle["selected_area"] == {
+            "node_count": 1,
+            "induced_directed_edge_count": 0,
+            "weakly_connected_component_count": 1,
+            "endpoint_split_directed_edge_count": 1,
+        }
+
+        status, both, _ = _get(server, "/api/metrics?districts=Ratnapura,Kegalle")
+        assert status == 200
+        assert both["selected_area"] == {
+            "node_count": 3,
+            "induced_directed_edge_count": 3,
+            "weakly_connected_component_count": 2,
+            "endpoint_split_directed_edge_count": 1,
+        }
+
+        status, empty, _ = _get(server, "/api/metrics?districts=")
+        assert status == 200
+        assert empty["selected_districts"] == []
+        assert empty["selected_area"] == {
+            "node_count": 0,
+            "induced_directed_edge_count": 0,
+            "weakly_connected_component_count": 0,
+            "endpoint_split_directed_edge_count": 0,
+        }
+    finally:
+        server.shutdown()
+        thread.join()
+
+
+def test_metrics_include_nodes_on_polygon_boundary(tmp_path):
+    data = _fixture(tmp_path)
+    graph = nx.read_graphml(data.graph_path, force_multigraph=True)
+    graph.add_node("boundary", x="80.5", y="7.5")
+    nx.write_graphml(graph, data.graph_path)
+    server, thread = _server(data)
+    try:
+        status, payload, _ = _get(server, "/api/metrics?districts=Ratnapura")
+        assert status == 200
+        assert payload["selected_area"]["node_count"] == 3
+    finally:
+        server.shutdown()
+        thread.join()
+
+
+def test_metrics_reject_invalid_district_parameters(tmp_path):
+    server, thread = _server(_fixture(tmp_path))
+    try:
+        for path in (
+            "/api/metrics?districts=Unknown",
+            "/api/metrics?districts=Ratnapura&districts=Kegalle",
+        ):
+            status, payload, _ = _get(server, path)
+            assert status == 400
+            assert payload["code"] == "bad_request"
+    finally:
+        server.shutdown()
+        thread.join()
+
+
+def test_metrics_reports_missing_graph_as_unavailable(tmp_path):
+    data = _fixture(tmp_path)
+    data.graph_path = tmp_path / "missing.graphml"
+    server, thread = _server(data)
+    try:
+        status, payload, _ = _get(server, "/api/metrics?districts=Ratnapura")
+        assert status == 503
+        assert payload["code"] == "graph_unavailable"
+    finally:
+        server.shutdown()
+        thread.join()
+
+
+def test_metrics_reports_unreadable_graph_as_unavailable(tmp_path):
+    data = _fixture(tmp_path)
+    data.graph_path.write_text("not a GraphML document", encoding="utf-8")
+    server, thread = _server(data)
+    try:
+        status, payload, _ = _get(server, "/api/metrics?districts=Ratnapura")
+        assert status == 503
+        assert payload["code"] == "graph_unavailable"
     finally:
         server.shutdown()
         thread.join()

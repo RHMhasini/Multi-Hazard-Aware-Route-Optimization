@@ -127,6 +127,42 @@ tiles outside the province viewport, and the source raster tiles are not
 server-clipped. Road and candidate vector geometries are intersected with the
 province and selected district polygons before they are returned by the API.
 
+#### Selected-area graph metrics contract
+
+`GET /api/metrics?districts=Ratnapura,Kegalle` reports graph counts for the
+selected district polygon union and province-wide totals. `districts` accepts
+`Ratnapura`, `Kegalle`, both comma-separated, or an empty value for an empty
+selection. If omitted, it defaults to both available districts. Unknown names
+or repeated `districts` query parameters return HTTP 400 using the API error
+shape `{"error":"...","code":"bad_request"}`. If the local graph is
+unavailable, this route returns HTTP 503 with code `graph_unavailable`.
+
+The response has `selected_districts`, `spatial_policy`, `province_wide`, and
+`selected_area` fields. Counts are named by scope: province totals use
+`node_count` and `directed_edge_count`; selected-area edges use
+`induced_directed_edge_count`. `weakly_connected_component_count` is computed
+on each corresponding directed graph's undirected connectivity. For an empty
+selected graph, this count is zero.
+
+Node inclusion uses the selected polygon union's boundary-inclusive `covers`
+predicate on each node's EPSG:4326 coordinate. Selected-area edges form the
+induced directed multigraph: both endpoint nodes must be included. Directed
+edge records retain their MultiDiGraph keys and parallel edges count
+separately. `endpoint_split_directed_edge_count` reports directed edge records
+with exactly one endpoint inside. It is not a spatial crossing count. The
+GraphML stores node coordinates but no edge geometry, so
+`geometric_boundary_crossing_directed_edge_count` is `null`; crossings are not
+estimated by drawing straight lines between nodes.
+
+These induced-subgraph edge totals are not counts of all road segments whose
+geometries intersect a district. An edge with an endpoint outside the selected
+polygon is excluded from the induced graph even if its actual road geometry
+would enter or cross the polygon. The endpoint-split count exposes those
+records without claiming where their geometry lies. `/api/metrics` uses the
+cached local GraphML graph, not map viewport bounds or rendered GeoJSON feature
+counts. There is no locality selection because validated locality polygons
+are not available.
+
 ### Component 2 candidate review workflow
 
 `outputs/component2_evaluation/c2_topology_candidate_reviews.json` is a separate,
