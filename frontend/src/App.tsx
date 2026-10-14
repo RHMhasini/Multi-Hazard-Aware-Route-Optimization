@@ -13,6 +13,23 @@ type Summary = {
   study_area: string
 }
 
+type PipelineStage = {
+  stage_id: string
+  status: string
+  explanation: string
+}
+
+type GraphStageMetrics = {
+  node_count: number | null
+  directed_edge_count: number | null
+  degree_1_node_count: number | null
+  weakly_connected_component_count: number | null
+}
+
+type GraphComparison = {
+  graphs: Record<string, { metrics: GraphStageMetrics | null; status: string }>
+}
+
 type MetricsResponse = {
   selected_districts: DistrictName[]
   spatial_policy: {
@@ -245,6 +262,8 @@ function App() {
   const [boundaryError, setBoundaryError] = useState<string | null>(null)
   const [selectedDistricts, setSelectedDistricts] = useState<DistrictName[]>(districtNames)
   const [activeView, setActiveView] = useState<View>('roadmap')
+  const [pipelineStages, setPipelineStages] = useState<PipelineStage[] | null>(null)
+  const [graphComparison, setGraphComparison] = useState<GraphComparison | null>(null)
   const highwayBreakdown = useMemo(() => {
     if (!roads) return null
     const counts: Record<string, number> = {}
@@ -276,6 +295,12 @@ function App() {
       const message = reason instanceof Error ? reason.message : 'Could not load boundary data'
       setBoundaryError(message)
     })
+    getJson<{ stages: PipelineStage[] }>('/api/pipeline-status')
+      .then((r) => setPipelineStages(r.stages))
+      .catch(() => setPipelineStages(null))
+    getJson<GraphComparison>('/api/graph-comparison')
+      .then(setGraphComparison)
+      .catch(() => setGraphComparison(null))
     loadReviewDataset()
   }, [loadReviewDataset, dashboardRetry])
 
@@ -623,17 +648,75 @@ function App() {
                   </ul>
                 )}
               </div>
-              <div className="rounded-2xl border border-blue-200 bg-blue-50 p-5">
-                <h2 className="font-semibold text-blue-950">Component 3 — Risk Scoring Input</h2>
-                <p className="mt-2 text-sm leading-6 text-blue-900">This topology-refined graph is the spatial foundation for hazard-weighted route planning. Each node is an OSM junction usable as an origin or destination waypoint.</p>
-                <dl className="mt-4 space-y-2 text-sm">
-                  <div className="flex justify-between gap-2"><dt className="text-blue-800">Format</dt><dd className="font-semibold text-blue-950">NetworkX MultiDiGraph</dd></div>
-                  <div className="flex justify-between gap-2"><dt className="text-blue-800">Nodes</dt><dd className="font-semibold text-blue-950">{summary?.graph.nodes?.toLocaleString() ?? '—'}</dd></div>
-                  <div className="flex justify-between gap-2"><dt className="text-blue-800">Directed edges</dt><dd className="font-semibold text-blue-950">{summary?.graph.directed_edges?.toLocaleString() ?? '—'}</dd></div>
-                  <div className="flex justify-between gap-2"><dt className="text-blue-800">CRS</dt><dd className="font-semibold text-blue-950">EPSG:4326 (WGS 84)</dd></div>
-                  <div className="flex justify-between gap-2"><dt className="text-blue-800">Node attributes</dt><dd className="text-right text-xs text-blue-900">id, x (lon), y (lat)</dd></div>
-                  <div className="flex justify-between gap-2"><dt className="text-blue-800">Edge attributes</dt><dd className="text-right text-xs text-blue-900">highway, length, name, maxspeed, oneway_normalized</dd></div>
-                </dl>
+              <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+                <h2 className="font-semibold text-slate-900">Pipeline Stages</h2>
+                <p className="mt-1 text-sm text-slate-500">Component 2 processing steps.</p>
+                {!pipelineStages && <p className="mt-3 text-sm text-slate-400">Loading…</p>}
+                {pipelineStages && (
+                  <ul className="mt-3 space-y-2">
+                    {pipelineStages.map((s) => {
+                      const label: Record<string, string> = {
+                        extraction: 'OSM Data Extraction',
+                        cleaning_validation: 'Road Cleaning & Validation',
+                        direction_normalization: 'Direction Normalization',
+                        topology_candidates: 'Topology Candidate Detection',
+                        topology_repair: 'Topology Repair',
+                        evaluation: 'Evaluation Reports',
+                        export: 'Graph Export',
+                      }
+                      const dot = s.status === 'completed' ? 'bg-green-500' : s.status === 'partial' ? 'bg-amber-400' : s.status === 'failed' ? 'bg-red-500' : 'bg-slate-300'
+                      return (
+                        <li className="flex items-start gap-2" key={s.stage_id}>
+                          <span className={`mt-1.5 inline-block h-2.5 w-2.5 flex-shrink-0 rounded-full ${dot}`} />
+                          <span className="text-sm text-slate-800">{label[s.stage_id] ?? s.stage_id}</span>
+                        </li>
+                      )
+                    })}
+                  </ul>
+                )}
+                <div className="mt-3 flex flex-wrap gap-3 text-xs text-slate-500">
+                  <span className="flex items-center gap-1"><span className="inline-block h-2 w-2 rounded-full bg-green-500" />Completed</span>
+                  <span className="flex items-center gap-1"><span className="inline-block h-2 w-2 rounded-full bg-amber-400" />Partial</span>
+                  <span className="flex items-center gap-1"><span className="inline-block h-2 w-2 rounded-full bg-slate-300" />Unavailable</span>
+                </div>
+              </div>
+              <div className="rounded-2xl border border-slate-200 bg-slate-50 p-5">
+                <h2 className="font-semibold text-slate-900">Network Refinement</h2>
+                <p className="mt-1 text-sm text-slate-500">Raw OSM vs topology-refined output.</p>
+                {graphComparison && (() => {
+                  const raw = graphComparison.graphs.raw?.metrics
+                  const final = graphComparison.graphs.topology_repaired?.metrics ?? graphComparison.graphs.direction_normalized?.metrics
+                  if (!raw || !final) return <p className="mt-3 text-sm text-slate-400">Metrics unavailable.</p>
+                  return (
+                    <div className="mt-3 space-y-3">
+                      {[
+                        { label: 'Nodes', raw: raw.node_count, out: final.node_count },
+                        { label: 'Directed edges', raw: raw.directed_edge_count, out: final.directed_edge_count },
+                        { label: 'Degree-1 nodes', raw: raw.degree_1_node_count, out: final.degree_1_node_count },
+                        { label: 'Weak components', raw: raw.weakly_connected_component_count, out: final.weakly_connected_component_count },
+                      ].map(({ label, raw: r, out: o }) => (
+                        <div key={label}>
+                          <p className="text-xs font-medium text-slate-500">{label}</p>
+                          <div className="mt-1 flex justify-between text-sm">
+                            <span className="text-slate-500">Raw: <span className="font-mono font-semibold text-slate-700">{r?.toLocaleString() ?? '—'}</span></span>
+                            <span className="text-slate-500">Final: <span className="font-mono font-semibold text-green-700">{o?.toLocaleString() ?? '—'}</span></span>
+                          </div>
+                        </div>
+                      ))}
+                      <div className="mt-1 border-t border-slate-200 pt-3">
+                        <div className="flex justify-between text-sm">
+                          <span className="text-slate-600">Topology candidates</span>
+                          <span className="font-semibold text-slate-900">{summary?.candidate_count?.toLocaleString() ?? '—'}</span>
+                        </div>
+                        <div className="flex justify-between text-sm">
+                          <span className="text-slate-600">Accepted repairs</span>
+                          <span className="font-semibold text-slate-900">{summary?.repairs.accepted?.toLocaleString() ?? '—'}</span>
+                        </div>
+                      </div>
+                    </div>
+                  )
+                })()}
+                {!graphComparison && <p className="mt-3 text-sm text-slate-400">Loading…</p>}
               </div>
               {metrics && !loadingMetrics && (
                 <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
