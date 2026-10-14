@@ -198,7 +198,7 @@ class Component2Data:
                         raise ApiError(f"{name} district boundary geometry is invalid", HTTPStatus.INTERNAL_SERVER_ERROR)
                     district_features[name] = feature
             if set(district_features) != DISTRICT_NAMES:
-                raise ApiError("District boundary data must contain Ratnapura and Kegalle", HTTPStatus.INTERNAL_SERVER_ERROR)
+                raise ApiError("District boundary data must cover all Sabaragamuwa Province districts", HTTPStatus.INTERNAL_SERVER_ERROR)
             self._province_geometry = province_geometry
             self._district_features = district_features
             return province_geometry, district_features
@@ -214,7 +214,7 @@ class Component2Data:
             return tuple()
         names = tuple(dict.fromkeys(name.strip() for name in values[0].split(",") if name.strip()))
         if not names or any(name not in DISTRICT_NAMES for name in names):
-            raise ApiError("districts must contain only Ratnapura and Kegalle")
+            raise ApiError("districts must contain only valid Sabaragamuwa Province districts")
         return names
 
     def boundaries(self) -> dict[str, Any]:

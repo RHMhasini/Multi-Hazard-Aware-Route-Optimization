@@ -58,8 +58,8 @@ def _graph(
 
 
 def _graph_with_gap_m(gap_m):
-    to_metric = Transformer.from_crs("EPSG:4326", "EPSG:32644", always_xy=True)
-    to_geo = Transformer.from_crs("EPSG:32644", "EPSG:4326", always_xy=True)
+    to_metric = Transformer.from_crs("EPSG:4326", "EPSG:5235", always_xy=True)
+    to_geo = Transformer.from_crs("EPSG:5235", "EPSG:4326", always_xy=True)
     origin_x, origin_y = to_metric.transform(80.0, 7.0)
     points_m = {
         1: (origin_x, origin_y),
@@ -78,8 +78,8 @@ def _graph_with_gap_m(gap_m):
 
 
 def _graph_with_angular_pairs():
-    to_metric = Transformer.from_crs("EPSG:4326", "EPSG:32644", always_xy=True)
-    to_geo = Transformer.from_crs("EPSG:32644", "EPSG:4326", always_xy=True)
+    to_metric = Transformer.from_crs("EPSG:4326", "EPSG:5235", always_xy=True)
+    to_geo = Transformer.from_crs("EPSG:5235", "EPSG:4326", always_xy=True)
     origin_x, origin_y = to_metric.transform(80.0, 7.0)
     graph = nx.MultiDiGraph(crs="EPSG:4326")
     pairs = [
@@ -275,7 +275,7 @@ def test_missing_or_incompatible_crs_fails_clearly(crs):
 def test_crs_validation_and_geojson_coordinates_are_longitude_latitude():
     report, geojson = MODULE.detect_candidates(_graph_with_gap_m(10.0), search_distance_m=20)
     assert report["input_graph"]["crs_validation"]["status"] == "validated"
-    assert report["configuration"]["metric_crs"] == "EPSG:32644"
+    assert report["configuration"]["metric_crs"] == "EPSG:5235"
     assert report["configuration"]["geojson_crs"] == "EPSG:4326"
     line = next(
         feature for feature in geojson["features"]
