@@ -87,13 +87,17 @@ source-relative data paths resolve to this repository:
 ```
 
 The API serves `/api/health`, `/api/summary`, `/api/boundaries`,
-`/api/candidates`, `/api/reviews`, and bounded
-`/api/roads?bbox=minLon,minLat,maxLon,maxLat`
-requests. Roads are derived from
-the direction-normalized OSM graph using real endpoint coordinates; the full
-GraphML file is never sent to the browser. The frontend displays candidate
+`/api/candidates`, `/api/reviews`, `/api/metrics`, the read-only audit routes
+`/api/pipeline-status`, `/api/graph-comparison`, `/api/semantic-audit`,
+`/api/repaired-links`, `/api/exports`, and bounded
+`/api/roads?bbox=minLon,minLat,maxLon,maxLat` requests. Roads are derived from
+the direction-normalized OSM graph using real endpoint coordinates. The
+dashboard does not load GraphML; `/api/exports/{artifact_id}` streams only
+explicitly allowlisted, validated artifacts. The frontend displays candidate
 evidence and repair counts from the existing reports, and cannot approve or
-apply repairs. The API rejects malformed or overly broad road requests.
+apply repairs. The API rejects malformed or overly broad road requests. See
+[`docs/component2-audit-api.md`](docs/component2-audit-api.md) for audit,
+identity, cache, semantic evidence, repair-link, and export contracts.
 The normalized GraphML road network is a local generated artifact and is not
 included in a fresh checkout. The API and frontend can start using the commands
 above, but road requests need

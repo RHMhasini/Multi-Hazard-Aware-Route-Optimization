@@ -25,6 +25,8 @@ from src.road_network.c2_candidate_review import (
     ReviewDatasetError,
     load_review_dataset,
 )
+from src.road_network.c2_project_audit import ProjectAuditService
+from src.road_network.c2_project_audit import GRAPH_FILES as PROJECT_GRAPH_FILES
 
 ROOT = Path(__file__).resolve().parents[2]
 DEFAULT_GRAPH = ROOT / "data" / "intermediate" / "c2_sabaragamuwa_direction_normalized_graph.graphml"
@@ -120,6 +122,7 @@ class Component2Data:
 
     def __post_init__(self) -> None:
         self._graph: nx.MultiDiGraph | None = None
+        self._graph_stat: tuple[int, int] | None = None
         self._lock = threading.Lock()
         self._metrics_lock = threading.Lock()
         self._metrics_cache: dict[tuple[str, ...], dict[str, Any]] = {}
@@ -128,6 +131,17 @@ class Component2Data:
         self._road_tree: STRtree | None = None
         self._road_geometries: list[LineString] = []
         self._road_records: list[tuple[Any, Any, Any, dict[str, Any]]] = []
+        self._project_audit = ProjectAuditService(ROOT)
+
+    def project_audit(self) -> dict[str, Any]:
+        with self._lock:
+            try:
+                stat = self.graph_path.stat()
+                current_stat = (stat.st_size, stat.st_mtime_ns)
+            except OSError:
+                current_stat = None
+            preloaded = self._graph if (self.graph_path.resolve() == (ROOT / PROJECT_GRAPH_FILES["direction_normalized"]).resolve() and current_stat == self._graph_stat) else None
+        return self._project_audit.snapshot(preloaded_graph=preloaded)
 
     def graph(self) -> nx.MultiDiGraph:
         with self._lock:
@@ -145,6 +159,8 @@ class Component2Data:
                 if not isinstance(loaded, nx.MultiDiGraph):
                     raise ApiError("Direction-normalized graph is not a MultiDiGraph", HTTPStatus.INTERNAL_SERVER_ERROR)
                 self._graph = loaded
+                stat = self.graph_path.stat()
+                self._graph_stat = (stat.st_size, stat.st_mtime_ns)
             return self._graph
 
     def _boundaries(self) -> tuple[Any, dict[str, dict[str, Any]]]:
@@ -402,6 +418,24 @@ class Component2RequestHandler(BaseHTTPRequestHandler):
         self.end_headers()
         self.wfile.write(body)
 
+    def _send_artifact(self, path: Path, filename: str, content_type: str) -> None:
+        try:
+            size = path.stat().st_size
+            stream = path.open("rb")
+        except OSError as exc:
+            raise ApiError("Validated export is no longer available", HTTPStatus.SERVICE_UNAVAILABLE, "export_unavailable") from exc
+        with stream:
+            self.send_response(HTTPStatus.OK)
+            self.send_header("Content-Type", content_type)
+            self.send_header("Content-Length", str(size))
+            self.send_header("Content-Disposition", f'attachment; filename="{filename}"')
+            self.send_header("Access-Control-Allow-Origin", "http://localhost:5173")
+            self.send_header("Access-Control-Allow-Methods", "GET, OPTIONS")
+            self.send_header("Access-Control-Allow-Headers", "Content-Type")
+            self.end_headers()
+            while chunk := stream.read(1024 * 1024):
+                self.wfile.write(chunk)
+
     def do_OPTIONS(self) -> None:
         self._send({})
 
@@ -419,6 +453,26 @@ class Component2RequestHandler(BaseHTTPRequestHandler):
             elif parsed.path == "/api/metrics":
                 selected = Component2Data._selected_names(parse_qs(parsed.query, keep_blank_values=True))
                 self._send(self.data.metrics(selected))
+            elif parsed.path == "/api/pipeline-status":
+                self._send({"stages": self.data.project_audit()["pipeline"]})
+            elif parsed.path == "/api/graph-comparison":
+                self._send(self.data.project_audit()["graph_comparison"])
+            elif parsed.path == "/api/semantic-audit":
+                self._send(self.data.project_audit()["semantic_audit"])
+            elif parsed.path == "/api/repaired-links":
+                self._send(self.data.project_audit()["repaired_links"])
+            elif parsed.path == "/api/exports":
+                self._send(self.data.project_audit()["exports"])
+            elif parsed.path.startswith("/api/exports/"):
+                artifact_id = parsed.path.removeprefix("/api/exports/")
+                if not artifact_id or "/" in artifact_id or "\\" in artifact_id:
+                    raise ApiError("Unknown export artifact", HTTPStatus.NOT_FOUND, "export_not_found")
+                exported = self.data._project_audit.export_path(artifact_id)
+                if exported is None:
+                    raise ApiError("Unknown or unavailable validated export artifact", HTTPStatus.NOT_FOUND, "export_not_found")
+                path, item = exported
+                media_type = "application/geo+json" if item["format"] == "GeoJSON" else "application/graphml+xml"
+                self._send_artifact(path, path.name, media_type)
             elif parsed.path == "/api/boundaries":
                 self._send(self.data.boundaries())
             elif parsed.path == "/api/roads":
