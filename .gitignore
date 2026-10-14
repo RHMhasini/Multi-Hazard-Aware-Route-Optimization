@@ -1,0 +1,29 @@
+# Python virtual environment
+.venv/
+env/
+venv/
+ENV/
+
+# Byte-compiled / optimized files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Testing and coverage
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Editor / IDE configuration
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Intermediate generated data
+data/intermediate/component3/*
+!data/intermediate/component3/.gitkeep
+
+# Output generated plots, metric tables, route exports
+outputs/component3/*
+!outputs/component3/.gitkeep
