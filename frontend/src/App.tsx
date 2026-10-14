@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { MapContainer, TileLayer, GeoJSON, useMap, useMapEvents } from 'react-leaflet'
 import type { Feature, FeatureCollection, GeoJsonObject } from 'geojson'
 import { geoJSON } from 'leaflet'
@@ -208,6 +208,23 @@ function candidateStyle(feature?: Feature, selectedCandidateId: string | null = 
   return { color: '#dc2626', weight: 6, opacity: 0.9, dashArray: '3 5' }
 }
 
+const HIGHWAY_COLORS: Record<string, string> = {
+  motorway: '#dc2626', motorway_link: '#ef4444',
+  trunk: '#b91c1c', trunk_link: '#dc2626',
+  primary: '#1d4ed8', primary_link: '#2563eb',
+  secondary: '#7c3aed', secondary_link: '#8b5cf6',
+  tertiary: '#059669', tertiary_link: '#10b981',
+  residential: '#6b7280', living_street: '#9ca3af',
+  service: '#9ca3af', unclassified: '#d1d5db',
+}
+
+function highwayColor(highway: string | undefined): string {
+  if (!highway) return '#94a3b8'
+  return HIGHWAY_COLORS[highway.toLowerCase().trim()] ?? '#94a3b8'
+}
+
+type View = 'analysis' | 'roadmap'
+
 function App() {
   const [summary, setSummary] = useState<Summary | null>(null)
   const [metrics, setMetrics] = useState<MetricsResponse | null>(null)
@@ -227,6 +244,16 @@ function App() {
   const [boundaries, setBoundaries] = useState<BoundaryCollection | null>(null)
   const [boundaryError, setBoundaryError] = useState<string | null>(null)
   const [selectedDistricts, setSelectedDistricts] = useState<DistrictName[]>(districtNames)
+  const [activeView, setActiveView] = useState<View>('roadmap')
+  const highwayBreakdown = useMemo(() => {
+    if (!roads) return null
+    const counts: Record<string, number> = {}
+    for (const feature of roads.features) {
+      const hw = (feature.properties?.highway as string | undefined) ?? 'unknown'
+      counts[hw] = (counts[hw] ?? 0) + 1
+    }
+    return Object.entries(counts).sort(([, a], [, b]) => b - a)
+  }, [roads])
 
   const loadReviewDataset = useCallback(() => {
     getJson<ReviewDataset>('/api/reviews').then(setReviewDataset).catch((reason: unknown) => {
@@ -350,6 +377,14 @@ function App() {
           <p className="mt-2 text-sm text-slate-600">Real OSM roads and topology evidence, delivered through bounded read-only API requests.</p>
         </div>
       </header>
+      <div className="border-b border-slate-200 bg-white">
+        <div className="mx-auto max-w-7xl px-6">
+          <nav className="-mb-px flex gap-8" aria-label="View tabs">
+            <button className={`border-b-2 pb-3 pt-3 text-sm font-medium transition-colors ${activeView === 'analysis' ? 'border-blue-600 text-blue-700' : 'border-transparent text-slate-500 hover:text-slate-700'}`} onClick={() => setActiveView('analysis')} type="button">Topology Analysis</button>
+            <button className={`border-b-2 pb-3 pt-3 text-sm font-medium transition-colors ${activeView === 'roadmap' ? 'border-blue-600 text-blue-700' : 'border-transparent text-slate-500 hover:text-slate-700'}`} onClick={() => setActiveView('roadmap')} type="button">Road Map Output</button>
+          </nav>
+        </div>
+      </div>
       <section className="mx-auto max-w-7xl px-6 py-8">
         {error && <div className="mb-5 rounded-lg bg-red-50 p-4 text-sm text-red-800"><p>{error}</p><button className="mt-2 rounded border border-red-300 px-3 py-1 font-medium hover:bg-red-100" onClick={() => { setError(null); setReviewError(null); setDashboardRetry((attempt) => attempt + 1) }} type="button">Retry dashboard data</button></div>}
         <section className="mb-6 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
@@ -407,7 +442,7 @@ function App() {
           ))}
           </div>
         </section>
-        <section className="mb-6 rounded-2xl border border-blue-200 bg-white p-5 shadow-sm" aria-live="polite">
+        {activeView === 'analysis' && <><section className="mb-6 rounded-2xl border border-blue-200 bg-white p-5 shadow-sm" aria-live="polite">
           <div>
             <h2 className="font-semibold text-slate-900">Selected-area graph metrics</h2>
             <p className="mt-1 text-sm text-slate-600">Scope: {selectedDistricts.length ? selectedDistricts.join(' + ') : 'empty district selection'}; calculated from graph nodes covered by the selected verified district polygon union.</p>
@@ -524,7 +559,96 @@ function App() {
               )}
             </div>
           </aside>
-        </div>
+        </div></>}
+        {activeView === 'roadmap' && (
+          <div className="mt-6 grid gap-6 lg:grid-cols-[2fr_1fr]">
+            <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+              <div className="relative h-[680px]">
+                <MapContainer center={[7.225, 80.225]} zoom={10} className="h-full w-full">
+                  <TileLayer attribution="&copy; OpenStreetMap contributors" url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
+                  <FitSelectedDistricts boundaries={boundaries} selected={selectedDistricts} />
+                  <ViewportRoads onBounds={loadRoads} retryKey={roadRetry} />
+                  {mask && <GeoJSON data={mask as GeoJsonObject} interactive={false} style={{ color: 'transparent', weight: 0, fillColor: '#f1f5f9', fillOpacity: 0.35 }} />}
+                  {selectedBoundaryData && <GeoJSON data={selectedBoundaryData} style={(feature) =>
+                    feature?.properties?.boundary_type === 'province'
+                      ? { color: '#0f172a', weight: 2.5, fill: false }
+                      : { color: '#2563eb', weight: 1.5, fill: false, dashArray: '5 3' }
+                  } />}
+                  {roadData && <GeoJSON data={roadData} style={(feature) => {
+                    const hw = feature?.properties?.highway as string | undefined
+                    return {
+                      color: highwayColor(hw),
+                      weight: !hw ? 1 : hw.startsWith('motorway') || hw.startsWith('trunk') ? 3.5 : hw.startsWith('primary') ? 2.5 : hw.startsWith('secondary') ? 2 : 1.5,
+                      opacity: 0.9,
+                    }
+                  }} />}
+                </MapContainer>
+                {loadingRoads && selectedDistricts.length > 0 && <p className="absolute left-4 top-4 z-[1000] rounded bg-white px-3 py-2 text-xs font-medium shadow">Loading road network…</p>}
+                {roadError && <div className="absolute bottom-4 left-4 right-4 z-[1000] rounded bg-red-50 px-3 py-2 text-xs text-red-800"><p>{roadError}</p><button className="mt-1 rounded border border-red-300 px-2 py-1 font-medium hover:bg-red-100" onClick={() => { setLoadingRoads(true); setRoadError(null); setRoadRetry((n) => n + 1) }} type="button">Retry</button></div>}
+              </div>
+              <div className="border-t border-slate-200 px-5 py-4">
+                <p className="mb-3 text-xs font-semibold uppercase tracking-wide text-slate-500">Road classification</p>
+                <div className="flex flex-wrap gap-x-5 gap-y-2">
+                  {[
+                    { label: 'Motorway / Trunk', color: '#dc2626' },
+                    { label: 'Primary', color: '#1d4ed8' },
+                    { label: 'Secondary', color: '#7c3aed' },
+                    { label: 'Tertiary', color: '#059669' },
+                    { label: 'Residential', color: '#6b7280' },
+                    { label: 'Service / Other', color: '#9ca3af' },
+                  ].map(({ label, color }) => (
+                    <span className="flex items-center gap-1.5 text-xs text-slate-700" key={label}>
+                      <span className="inline-block h-1.5 w-6 rounded-full" style={{ backgroundColor: color }} />
+                      {label}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            </div>
+            <aside className="space-y-6">
+              <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+                <h2 className="font-semibold text-slate-900">Road types in viewport</h2>
+                <p className="mt-1 text-sm text-slate-500">Segments visible in the current map view.</p>
+                {!highwayBreakdown && <p className="mt-3 text-sm text-slate-500">Pan or zoom the map to load road data.</p>}
+                {highwayBreakdown && highwayBreakdown.length === 0 && <p className="mt-3 text-sm text-slate-500">No roads in current view.</p>}
+                {highwayBreakdown && highwayBreakdown.length > 0 && (
+                  <ul className="mt-4 space-y-2">
+                    {highwayBreakdown.slice(0, 12).map(([type, count]) => (
+                      <li className="flex items-center gap-2" key={type}>
+                        <span className="inline-block h-3 w-3 flex-shrink-0 rounded-sm" style={{ backgroundColor: highwayColor(type) }} />
+                        <span className="flex-1 text-sm text-slate-700">{type}</span>
+                        <span className="font-mono text-xs font-semibold text-slate-900">{count.toLocaleString()}</span>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </div>
+              <div className="rounded-2xl border border-blue-200 bg-blue-50 p-5">
+                <h2 className="font-semibold text-blue-950">Component 3 — Risk Scoring Input</h2>
+                <p className="mt-2 text-sm leading-6 text-blue-900">This topology-refined graph is the spatial foundation for hazard-weighted route planning. Each node is an OSM junction usable as an origin or destination waypoint.</p>
+                <dl className="mt-4 space-y-2 text-sm">
+                  <div className="flex justify-between gap-2"><dt className="text-blue-800">Format</dt><dd className="font-semibold text-blue-950">NetworkX MultiDiGraph</dd></div>
+                  <div className="flex justify-between gap-2"><dt className="text-blue-800">Nodes</dt><dd className="font-semibold text-blue-950">{summary?.graph.nodes?.toLocaleString() ?? '—'}</dd></div>
+                  <div className="flex justify-between gap-2"><dt className="text-blue-800">Directed edges</dt><dd className="font-semibold text-blue-950">{summary?.graph.directed_edges?.toLocaleString() ?? '—'}</dd></div>
+                  <div className="flex justify-between gap-2"><dt className="text-blue-800">CRS</dt><dd className="font-semibold text-blue-950">EPSG:4326 (WGS 84)</dd></div>
+                  <div className="flex justify-between gap-2"><dt className="text-blue-800">Node attributes</dt><dd className="text-right text-xs text-blue-900">id, x (lon), y (lat)</dd></div>
+                  <div className="flex justify-between gap-2"><dt className="text-blue-800">Edge attributes</dt><dd className="text-right text-xs text-blue-900">highway, length, name, maxspeed, oneway_normalized</dd></div>
+                </dl>
+              </div>
+              {metrics && !loadingMetrics && (
+                <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+                  <h2 className="font-semibold text-slate-900">Selected-area totals</h2>
+                  <p className="mt-1 text-sm text-slate-500">{selectedDistricts.length ? selectedDistricts.join(' + ') : 'No districts selected'}</p>
+                  <dl className="mt-3 space-y-2 text-sm">
+                    <div className="flex justify-between"><dt className="text-slate-600">Nodes</dt><dd className="font-semibold">{metrics.selected_area.node_count?.toLocaleString() ?? '—'}</dd></div>
+                    <div className="flex justify-between"><dt className="text-slate-600">Road segments</dt><dd className="font-semibold">{metrics.selected_area.induced_directed_edge_count?.toLocaleString() ?? '—'}</dd></div>
+                    <div className="flex justify-between"><dt className="text-slate-600">Weak components</dt><dd className="font-semibold">{metrics.selected_area.weakly_connected_component_count?.toLocaleString() ?? '—'}</dd></div>
+                  </dl>
+                </div>
+              )}
+            </aside>
+          </div>
+        )}
       </section>
     </main>
   )
