@@ -387,14 +387,22 @@ class Component2Data:
             if len(features) >= MAX_FEATURES:
                 raise ApiError("Requested bbox contains too many road segments; zoom in further")
             source, target, key, attrs = records[index]
+            source_node = graph.nodes.get(source, {})
+            target_node = graph.nodes.get(target, {})
             properties = {
                 "source": str(source),
                 "target": str(target),
                 "edge_key": str(key),
                 "length": _json_value(attrs.get("length")),
                 "highway": _json_value(attrs.get("highway")),
+                "name": _json_value(attrs.get("name")),
+                "maxspeed": _json_value(attrs.get("maxspeed")),
                 "oneway_normalized": _json_value(attrs.get("oneway_normalized")),
                 "direction_source": _json_value(attrs.get("direction_source")),
+                "source_lon": _json_value(source_node.get("x")),
+                "source_lat": _json_value(source_node.get("y")),
+                "target_lon": _json_value(target_node.get("x")),
+                "target_lat": _json_value(target_node.get("y")),
             }
             features.append({
                 "type": "Feature",

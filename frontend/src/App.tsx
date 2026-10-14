@@ -4,6 +4,7 @@ import type { Feature, FeatureCollection, GeoJsonObject } from 'geojson'
 import { geoJSON } from 'leaflet'
 import type { Layer, PathOptions } from 'leaflet'
 import 'leaflet/dist/leaflet.css'
+import { NetworkGraph } from './NetworkGraph'
 
 type Summary = {
   graph: Record<string, number>
@@ -586,150 +587,8 @@ function App() {
           </aside>
         </div></>}
         {activeView === 'roadmap' && (
-          <div className="mt-6 grid gap-6 lg:grid-cols-[2fr_1fr]">
-            <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
-              <div className="relative h-[680px]">
-                <MapContainer center={[7.225, 80.225]} zoom={10} className="h-full w-full">
-                  <TileLayer attribution="&copy; OpenStreetMap contributors" url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
-                  <FitSelectedDistricts boundaries={boundaries} selected={selectedDistricts} />
-                  <ViewportRoads onBounds={loadRoads} retryKey={roadRetry} />
-                  {mask && <GeoJSON data={mask as GeoJsonObject} interactive={false} style={{ color: 'transparent', weight: 0, fillColor: '#f1f5f9', fillOpacity: 0.35 }} />}
-                  {selectedBoundaryData && <GeoJSON data={selectedBoundaryData} style={(feature) =>
-                    feature?.properties?.boundary_type === 'province'
-                      ? { color: '#0f172a', weight: 2.5, fill: false }
-                      : { color: '#2563eb', weight: 1.5, fill: false, dashArray: '5 3' }
-                  } />}
-                  {roadData && <GeoJSON data={roadData} style={(feature) => {
-                    const hw = feature?.properties?.highway as string | undefined
-                    return {
-                      color: highwayColor(hw),
-                      weight: !hw ? 1 : hw.startsWith('motorway') || hw.startsWith('trunk') ? 3.5 : hw.startsWith('primary') ? 2.5 : hw.startsWith('secondary') ? 2 : 1.5,
-                      opacity: 0.9,
-                    }
-                  }} />}
-                </MapContainer>
-                {loadingRoads && selectedDistricts.length > 0 && <p className="absolute left-4 top-4 z-[1000] rounded bg-white px-3 py-2 text-xs font-medium shadow">Loading road network…</p>}
-                {roadError && <div className="absolute bottom-4 left-4 right-4 z-[1000] rounded bg-red-50 px-3 py-2 text-xs text-red-800"><p>{roadError}</p><button className="mt-1 rounded border border-red-300 px-2 py-1 font-medium hover:bg-red-100" onClick={() => { setLoadingRoads(true); setRoadError(null); setRoadRetry((n) => n + 1) }} type="button">Retry</button></div>}
-              </div>
-              <div className="border-t border-slate-200 px-5 py-4">
-                <p className="mb-3 text-xs font-semibold uppercase tracking-wide text-slate-500">Road classification</p>
-                <div className="flex flex-wrap gap-x-5 gap-y-2">
-                  {[
-                    { label: 'Motorway / Trunk', color: '#dc2626' },
-                    { label: 'Primary', color: '#1d4ed8' },
-                    { label: 'Secondary', color: '#7c3aed' },
-                    { label: 'Tertiary', color: '#059669' },
-                    { label: 'Residential', color: '#6b7280' },
-                    { label: 'Service / Other', color: '#9ca3af' },
-                  ].map(({ label, color }) => (
-                    <span className="flex items-center gap-1.5 text-xs text-slate-700" key={label}>
-                      <span className="inline-block h-1.5 w-6 rounded-full" style={{ backgroundColor: color }} />
-                      {label}
-                    </span>
-                  ))}
-                </div>
-              </div>
-            </div>
-            <aside className="space-y-6">
-              <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-                <h2 className="font-semibold text-slate-900">Road types in viewport</h2>
-                <p className="mt-1 text-sm text-slate-500">Segments visible in the current map view.</p>
-                {!highwayBreakdown && <p className="mt-3 text-sm text-slate-500">Pan or zoom the map to load road data.</p>}
-                {highwayBreakdown && highwayBreakdown.length === 0 && <p className="mt-3 text-sm text-slate-500">No roads in current view.</p>}
-                {highwayBreakdown && highwayBreakdown.length > 0 && (
-                  <ul className="mt-4 space-y-2">
-                    {highwayBreakdown.slice(0, 12).map(([type, count]) => (
-                      <li className="flex items-center gap-2" key={type}>
-                        <span className="inline-block h-3 w-3 flex-shrink-0 rounded-sm" style={{ backgroundColor: highwayColor(type) }} />
-                        <span className="flex-1 text-sm text-slate-700">{type}</span>
-                        <span className="font-mono text-xs font-semibold text-slate-900">{count.toLocaleString()}</span>
-                      </li>
-                    ))}
-                  </ul>
-                )}
-              </div>
-              <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-                <h2 className="font-semibold text-slate-900">Pipeline Stages</h2>
-                <p className="mt-1 text-sm text-slate-500">Component 2 processing steps.</p>
-                {!pipelineStages && <p className="mt-3 text-sm text-slate-400">Loading…</p>}
-                {pipelineStages && (
-                  <ul className="mt-3 space-y-2">
-                    {pipelineStages.map((s) => {
-                      const label: Record<string, string> = {
-                        extraction: 'OSM Data Extraction',
-                        cleaning_validation: 'Road Cleaning & Validation',
-                        direction_normalization: 'Direction Normalization',
-                        topology_candidates: 'Topology Candidate Detection',
-                        topology_repair: 'Topology Repair',
-                        evaluation: 'Evaluation Reports',
-                        export: 'Graph Export',
-                      }
-                      const dot = s.status === 'completed' ? 'bg-green-500' : s.status === 'partial' ? 'bg-amber-400' : s.status === 'failed' ? 'bg-red-500' : 'bg-slate-300'
-                      return (
-                        <li className="flex items-start gap-2" key={s.stage_id}>
-                          <span className={`mt-1.5 inline-block h-2.5 w-2.5 flex-shrink-0 rounded-full ${dot}`} />
-                          <span className="text-sm text-slate-800">{label[s.stage_id] ?? s.stage_id}</span>
-                        </li>
-                      )
-                    })}
-                  </ul>
-                )}
-                <div className="mt-3 flex flex-wrap gap-3 text-xs text-slate-500">
-                  <span className="flex items-center gap-1"><span className="inline-block h-2 w-2 rounded-full bg-green-500" />Completed</span>
-                  <span className="flex items-center gap-1"><span className="inline-block h-2 w-2 rounded-full bg-amber-400" />Partial</span>
-                  <span className="flex items-center gap-1"><span className="inline-block h-2 w-2 rounded-full bg-slate-300" />Unavailable</span>
-                </div>
-              </div>
-              <div className="rounded-2xl border border-slate-200 bg-slate-50 p-5">
-                <h2 className="font-semibold text-slate-900">Network Refinement</h2>
-                <p className="mt-1 text-sm text-slate-500">Raw OSM vs topology-refined output.</p>
-                {graphComparison && (() => {
-                  const raw = graphComparison.graphs.raw?.metrics
-                  const final = graphComparison.graphs.topology_repaired?.metrics ?? graphComparison.graphs.direction_normalized?.metrics
-                  if (!raw || !final) return <p className="mt-3 text-sm text-slate-400">Metrics unavailable.</p>
-                  return (
-                    <div className="mt-3 space-y-3">
-                      {[
-                        { label: 'Nodes', raw: raw.node_count, out: final.node_count },
-                        { label: 'Directed edges', raw: raw.directed_edge_count, out: final.directed_edge_count },
-                        { label: 'Degree-1 nodes', raw: raw.degree_1_node_count, out: final.degree_1_node_count },
-                        { label: 'Weak components', raw: raw.weakly_connected_component_count, out: final.weakly_connected_component_count },
-                      ].map(({ label, raw: r, out: o }) => (
-                        <div key={label}>
-                          <p className="text-xs font-medium text-slate-500">{label}</p>
-                          <div className="mt-1 flex justify-between text-sm">
-                            <span className="text-slate-500">Raw: <span className="font-mono font-semibold text-slate-700">{r?.toLocaleString() ?? '—'}</span></span>
-                            <span className="text-slate-500">Final: <span className="font-mono font-semibold text-green-700">{o?.toLocaleString() ?? '—'}</span></span>
-                          </div>
-                        </div>
-                      ))}
-                      <div className="mt-1 border-t border-slate-200 pt-3">
-                        <div className="flex justify-between text-sm">
-                          <span className="text-slate-600">Topology candidates</span>
-                          <span className="font-semibold text-slate-900">{summary?.candidate_count?.toLocaleString() ?? '—'}</span>
-                        </div>
-                        <div className="flex justify-between text-sm">
-                          <span className="text-slate-600">Accepted repairs</span>
-                          <span className="font-semibold text-slate-900">{summary?.repairs.accepted?.toLocaleString() ?? '—'}</span>
-                        </div>
-                      </div>
-                    </div>
-                  )
-                })()}
-                {!graphComparison && <p className="mt-3 text-sm text-slate-400">Loading…</p>}
-              </div>
-              {metrics && !loadingMetrics && (
-                <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-                  <h2 className="font-semibold text-slate-900">Selected-area totals</h2>
-                  <p className="mt-1 text-sm text-slate-500">{selectedDistricts.length ? selectedDistricts.join(' + ') : 'No districts selected'}</p>
-                  <dl className="mt-3 space-y-2 text-sm">
-                    <div className="flex justify-between"><dt className="text-slate-600">Nodes</dt><dd className="font-semibold">{metrics.selected_area.node_count?.toLocaleString() ?? '—'}</dd></div>
-                    <div className="flex justify-between"><dt className="text-slate-600">Road segments</dt><dd className="font-semibold">{metrics.selected_area.induced_directed_edge_count?.toLocaleString() ?? '—'}</dd></div>
-                    <div className="flex justify-between"><dt className="text-slate-600">Weak components</dt><dd className="font-semibold">{metrics.selected_area.weakly_connected_component_count?.toLocaleString() ?? '—'}</dd></div>
-                  </dl>
-                </div>
-              )}
-            </aside>
+          <div className="mt-6">
+            <NetworkGraph summary={summary} boundaries={boundaries} mask={mask} />
           </div>
         )}
       </section>
