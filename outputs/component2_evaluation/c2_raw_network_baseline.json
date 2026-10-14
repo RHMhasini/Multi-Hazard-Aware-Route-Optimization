@@ -58,7 +58,7 @@
   },
   "inspection": {
     "boundary_path": "data\\raw\\c2_sabaragamuwa_boundary.geojson",
-    "generated_at": "2026-10-08T07:18:18.863644+00:00",
+    "generated_at": "2026-10-12T05:14:57.665685+00:00",
     "graph_path": "data\\raw\\c2_sabaragamuwa_raw_drive_network.graphml",
     "graph_size_bytes": 379592640,
     "metadata_path": "data\\raw\\c2_sabaragamuwa_osm_metadata.json",
