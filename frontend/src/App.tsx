@@ -13,19 +13,47 @@ type Summary = {
   study_area: string
 }
 
+type MetricsResponse = {
+  selected_districts: DistrictName[]
+  spatial_policy: {
+    node_inclusion: string
+    edge_inclusion: string
+    geometric_boundary_crossing_directed_edge_count: number | null
+    geometric_boundary_crossing_limitation: string
+    endpoint_split_directed_edge_count: string
+  }
+  province_wide: {
+    node_count: number | null
+    directed_edge_count: number | null
+    weakly_connected_component_count: number | null
+  }
+  selected_area: {
+    node_count: number | null
+    induced_directed_edge_count: number | null
+    weakly_connected_component_count: number | null
+    endpoint_split_directed_edge_count: number | null
+  }
+}
+
 type CandidateProperties = {
   candidate_id?: string
   status?: string
   distance_m?: number
   heading_compatible?: boolean
+  heading_u_degrees?: number | null
+  heading_v_degrees?: number | null
+  heading_deviation_degrees?: number | null
+  reasons?: string[]
   semantic_conflicts?: string[]
   semantic_missing_attributes?: string[]
-  endpoint_u?: string
-  endpoint_v?: string
+  endpoint_semantics?: Record<string, Record<string, { ambiguous: boolean; missing: boolean; values: string[] }>>
+  endpoint_u?: string | number
+  endpoint_v?: string | number
   feature_type?: string
 }
 
 type CandidateFeature = Feature & { properties?: CandidateProperties }
+type RoadAttributeEvidence = { ambiguous: boolean; missing: boolean; values: string[] }
 type ReviewEvidence = { evidence_type: string; description: string; reference: string }
 type CandidateReview = {
   candidate_id: string
@@ -48,6 +76,14 @@ type BoundaryFeature = Feature & { properties?: { boundary_type?: string; distri
 type BoundaryCollection = FeatureCollection & { features: BoundaryFeature[] }
 
 const districtNames: DistrictName[] = ['Ratnapura', 'Kegalle']
+const candidateStatuses = ['eligible', 'needs_review', 'rejected'] as const
+
+function formatRoadAttribute(evidence?: RoadAttributeEvidence): string {
+  if (!evidence) return 'Unavailable'
+  if (evidence.missing) return 'Not recorded'
+  if (evidence.values.length === 0) return 'Unavailable'
+  return `${evidence.values.join(', ')}${evidence.ambiguous ? ' (ambiguous)' : ''}`
+}
 
 function provinceMask(boundaries: BoundaryCollection | null): Feature | null {
   const province = boundaries?.features.find((feature) => feature.properties?.boundary_type === 'province')
@@ -70,7 +106,7 @@ function provinceMask(boundaries: BoundaryCollection | null): Feature | null {
 
 async function getJson<T>(path: string): Promise<T> {
   const unavailableMessage =
-    'Cannot reach the Component 2 API at 127.0.0.1:8000. Start or restart it from the repository root with .venv\\Scripts\\python.exe scripts\\c2_api.py, then retry.'
+    'Connection failure: cannot reach the Component 2 API at 127.0.0.1:8000. Start or restart it from the repository root with .venv\\Scripts\\python.exe scripts\\c2_api.py, then retry.'
   let response: Response
   try {
     response = await fetch(path)
@@ -84,9 +120,6 @@ async function getJson<T>(path: string): Promise<T> {
   try {
     payload = JSON.parse(body)
   } catch {
-    if (!contentType.toLowerCase().includes('application/json') && response.status >= 500) {
-      throw new Error(unavailableMessage)
-    }
     const preview = body.replace(/\s+/g, ' ').slice(0, 120)
     throw new Error(
       `API returned a non-JSON response for ${path} (${response.status}, ${contentType || 'unknown content type'}): ${preview || 'empty response'}`,
@@ -94,8 +127,9 @@ async function getJson<T>(path: string): Promise<T> {
   }
 
   if (!response.ok) {
-    const error = payload as { error?: string }
-    throw new Error(error.error ?? `API request failed for ${path} (${response.status})`)
+    const error = payload as { error?: string; message?: string; code?: string }
+    const detail = error.error ?? error.message ?? 'Request was rejected'
+    throw new Error(`HTTP ${response.status} API error${error.code ? ` (${error.code})` : ''} for ${path}: ${detail}`)
   }
 
   if (!contentType.toLowerCase().includes('application/json')) {
@@ -125,7 +159,7 @@ async function getRoadsForBounds(bounds: number[], districts: string, depth = 0)
   }
 }
 
-function ViewportRoads({ onBounds }: { onBounds: (bbox: string) => void }) {
+function ViewportRoads({ onBounds, retryKey }: { onBounds: (bbox: string) => void; retryKey: number }) {
   const map = useMapEvents({
     moveend: () => {
       const bounds = map.getBounds()
@@ -137,6 +171,11 @@ function ViewportRoads({ onBounds }: { onBounds: (bbox: string) => void }) {
       ].join(','))
     },
   })
+  useEffect(() => {
+    if (retryKey === 0) return
+    const bounds = map.getBounds()
+    onBounds([bounds.getWest(), bounds.getSouth(), bounds.getEast(), bounds.getNorth()].join(','))
+  }, [map, onBounds, retryKey])
   return null
 }
 
@@ -159,22 +198,31 @@ function FitSelectedDistricts({ boundaries, selected }: { boundaries: BoundaryCo
   return null
 }
 
-function candidateStyle(feature?: Feature): PathOptions {
-  const status = (feature as CandidateFeature | undefined)?.properties?.status
-  if (status === 'eligible') return { color: '#16a34a', weight: 4 }
-  if (status === 'needs_review') return { color: '#d97706', weight: 4, dashArray: '5 4' }
-  return { color: '#dc2626', weight: 3, dashArray: '3 5' }
+function candidateStyle(feature?: Feature, selectedCandidateId: string | null = null): PathOptions {
+  const properties = (feature as CandidateFeature | undefined)?.properties
+  const selected = properties?.candidate_id === selectedCandidateId
+  const status = properties?.status
+  if (selected) return { color: '#7c3aed', weight: 9, opacity: 1 }
+  if (status === 'eligible') return { color: '#16a34a', weight: 6, opacity: 0.9 }
+  if (status === 'needs_review') return { color: '#d97706', weight: 6, opacity: 0.9, dashArray: '5 4' }
+  return { color: '#dc2626', weight: 6, opacity: 0.9, dashArray: '3 5' }
 }
 
 function App() {
   const [summary, setSummary] = useState<Summary | null>(null)
+  const [metrics, setMetrics] = useState<MetricsResponse | null>(null)
+  const [metricsError, setMetricsError] = useState<string | null>(null)
+  const [loadingMetrics, setLoadingMetrics] = useState(true)
+  const [metricsRetry, setMetricsRetry] = useState(0)
   const [reviewDataset, setReviewDataset] = useState<ReviewDataset | null>(null)
   const [reviewError, setReviewError] = useState<string | null>(null)
   const [selectedCandidateId, setSelectedCandidateId] = useState<string | null>(null)
   const [candidates, setCandidates] = useState<FeatureCollection | null>(null)
   const [roads, setRoads] = useState<FeatureCollection | null>(null)
   const [roadError, setRoadError] = useState<string | null>(null)
+  const [roadRetry, setRoadRetry] = useState(0)
   const [error, setError] = useState<string | null>(null)
+  const [dashboardRetry, setDashboardRetry] = useState(0)
   const [loadingRoads, setLoadingRoads] = useState(true)
   const [boundaries, setBoundaries] = useState<BoundaryCollection | null>(null)
   const [boundaryError, setBoundaryError] = useState<string | null>(null)
@@ -182,21 +230,45 @@ function App() {
 
   const loadReviewDataset = useCallback(() => {
     getJson<ReviewDataset>('/api/reviews').then(setReviewDataset).catch((reason: unknown) => {
+      setReviewDataset(null)
       setReviewError(reason instanceof Error ? reason.message : 'Could not load candidate review records')
     })
   }, [])
 
   useEffect(() => {
     getJson<Summary>('/api/summary').then(setSummary).catch((reason: unknown) => {
+      setSummary(null)
       const message = reason instanceof Error ? reason.message : 'Could not load research data'
       setError(message)
     })
-    getJson<BoundaryCollection>('/api/boundaries').then(setBoundaries).catch((reason: unknown) => {
+    getJson<BoundaryCollection>('/api/boundaries').then((value) => {
+      setBoundaries(value)
+      setBoundaryError(null)
+    }).catch((reason: unknown) => {
+      setBoundaries(null)
       const message = reason instanceof Error ? reason.message : 'Could not load boundary data'
       setBoundaryError(message)
     })
     loadReviewDataset()
-  }, [loadReviewDataset])
+  }, [loadReviewDataset, dashboardRetry])
+
+  useEffect(() => {
+    let active = true
+    const districts = encodeURIComponent(selectedDistricts.join(','))
+    getJson<MetricsResponse>(`/api/metrics?districts=${districts}`)
+      .then((response) => {
+        if (active) setMetrics(response)
+      })
+      .catch((reason: unknown) => {
+        if (!active) return
+        setMetrics(null)
+        setMetricsError(reason instanceof Error ? reason.message : 'Could not load graph metrics')
+      })
+      .finally(() => {
+        if (active) setLoadingMetrics(false)
+      })
+    return () => { active = false }
+  }, [selectedDistricts, metricsRetry])
 
   useEffect(() => {
     if (selectedDistricts.length === 0) {
@@ -205,8 +277,11 @@ function App() {
     const districts = encodeURIComponent(selectedDistricts.join(','))
     getJson<FeatureCollection>(`/api/candidates?districts=${districts}`)
       .then(setCandidates)
-      .catch((reason: unknown) => setError(reason instanceof Error ? reason.message : 'Could not load district candidates'))
-  }, [selectedDistricts])
+      .catch((reason: unknown) => {
+        setCandidates(null)
+        setError(reason instanceof Error ? reason.message : 'Could not load district candidates')
+      })
+  }, [selectedDistricts, dashboardRetry])
 
   const loadRoads = useCallback((bbox: string) => {
     if (selectedDistricts.length === 0) {
@@ -228,7 +303,9 @@ function App() {
 
   const onEachCandidate = (feature: Feature, layer: Layer) => {
     const properties = (feature as CandidateFeature).properties ?? {}
-    if (properties.candidate_id && properties.feature_type === 'candidate_connection') {
+    if (properties.candidate_id) {
+      // Endpoint point features are rendered after their short connector line and
+      // can receive the pointer event instead of the line. Both must select the ID.
       layer.on('click', () => setSelectedCandidateId(properties.candidate_id ?? null))
     }
     const label = [
@@ -248,6 +325,11 @@ function App() {
     return properties?.candidate_id === selectedCandidateId && properties.feature_type === 'candidate_connection'
   }) as CandidateFeature | undefined
   const selectedCandidateProperties = selectedCandidate?.properties
+  const candidateFeatures = candidates?.features.filter((feature) => {
+    const properties = (feature as CandidateFeature).properties
+    return properties?.feature_type === 'candidate_connection' && Boolean(properties.candidate_id)
+  }) as CandidateFeature[] | undefined
+  const candidateAttributes = selectedCandidateProperties?.endpoint_semantics
   const selectedBoundaryData = boundaries
     ? {
         ...boundaries,
@@ -269,7 +351,7 @@ function App() {
         </div>
       </header>
       <section className="mx-auto max-w-7xl px-6 py-8">
-        {error && <p className="mb-5 rounded-lg bg-red-50 p-4 text-sm text-red-800">{error}</p>}
+        {error && <div className="mb-5 rounded-lg bg-red-50 p-4 text-sm text-red-800"><p>{error}</p><button className="mt-2 rounded border border-red-300 px-3 py-1 font-medium hover:bg-red-100" onClick={() => { setError(null); setReviewError(null); setDashboardRetry((attempt) => attempt + 1) }} type="button">Retry dashboard data</button></div>}
         <section className="mb-6 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
           <div className="flex flex-wrap items-center justify-between gap-4">
             <div>
@@ -283,6 +365,8 @@ function App() {
                     checked={selectedDistricts.includes(district)}
                     className="h-4 w-4 accent-blue-700"
                     onChange={() => {
+                      setLoadingMetrics(true)
+                      setMetricsError(null)
                       const next = selectedDistricts.includes(district)
                         ? selectedDistricts.filter((name) => name !== district)
                         : [...selectedDistricts, district]
@@ -303,7 +387,12 @@ function App() {
           </div>
           {boundaryError && <p className="mt-3 text-sm text-red-700">Verified district boundaries are unavailable: {boundaryError}</p>}
         </section>
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
+        <section className="mb-6 rounded-2xl border border-slate-200 bg-slate-50 p-5">
+          <div>
+            <h2 className="font-semibold text-slate-900">Province-wide graph totals</h2>
+            <p className="mt-1 text-sm text-slate-600">Scope: all of Sabaragamuwa Province. These totals do not change with district selection.</p>
+          </div>
+          <div className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
           {[
             ['Nodes', summary?.graph.nodes],
             ['Directed edges', summary?.graph.directed_edges],
@@ -316,14 +405,42 @@ function App() {
               <p className="mt-2 text-2xl font-bold text-slate-950">{value ?? '—'}</p>
             </div>
           ))}
-        </div>
+          </div>
+        </section>
+        <section className="mb-6 rounded-2xl border border-blue-200 bg-white p-5 shadow-sm" aria-live="polite">
+          <div>
+            <h2 className="font-semibold text-slate-900">Selected-area graph metrics</h2>
+            <p className="mt-1 text-sm text-slate-600">Scope: {selectedDistricts.length ? selectedDistricts.join(' + ') : 'empty district selection'}; calculated from graph nodes covered by the selected verified district polygon union.</p>
+          </div>
+          {loadingMetrics && <p className="mt-4 text-sm text-slate-600">Loading graph metrics…</p>}
+          {metricsError && <div className="mt-4 rounded-lg bg-red-50 p-3 text-sm text-red-800"><p>Selected-area metrics unavailable: {metricsError}</p><button className="mt-2 rounded border border-red-300 px-3 py-1 font-medium hover:bg-red-100" onClick={() => { setLoadingMetrics(true); setMetricsError(null); setMetricsRetry((attempt) => attempt + 1) }} type="button">Retry metrics</button></div>}
+          {!loadingMetrics && !metricsError && metrics && (
+            <>
+              <dl className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+                {[
+                  ['Selected nodes', metrics.selected_area.node_count],
+                  ['Induced directed edges', metrics.selected_area.induced_directed_edge_count],
+                  ['Selected weak components', metrics.selected_area.weakly_connected_component_count],
+                  ['Endpoint-split directed edges', metrics.selected_area.endpoint_split_directed_edge_count],
+                ].map(([label, value]) => (
+                  <div className="rounded-xl border border-slate-200 p-4" key={label}>
+                    <dt className="text-xs font-semibold uppercase tracking-wide text-slate-500">{label}</dt>
+                    <dd className="mt-2 text-2xl font-bold text-slate-950">{value ?? 'Unavailable'}</dd>
+                  </div>
+                ))}
+              </dl>
+              <p className="mt-4 text-xs leading-5 text-slate-600">{metrics.spatial_policy.edge_inclusion} {metrics.spatial_policy.geometric_boundary_crossing_limitation}</p>
+              <p className="mt-1 text-xs text-slate-500">Geometric boundary-crossing edges: {metrics.spatial_policy.geometric_boundary_crossing_directed_edge_count ?? 'Unavailable'}. A 200 response does not imply every metric is available.</p>
+            </>
+          )}
+        </section>
         <div className="mt-6 grid gap-6 lg:grid-cols-[1.6fr_1fr]">
           <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
             <div className="relative h-[620px]">
               <MapContainer center={[7.225, 80.225]} zoom={12} className="h-full w-full">
                 <TileLayer attribution="&copy; OpenStreetMap contributors" url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
                 <FitSelectedDistricts boundaries={boundaries} selected={selectedDistricts} />
-                <ViewportRoads onBounds={loadRoads} />
+                <ViewportRoads onBounds={loadRoads} retryKey={roadRetry} />
                 {mask && <GeoJSON data={mask as GeoJsonObject} interactive={false} style={{ color: 'transparent', weight: 0, fillColor: '#f1f5f9', fillOpacity: 1 }} />}
                 {selectedBoundaryData && <GeoJSON data={selectedBoundaryData} style={(feature) =>
                   feature?.properties?.boundary_type === 'province'
@@ -331,11 +448,11 @@ function App() {
                     : { color: '#2563eb', weight: 3, fill: false }
                 } />}
                 {roadData && <GeoJSON data={roadData} style={{ color: '#2563eb', weight: 1.5, opacity: 0.7 }} />}
-                {candidateData && <GeoJSON data={candidateData} style={candidateStyle} onEachFeature={onEachCandidate} />}
+                {candidateData && <GeoJSON data={candidateData} style={(feature) => candidateStyle(feature, selectedCandidateId)} onEachFeature={onEachCandidate} />}
               </MapContainer>
               {selectedDistricts.length === 0 && <p className="absolute left-4 right-4 top-4 z-[1000] rounded bg-white px-3 py-3 text-sm font-medium text-slate-700 shadow">Select at least one district to display its roads and candidate overlays.</p>}
               {loadingRoads && selectedDistricts.length > 0 && <p className="absolute left-4 top-4 z-[1000] rounded bg-white px-3 py-2 text-xs font-medium shadow">Loading bounded district road view…</p>}
-              {roadError && <p className="absolute bottom-4 left-4 right-4 z-[1000] rounded bg-red-50 px-3 py-2 text-xs text-red-800">{roadError}</p>}
+              {roadError && <div className="absolute bottom-4 left-4 right-4 z-[1000] rounded bg-red-50 px-3 py-2 text-xs text-red-800"><p>{roadError}</p><button className="mt-1 rounded border border-red-300 px-2 py-1 font-medium hover:bg-red-100" onClick={() => { setLoadingRoads(true); setRoadError(null); setRoadRetry((attempt) => attempt + 1) }} type="button">Retry road data</button></div>}
             </div>
             <div className="flex flex-wrap gap-4 border-t border-slate-200 px-4 py-3 text-xs text-slate-600">
               <span><i className="mr-1 inline-block h-2.5 w-2.5 rounded-full bg-green-600" />Eligible</span>
@@ -347,37 +464,62 @@ function App() {
             <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
               <h2 className="font-semibold text-slate-900">Candidate statuses</h2>
               <dl className="mt-4 space-y-3 text-sm">
-                {Object.entries(summary?.candidate_status_counts ?? {}).map(([status, count]) => (
-                  <div className="flex justify-between" key={status}><dt className="text-slate-600">{status}</dt><dd className="font-semibold">{count}</dd></div>
+                {candidateStatuses.map((status) => (
+                  <div className="flex justify-between" key={status}><dt className="text-slate-600">{status}</dt><dd className="font-semibold">{summary ? summary.candidate_status_counts[status] ?? 0 : 'Unavailable'}</dd></div>
                 ))}
               </dl>
-              <p className="mt-5 text-xs leading-5 text-slate-500">Select a candidate line on the map to inspect its real ID, status, distance, and endpoint evidence.</p>
+              <p className="mt-5 text-xs leading-5 text-slate-500">Select a candidate connector or endpoint on the map, or use these keyboard-accessible candidate controls.</p>
+              {candidateFeatures && candidateFeatures.length > 0 && <ul className="mt-3 max-h-52 space-y-1 overflow-y-auto">{candidateFeatures.map((feature) => {
+                const properties = feature.properties ?? {}
+                const candidateId = properties.candidate_id!
+                return <li key={candidateId}><button aria-pressed={selectedCandidateId === candidateId} className={`w-full rounded px-2 py-1 text-left text-xs font-mono ${selectedCandidateId === candidateId ? 'bg-blue-100 text-blue-950' : 'hover:bg-slate-100'}`} onClick={() => setSelectedCandidateId(candidateId)} type="button">{candidateId} <span className="font-sans">· {properties.status ?? 'status unavailable'}</span></button></li>
+              })}</ul>}
+              {candidates && candidateFeatures?.length === 0 && <p className="mt-3 text-sm text-slate-600">No candidate connections are available for the selected districts.</p>}
+            </div>
+            <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+              <h2 className="font-semibold text-slate-900">Candidate inspection</h2>
+              {!selectedCandidateId && <p className="mt-2 text-sm text-slate-600">Select a real candidate from the map or list.</p>}
+              {selectedCandidateId && <>
+                <p className="mt-2 break-all font-mono text-xs text-slate-600">{selectedCandidateId}</p>
+                {!selectedCandidate && <p className="mt-2 text-sm text-amber-800">Candidate geometry or evidence is not currently available for this selection.</p>}
+                {selectedCandidateProperties && <dl className="mt-3 space-y-2 text-sm">
+                  <div className="flex justify-between gap-3"><dt className="text-slate-600">Automated status</dt><dd className="font-semibold">{selectedCandidateProperties.status ?? 'unavailable'}</dd></div>
+                  <div className="flex justify-between gap-3"><dt className="text-slate-600">Endpoint distance</dt><dd>{selectedCandidateProperties.distance_m ?? 'Unavailable'}{selectedCandidateProperties.distance_m !== undefined ? ' m' : ''}</dd></div>
+                  <div className="flex justify-between gap-3"><dt className="text-slate-600">Heading compatible</dt><dd>{selectedCandidateProperties.heading_compatible === undefined ? 'Unavailable' : selectedCandidateProperties.heading_compatible ? 'yes' : 'no'}</dd></div>
+                  <div className="flex justify-between gap-3"><dt className="text-slate-600">Heading deviation</dt><dd>{selectedCandidateProperties.heading_deviation_degrees ?? 'Unavailable'}{selectedCandidateProperties.heading_deviation_degrees != null ? '°' : ''}</dd></div>
+                  <div><dt className="text-slate-600">Endpoints</dt><dd className="break-all">{selectedCandidateProperties.endpoint_u ?? 'Unavailable'} → {selectedCandidateProperties.endpoint_v ?? 'Unavailable'}</dd></div>
+                  {selectedCandidateProperties.reasons && <div><dt className="text-slate-600">Automated screening reasons</dt><dd>{selectedCandidateProperties.reasons.join(', ') || 'None recorded'}</dd></div>}
+                  {selectedCandidateProperties.semantic_conflicts && <div><dt className="text-slate-600">Road attribute conflicts</dt><dd>{selectedCandidateProperties.semantic_conflicts.join(', ') || 'None recorded'}</dd></div>}
+                  {selectedCandidateProperties.semantic_missing_attributes && <div><dt className="text-slate-600">Missing road attributes</dt><dd>{selectedCandidateProperties.semantic_missing_attributes.join(', ') || 'None recorded'}</dd></div>}
+                  <div><dt className="text-slate-600">Endpoint road attributes</dt>{['u', 'v'].map((endpoint) => {
+                    const attributes = candidateAttributes?.[endpoint]
+                    const entries = Object.entries(attributes ?? {})
+                    return <dd className="mt-1" key={endpoint}><span className="font-medium">{endpoint}:</span> {entries.length > 0 ? entries.map(([attribute, evidence]) => `${attribute}: ${formatRoadAttribute(evidence)}`).join('; ') : 'Unavailable'}</dd>
+                  })}</div>
+                </dl>}
+                <p className="mt-3 break-all text-[11px] text-slate-500">Candidate source: {reviewDataset?.candidate_source.path ?? (reviewError ? `unavailable (${reviewError})` : 'loading')} {reviewDataset?.candidate_source.sha256 ? `· SHA-256 ${reviewDataset.candidate_source.sha256}` : ''}</p>
+              </>}
             </div>
             <div className="rounded-2xl border border-amber-200 bg-amber-50 p-5">
               <h2 className="font-semibold text-amber-950">Repair status</h2>
               <p className="mt-2 text-sm leading-6 text-amber-900">
-                {summary?.repairs.accepted ?? 0} real-data repairs accepted. Candidates remain evidence, not confirmed defects, and this read-only UI cannot approve repairs.
+              {summary ? `${summary.repairs.accepted} real-data repairs accepted.` : 'Repair summary unavailable.'} Candidates remain evidence, not confirmed defects, and this read-only UI cannot approve repairs.
               </p>
             </div>
             <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-              <h2 className="font-semibold text-slate-900">Candidate review</h2>
+              <h2 className="font-semibold text-slate-900">Human review</h2>
               {reviewError && <div className="mt-2 text-sm text-red-700"><p>Review records unavailable: {reviewError}</p><button className="mt-2 rounded border border-red-300 px-3 py-1 font-medium text-red-800 hover:bg-red-100" onClick={() => { setReviewError(null); loadReviewDataset() }} type="button">Retry review data</button></div>}
-              {!reviewError && !selectedReview && <p className="mt-2 text-sm text-slate-600">Select a candidate connection on the map to inspect its review record.</p>}
+              {!reviewError && !selectedReview && <p className="mt-2 text-sm text-slate-600">{selectedCandidateId ? 'No human-review record is available for this candidate.' : 'Select a candidate connection on the map to inspect its review record.'}</p>}
               {selectedReview && (
                 <div className="mt-3 space-y-3 text-sm">
-                  <p className="break-all font-mono text-xs text-slate-600">{selectedReview.candidate_id}</p>
                   <dl className="space-y-2">
-                    <div className="flex justify-between gap-3"><dt className="text-slate-600">Automated status</dt><dd className="font-semibold">{selectedReview.automated_status}</dd></div>
                     <div className="flex justify-between gap-3"><dt className="text-slate-600">Human review</dt><dd className="font-semibold">{selectedReview.review_state === 'unreviewed' ? 'unreviewed' : selectedReview.classification}</dd></div>
-                    {selectedCandidateProperties?.distance_m !== undefined && <div className="flex justify-between gap-3"><dt className="text-slate-600">Endpoint distance</dt><dd>{selectedCandidateProperties.distance_m} m</dd></div>}
-                    {selectedCandidateProperties?.endpoint_u && <div className="flex justify-between gap-3"><dt className="text-slate-600">Endpoints</dt><dd>{selectedCandidateProperties.endpoint_u} → {selectedCandidateProperties.endpoint_v}</dd></div>}
                   </dl>
                   {selectedReview.reviewer_decision && <p><span className="font-medium">Decision: </span>{selectedReview.reviewer_decision}</p>}
                   {selectedReview.supporting_evidence.length > 0 && <div><p className="font-medium">Supporting evidence</p><ul className="mt-1 list-disc space-y-1 pl-5">{selectedReview.supporting_evidence.map((item, index) => <li key={`${item.reference}-${index}`}>{item.evidence_type}: {item.description} <span className="break-all text-slate-500">({item.reference})</span></li>)}</ul></div>}
                   {selectedReview.limitations.length > 0 && <div><p className="font-medium">Limitations</p><ul className="mt-1 list-disc space-y-1 pl-5">{selectedReview.limitations.map((item) => <li key={item}>{item}</li>)}</ul></div>}
                   <p className="text-xs text-slate-500">Reviewer: {selectedReview.reviewer_id ?? 'not recorded'} · Reviewed: {selectedReview.reviewed_at ?? 'not recorded'}</p>
                   <p className="rounded bg-blue-50 p-2 text-xs text-blue-900">Review annotations are evidence records only. They do not approve repairs or modify the road graph.</p>
-                  <p className="break-all text-[11px] text-slate-400">Source report SHA-256: {reviewDataset?.candidate_source.sha256}</p>
                 </div>
               )}
             </div>
