@@ -70,12 +70,13 @@ def apply_hazard_penalty_scenario(
 ) -> nx.DiGraph:
     """Apply severe transit penalties to cautionary hazard zones without completely severing them.
 
-    Multiplies travel time and routing impedance by penalty_multiplier for edges exceeding warning_threshold.
+    Keeps free-flow travel time pure (preserving NFR objective independence) while scaling routing
+    impedance by penalty_multiplier for edges exceeding warning_threshold.
 
     Args:
         graph: Routing graph.
-        warning_threshold: Hazard level where speed is reduced and risk penalty is imposed (default: 0.50).
-        penalty_multiplier: Factor by which travel time / impedance increases.
+        warning_threshold: Hazard level where risk penalty is imposed (default: 0.50).
+        penalty_multiplier: Factor by which routing impedance increases.
         inplace: If True, modifies input graph directly.
 
     Returns:
@@ -88,8 +89,8 @@ def apply_hazard_penalty_scenario(
         hazard_val = float(data.get("hazard_score", data.get("max_hazard", 0.0)))
         if hazard_val >= warning_threshold:
             penalized_count += 1
-            data["travel_time"] = round(float(data.get("travel_time", 1.0)) * penalty_multiplier, 2)
-            data["impedance"] = round(float(data.get("impedance", 1.0)) * penalty_multiplier, 2)
+            # Scale impedance for routing without mutating pure travel time
+            data["impedance"] = round(float(data.get("impedance", data.get("travel_time", 1.0))) * penalty_multiplier, 2)
             data["is_penalized"] = True
 
     g.graph["penalty_report"] = {
@@ -127,6 +128,8 @@ def evaluate_network_resilience(
 ) -> List[Dict[str, Any]]:
     """Evaluate network resilience by measuring topological degradation across hazard thresholds.
 
+    Computes strongly connected components (for directed road networks) as well as weakly connected components.
+
     Args:
         graph: Original routing graph with hazard scores attached.
         thresholds: List of hazard exclusion thresholds to test (default: [0.95, 0.85, 0.70, 0.50]).
@@ -139,15 +142,15 @@ def evaluate_network_resilience(
 
     resilience_results: List[Dict[str, Any]] = []
     initial_edges = len(graph.edges())
-    initial_nodes = len(graph.nodes())
 
     for thresh in thresholds:
         pruned_g = apply_hazard_exclusion(graph, hazard_threshold=thresh, inplace=False)
         active_edges = len(pruned_g.edges())
         severed_edges = initial_edges - active_edges
 
-        # Analyze connectivity
-        num_components = nx.number_weakly_connected_components(pruned_g)
+        # Analyze directed graph connectivity
+        num_scc = nx.number_strongly_connected_components(pruned_g)
+        num_wcc = nx.number_weakly_connected_components(pruned_g)
 
         resilience_results.append({
             "threshold": thresh,
@@ -155,7 +158,8 @@ def evaluate_network_resilience(
             "active_edges": active_edges,
             "severed_edges": severed_edges,
             "severed_pct": round(severed_edges / max(1, initial_edges) * 100.0, 2),
-            "weakly_connected_components": num_components,
+            "strongly_connected_components": num_scc,
+            "weakly_connected_components": num_wcc,
         })
 
     return resilience_results
