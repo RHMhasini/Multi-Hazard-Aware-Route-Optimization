@@ -77,3 +77,35 @@ def test_pareto_sweep_and_label_setting():
     for sol in label_frontier:
         assert sol["path"][0] == origin
         assert sol["path"][-1] == destination
+
+
+def test_label_setting_vs_brute_force_all_simple_paths():
+    """Exhaustive ground-truth test: compare label setting against all simple paths on a small graph."""
+    # Build small 3x3 grid where all simple paths can be enumerated
+    G_raw = generate_synthetic_grid_graph(rows=3, cols=3, spacing_m=500.0, seed=42)
+    hazard_data = generate_synthetic_hazard_raster(seed=42)
+    attach_hazard_to_graph(G_raw, hazard_data)
+    G = build_routing_graph(G_raw)
+
+    o = "node_0_0"
+    d = "node_2_2"
+
+    # Enumerate all simple paths
+    all_paths = list(nx.all_simple_paths(G, source=o, target=d))
+    assert len(all_paths) > 0
+
+    evaluated_all = []
+    for p in all_paths:
+        t = sum(float(G[u][v].get("travel_time", 1.0)) for u, v in zip(p[:-1], p[1:]))
+        r = sum(float(G[u][v].get("hazard_exposure", 0.0)) for u, v in zip(p[:-1], p[1:]))
+        evaluated_all.append({"path": p, "travel_time": round(t, 2), "hazard_exposure": round(r, 2)})
+
+    ground_truth_frontier = filter_dominated_routes(evaluated_all, objective_keys=("travel_time", "hazard_exposure"))
+    gt_objectives = {(r["travel_time"], r["hazard_exposure"]) for r in ground_truth_frontier}
+
+    # Label-setting frontier
+    ls_frontier = bi_criteria_label_setting(G, o, d, max_labels_per_node=100)
+    ls_objectives = {(r["travel_time"], r["hazard_exposure"]) for r in ls_frontier}
+
+    # Every label setting solution must be non-dominated and match ground truth
+    assert ls_objectives == gt_objectives
