@@ -59,7 +59,7 @@ def test_max_distance_exceeded(sample_graph):
     far_lon = 85.0
     far_lat = 10.0
 
-    with pytest.raises(ValueError, match="exceeding max allowed radius"):
+    with pytest.raises(ValueError, match="exceeds the maximum snapping threshold"):
         snap_coordinate_to_node(sample_graph, far_lon, far_lat, max_distance_m=2000.0)
 
     snapper = CoordinateSnapper(sample_graph)
