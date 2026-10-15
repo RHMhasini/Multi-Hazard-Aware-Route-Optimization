@@ -22,9 +22,10 @@ class RouteOptimizationConfig:
     """Master configuration for Component 3 Route Optimization."""
 
     # Risk formulation
+    # Exposure = length * hazard (as defined in research proposal).
     risk_formula: RiskFormulaChoice = RiskFormulaChoice.LINEAR
-    alpha_tradeoff: float = 0.5            # 1.0 = time only, 0.0 = risk only
-    exponential_beta: float = 3.0          # Scaling factor for exponential risk formula
+    alpha_tradeoff: float = 0.5            # 1.0 = travel time only, 0.0 = hazard exposure only (matches proposal lambda)
+    exponential_beta: float = 3.0          # Scaling factor for exponential risk formula option
 
     # Hazard & safety thresholds
     hazard_warning_threshold: float = 0.5  # Moderate risk threshold
