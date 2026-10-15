@@ -92,30 +92,59 @@ def compute_weighted_sum_route(
     origin: Union[str, int],
     destination: Union[str, int],
     alpha: float = 0.5,
-    normalize_exposure_scale: float = 0.1,
+    t_ref: Optional[float] = None,
+    r_ref: Optional[float] = None,
 ) -> Optional[List[Union[str, int]]]:
-    """Compute multi-objective route minimizing linear combination of time and hazard.
+    """Compute multi-objective route minimizing normalized linear combination of time and hazard.
 
-    Cost = (1 - alpha) * travel_time + alpha * (hazard_exposure * normalize_scale)
+    Consistent with the proposal formulation:
+        Cost = alpha * (travel_time / t_ref) + (1 - alpha) * (hazard_exposure / r_ref)
+    where alpha in [0.0, 1.0]:
+        - alpha = 1.0 corresponds to shortest time only
+        - alpha = 0.0 corresponds to risk-minimal only
 
     Args:
         graph: Routing graph with 'travel_time' and 'hazard_exposure'.
         origin: Source node ID.
         destination: Target node ID.
-        alpha: Weight parameter in [0.0, 1.0].
-            - alpha = 0.0 corresponds to shortest time
-            - alpha = 1.0 corresponds to risk-minimal
-        normalize_exposure_scale: Scale factor to align dimensional units.
+        alpha: Weight parameter in [0.0, 1.0] placed on travel time.
+        t_ref: Normalization baseline for travel time (e.g. from shortest time route).
+        r_ref: Normalization baseline for hazard exposure (e.g. from shortest time or safest route).
 
     Returns:
         Ordered list of node IDs along path, or None if no path exists.
     """
     clamped_alpha = max(0.0, min(1.0, float(alpha)))
 
+    # If alpha is 1.0, directly compute shortest time
+    if clamped_alpha >= 0.9999:
+        return compute_shortest_time_route(graph, origin, destination)
+    # If alpha is 0.0, directly compute risk minimal
+    if clamped_alpha <= 0.0001:
+        return compute_risk_min_route(graph, origin, destination)
+
+    # Automatically derive reference scales per OD pair if not provided
+    if t_ref is None or r_ref is None:
+        fast_path = compute_shortest_time_route(graph, origin, destination)
+        if fast_path is None:
+            return None
+        calc_t = sum(float(graph[u][v].get("travel_time", 1.0)) for u, v in zip(fast_path[:-1], fast_path[1:]))
+        calc_r = sum(float(graph[u][v].get("hazard_exposure", 0.0)) for u, v in zip(fast_path[:-1], fast_path[1:]))
+
+        if t_ref is None:
+            t_ref = max(1.0, calc_t)
+        if r_ref is None:
+            # If fastest path has zero exposure, check safest path exposure or default
+            if calc_r <= 0:
+                safe_p = compute_risk_min_route(graph, origin, destination)
+                calc_r = sum(float(graph[u][v].get("hazard_exposure", 0.0)) for u, v in zip(safe_p[:-1], safe_p[1:])) if safe_p else 100.0
+            r_ref = max(1.0, calc_r)
+
     def cost_func(u, v, data):
         time = float(data.get("travel_time", 1.0))
-        exposure = float(data.get("hazard_exposure", 0.0)) * normalize_exposure_scale
-        return (1.0 - clamped_alpha) * time + clamped_alpha * exposure
+        exposure = float(data.get("hazard_exposure", 0.0))
+        # Non-dimensional normalized combination
+        return clamped_alpha * (time / t_ref) + (1.0 - clamped_alpha) * (exposure / r_ref)
 
     try:
         return nx.shortest_path(graph, source=origin, target=destination, weight=cost_func)
@@ -135,22 +164,31 @@ def run_all_baselines(
         graph: Routing graph.
         origin: Source node ID.
         destination: Target node ID.
-        intermediate_alphas: List of trade-off alphas for weighted sums (e.g. [0.25, 0.5, 0.75]).
+        intermediate_alphas: List of trade-off alphas for weighted sums (e.g. [0.75, 0.50, 0.25]).
 
     Returns:
         Dict mapping algorithm name to node path list.
     """
     if intermediate_alphas is None:
-        intermediate_alphas = [0.25, 0.5, 0.75]
+        intermediate_alphas = [0.75, 0.50, 0.25]
+
+    fastest_path = compute_shortest_time_route(graph, origin, destination)
+    safest_path = compute_risk_min_route(graph, origin, destination)
+
+    t_ref = 1.0
+    r_ref = 1.0
+    if fastest_path:
+        t_ref = max(1.0, sum(float(graph[u][v].get("travel_time", 1.0)) for u, v in zip(fastest_path[:-1], fastest_path[1:])))
+        r_ref = max(1.0, sum(float(graph[u][v].get("hazard_exposure", 0.0)) for u, v in zip(fastest_path[:-1], fastest_path[1:])))
 
     results: Dict[str, Optional[List[Union[str, int]]]] = {
         "shortest_distance": compute_shortest_distance_route(graph, origin, destination),
-        "shortest_time": compute_shortest_time_route(graph, origin, destination),
-        "risk_minimal": compute_risk_min_route(graph, origin, destination),
+        "shortest_time": fastest_path,
+        "risk_minimal": safest_path,
     }
 
     for a in intermediate_alphas:
         label = f"weighted_sum_alpha_{int(a * 100):02d}"
-        results[label] = compute_weighted_sum_route(graph, origin, destination, alpha=a)
+        results[label] = compute_weighted_sum_route(graph, origin, destination, alpha=a, t_ref=t_ref, r_ref=r_ref)
 
     return results
