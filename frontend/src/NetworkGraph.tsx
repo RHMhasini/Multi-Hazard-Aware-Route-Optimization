@@ -10,14 +10,16 @@ const HW_TYPES = [
   { key: 'primary',     label: 'Primary',                    color: '#3b82f6', width: 3,   match: (h: string) => h.startsWith('primary') },
   { key: 'secondary',   label: 'Secondary',                  color: '#a855f7', width: 2.5, match: (h: string) => h.startsWith('secondary') },
   { key: 'tertiary',    label: 'Tertiary',                   color: '#22c55e', width: 2,   match: (h: string) => h.startsWith('tertiary') },
-  { key: 'residential', label: 'Residential / Unclassified', color: '#94a3b8', width: 1.5, match: (h: string) => h.startsWith('residential') || h.startsWith('unclassified') || h.startsWith('living_street') },
-  { key: 'service',     label: 'Service / Other',            color: '#475569', width: 1,   match: () => true },
+  { key: 'residential', label: 'Residential / Unclassified', color: '#94a3b8', width: 1.5, match: (h: string) => h.startsWith('residential') || h.startsWith('unclassified') || h.startsWith('living_street') || h === 'road' },
+  { key: 'service',     label: 'Service roads',              color: '#475569', width: 1,   match: (h: string) => h.startsWith('service') || h.startsWith('mini_roundabout') || h.startsWith('turning') },
 ]
 
+// Roads NOT in any HW_TYPES bucket (footway, path, cycleway, etc.) are
+// excluded entirely — the export script already filters them out.
 function hwGroup(hw: string | undefined): string {
   if (!hw) return 'service'
   const h = hw.toLowerCase()
-  for (const t of HW_TYPES) if (t.key !== 'service' && t.match(h)) return t.key
+  for (const t of HW_TYPES) if (t.match(h)) return t.key
   return 'service'
 }
 function hwMeta(hw: string | undefined) {

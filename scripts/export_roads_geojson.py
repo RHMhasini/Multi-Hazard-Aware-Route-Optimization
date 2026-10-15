@@ -1,8 +1,9 @@
 """
 One-time export: write frontend/public/roads.geojson
 
-Exports ALL road types (including residential/service) so every edge is
-visible in the road network graph visualisation.
+Exports only motor-vehicle-accessible roads (motorway → residential,
+living_street, service, unclassified).  Footways, cycleways, paths,
+steps, and bridleways are excluded — a motorbike cannot use them.
 
 Broken / isolated fragments are removed by keeping only edges whose both
 endpoints belong to the MAIN weakly-connected component of the province
@@ -25,6 +26,30 @@ import networkx as nx
 GRAPHML = ROOT / "data" / "intermediate" / "c2_sabaragamuwa_direction_normalized_graph.graphml"
 OUT     = ROOT / "frontend" / "public" / "roads.geojson"
 
+# Highway types accessible to at least a motorbike.
+# Footway / path / cycleway / steps / bridleway are excluded.
+MOTOR_ACCESSIBLE: set[str] = {
+    "motorway", "motorway_link",
+    "trunk", "trunk_link",
+    "primary", "primary_link",
+    "secondary", "secondary_link",
+    "tertiary", "tertiary_link",
+    "unclassified",
+    "residential",
+    "living_street",
+    "service",
+    "road",
+    "mini_roundabout",
+    "turning_loop",
+    "turning_circle",
+}
+
+# Access values that explicitly prohibit motor vehicles
+RESTRICTED_ACCESS: set[str] = {
+    "no", "private", "agricultural", "forestry",
+    "emergency", "military", "customers",
+}
+
 
 def _v(val):
     if val is None:
@@ -32,6 +57,22 @@ def _v(val):
     if isinstance(val, float) and val != val:   # NaN
         return None
     return val
+
+
+def is_motor_accessible(hw: str | None, attrs: dict) -> bool:
+    """Return True if a motorbike can legally use this road segment."""
+    if not hw:
+        return False
+    if hw.lower().strip() not in MOTOR_ACCESSIBLE:
+        return False
+    # Honour explicit access restrictions stored in the graph
+    if str(attrs.get("motor_vehicle", "")).lower() == "no":
+        return False
+    if str(attrs.get("vehicle", "")).lower() == "no":
+        return False
+    if str(attrs.get("access", "")).lower() in RESTRICTED_ACCESS:
+        return False
+    return True
 
 
 def main() -> None:
@@ -51,12 +92,17 @@ def main() -> None:
     print(f"  Main component: {len(main_nodes):,} / {total_nodes:,} nodes")
     print(f"  Removing {len(wcc) - 1:,} isolated fragments ({isolated_edges:,} edges)")
 
-    # ── Export every edge in the main component ────────────────────────────
+    # ── Export motor-vehicle-accessible edges in the main component ──────────
     features = []
     skipped_coords = 0
+    skipped_access = 0
 
     for source, target, attrs in graph.edges(data=True):
         if source not in main_nodes or target not in main_nodes:
+            continue
+        hw = attrs.get("highway")
+        if not is_motor_accessible(hw, attrs):
+            skipped_access += 1
             continue
         sn = graph.nodes.get(source, {})
         tn = graph.nodes.get(target, {})
@@ -97,7 +143,8 @@ def main() -> None:
 
     size_mb = OUT.stat().st_size / 1_048_576
     print(f"Done — {size_mb:.1f} MB  "
-          f"({len(features):,} edges, {len(wcc)-1:,} isolated fragments removed)")
+          f"({len(features):,} edges, {len(wcc)-1:,} isolated fragments removed, "
+          f"{skipped_access:,} non-motor-vehicle edges excluded)")
     print()
     print("Component 3 input file:")
     print(f"  {GRAPHML}")
