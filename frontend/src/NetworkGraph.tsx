@@ -44,6 +44,9 @@ type Summary = {
 
 // ── API helpers ─────────────────────────────────────────────────────────────
 
+// Errors the API returns when a bbox is too large — trigger quad-split instead of failing
+const SPLITTABLE = ['too broad', 'too many road segments']
+
 async function fetchRoads(bounds: number[], depth = 0): Promise<FeatureCollection> {
   const bbox = bounds.join(',')
   const districts = encodeURIComponent('Ratnapura,Kegalle')
@@ -55,7 +58,7 @@ async function fetchRoads(bounds: number[], depth = 0): Promise<FeatureCollectio
     const body = await r.text().catch(() => '')
     let msg = `HTTP ${r.status}`
     try { msg = (JSON.parse(body) as { error?: string }).error ?? msg } catch { /* */ }
-    if (msg.includes('too many road segments') && depth < 6) {
+    if (depth < 6 && SPLITTABLE.some(s => msg.toLowerCase().includes(s))) {
       const [w, s, e, n] = bounds
       const mLon = (w + e) / 2, mLat = (s + n) / 2
       const quads = [[w, s, mLon, mLat], [mLon, s, e, mLat], [w, mLat, mLon, n], [mLon, mLat, e, n]]
@@ -261,21 +264,23 @@ export function NetworkGraph({ summary, boundaries, mask }: Props) {
 
         <MapContainer center={[7.225, 80.225]} zoom={10} className="h-full w-full">
           <TileLayer
-            attribution="&copy; OpenStreetMap contributors"
-            url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+            attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>'
+            url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
+            subdomains="abcd"
+            maxZoom={20}
           />
           <MapController onViewChange={handleViewChange} />
 
-          {/* Outside-province mask */}
+          {/* Dim the area outside the province */}
           {mask && (
             <GeoJSON key="mask" data={mask as GeoJsonObject} interactive={false}
-              style={{ color: 'transparent', weight: 0, fillColor: '#64748b', fillOpacity: 0.22 }} />
+              style={{ color: 'transparent', weight: 0, fillColor: '#000000', fillOpacity: 0.45 }} />
           )}
 
           {/* Province boundary */}
           {showBoundary && province && (
             <GeoJSON key="province" data={province as GeoJsonObject}
-              style={{ color: '#0f172a', weight: 3, fill: false } as PathOptions} />
+              style={{ color: '#f8fafc', weight: 2.5, fill: false } as PathOptions} />
           )}
 
           {/* District boundaries */}
@@ -283,7 +288,7 @@ export function NetworkGraph({ summary, boundaries, mask }: Props) {
             <GeoJSON
               key="districts"
               data={{ type: 'FeatureCollection', features: districts } as GeoJsonObject}
-              style={{ color: '#3b82f6', weight: 1.5, fill: false, dashArray: '6 3' } as PathOptions}
+              style={{ color: '#60a5fa', weight: 1.5, fill: false, dashArray: '6 3' } as PathOptions}
             />
           )}
 
