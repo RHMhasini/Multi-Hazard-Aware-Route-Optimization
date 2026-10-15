@@ -53,7 +53,10 @@ def test_hazard_penalty_scenario(hazardous_network):
         orig_data = hazardous_network[u][v]
         if orig_data["hazard_score"] >= 0.50:
             penalized_found = True
-            assert data["travel_time"] == pytest.approx(orig_data["travel_time"] * 5.0, rel=1e-2)
+            # Impedance is scaled by penalty factor
+            assert data["impedance"] == pytest.approx(orig_data["impedance"] * 5.0, rel=1e-2)
+            # Travel time remains uncorrupted free-flow time
+            assert data["travel_time"] == orig_data["travel_time"]
             assert data["is_penalized"] is True
 
     assert penalized_found is True
