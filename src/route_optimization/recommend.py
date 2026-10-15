@@ -77,10 +77,10 @@ def recommend_optimal_route(
     safe_candidates = [c for c in evaluated_candidates if c["max_h"] <= max_hazard_limit]
     safety_fallback = False
     if not safe_candidates:
-        # If no route is below threshold, pick the route with the lowest peak hazard
+        # If no route is below threshold, relax ceiling to keep all candidate routes
+        # allowing the knee-point compromise selection to evaluate the full trade-off spectrum
         safety_fallback = True
-        lowest_peak = min(evaluated_candidates, key=lambda c: c["max_h"])
-        safe_candidates = [lowest_peak]
+        safe_candidates = list(evaluated_candidates)
 
     # Step 3: Detour filtering
     max_allowed_time = min_time * detour_limit
