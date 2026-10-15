@@ -52,6 +52,7 @@ class CoordinateSnapper:
         lon: float,
         lat: float,
         max_distance_m: float = 5000.0,
+        require_largest_component: bool = False,
     ) -> Tuple[Union[str, int], float]:
         """Snap a single (lon, lat) coordinate to the nearest road network node.
 
@@ -59,6 +60,7 @@ class CoordinateSnapper:
             lon: Query longitude (EPSG:4326).
             lat: Query latitude (EPSG:4326).
             max_distance_m: Maximum acceptable snapping distance in meters (default: 5000m).
+            require_largest_component: If True, restricts snapping candidate to nodes in the largest strongly connected component.
 
         Returns:
             Tuple of (nearest_node_id, distance_in_meters).
@@ -67,7 +69,21 @@ class CoordinateSnapper:
             ValueError: If the closest node exceeds max_distance_m.
         """
         query_proj = np.array([lon * self.meters_per_deg_lon, lat * self.meters_per_deg_lat])
-        dist_m, idx = self.kdtree.query(query_proj)
+        
+        if require_largest_component and len(self.graph) > 0:
+            sccs = list(nx.strongly_connected_components(self.graph))
+            largest_scc = max(sccs, key=len) if sccs else set(self.graph.nodes())
+            valid_indices = [i for i, nid in enumerate(self.node_ids) if nid in largest_scc]
+            if valid_indices:
+                sub_pts = self.projected_coords[valid_indices]
+                dists = np.linalg.norm(sub_pts - query_proj, axis=1)
+                min_i = int(np.argmin(dists))
+                dist_m = float(dists[min_i])
+                idx = valid_indices[min_i]
+            else:
+                dist_m, idx = self.kdtree.query(query_proj)
+        else:
+            dist_m, idx = self.kdtree.query(query_proj)
 
         if dist_m > max_distance_m:
             raise ValueError(
@@ -84,19 +100,16 @@ def snap_coordinate_to_node(
     lon: float,
     lat: float,
     max_distance_m: float = 5000.0,
+    require_largest_component: bool = False,
 ) -> Tuple[Union[str, int], float]:
-    """Find the nearest graph node to a given (lon, lat) coordinate.
-
-    Uses Euclidean approximation adjusted for latitude:
-        dx = (node_lon - lon) * 110500.0 * cos(radians(lat))
-        dy = (node_lat - lat) * 110500.0
-        dist_m = sqrt(dx^2 + dy^2)
+    """Find the nearest graph node to a given (lon, lat) coordinate using spatial KD-Tree.
 
     Args:
         graph: NetworkX DiGraph with node 'x' (lon) and 'y' (lat).
         lon: Target longitude.
         lat: Target latitude.
         max_distance_m: Snapping distance threshold in meters.
+        require_largest_component: If True, snaps only to nodes in the largest strongly connected component.
 
     Returns:
         Tuple of (nearest_node_id, distance_in_meters).
@@ -107,36 +120,11 @@ def snap_coordinate_to_node(
     if len(graph) == 0:
         raise ValueError("Cannot snap coordinate: graph is empty.")
 
-    meters_per_deg_lat = 110500.0
-    meters_per_deg_lon = 110500.0 * math.cos(math.radians(lat))
-
-    best_node = None
-    min_dist_m = float("inf")
-
-    for node_id, data in graph.nodes(data=True):
-        if "x" not in data or "y" not in data:
-            continue
-        nx_lon = float(data["x"])
-        ny_lat = float(data["y"])
-
-        dx = (nx_lon - lon) * meters_per_deg_lon
-        dy = (ny_lat - lat) * meters_per_deg_lat
-        dist_m = math.hypot(dx, dy)
-
-        if dist_m < min_dist_m:
-            min_dist_m = dist_m
-            best_node = node_id
-
-    if best_node is None:
-        raise ValueError("No valid nodes with 'x' and 'y' coordinate attributes found in graph.")
-
-    if min_dist_m > max_distance_m:
-        raise ValueError(
-            f"Nearest node {best_node} is {min_dist_m:.1f}m from ({lon:.5f}, {lat:.5f}), "
-            f"exceeding max allowed radius of {max_distance_m:.1f}m."
-        )
-
-    return best_node, round(min_dist_m, 2)
+    snapper = CoordinateSnapper(graph)
+    node_id, dist_m = snapper.snap_coordinate(
+        lon, lat, max_distance_m=max_distance_m, require_largest_component=require_largest_component
+    )
+    return node_id, round(dist_m, 2)
 
 
 def snap_od_coordinates(
@@ -144,14 +132,16 @@ def snap_od_coordinates(
     origin_coord: Tuple[float, float],
     destination_coord: Tuple[float, float],
     max_distance_m: float = 5000.0,
+    require_connected: bool = True,
 ) -> Dict[str, Any]:
-    """Snap an Origin-Destination coordinate query pair to road network nodes.
+    """Snap an Origin-Destination coordinate query pair to road network nodes using KD-Tree.
 
     Args:
         graph: Road network graph.
         origin_coord: (lon, lat) of emergency origin (e.g. dispatch depot).
         destination_coord: (lon, lat) of destination (e.g. disaster site / hospital).
         max_distance_m: Max snapping distance in meters.
+        require_connected: If True, snaps to the largest strongly connected component to guarantee path reachability.
 
     Returns:
         Dict with keys:
@@ -162,18 +152,23 @@ def snap_od_coordinates(
             - 'origin_coord': Original origin (lon, lat)
             - 'destination_coord': Original destination (lon, lat)
     """
-    orig_node, orig_dist = snap_coordinate_to_node(
-        graph, origin_coord[0], origin_coord[1], max_distance_m=max_distance_m
+    snapper = CoordinateSnapper(graph)
+    orig_node, orig_dist = snapper.snap_coordinate(
+        origin_coord[0], origin_coord[1],
+        max_distance_m=max_distance_m,
+        require_largest_component=require_connected,
     )
-    dest_node, dest_dist = snap_coordinate_to_node(
-        graph, destination_coord[0], destination_coord[1], max_distance_m=max_distance_m
+    dest_node, dest_dist = snapper.snap_coordinate(
+        destination_coord[0], destination_coord[1],
+        max_distance_m=max_distance_m,
+        require_largest_component=require_connected,
     )
 
     return {
         "origin_node": orig_node,
-        "origin_dist_m": orig_dist,
+        "origin_dist_m": round(orig_dist, 2),
         "destination_node": dest_node,
-        "destination_dist_m": dest_dist,
+        "destination_dist_m": round(dest_dist, 2),
         "origin_coord": origin_coord,
         "destination_coord": destination_coord,
     }
