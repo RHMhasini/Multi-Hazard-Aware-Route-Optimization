@@ -31,9 +31,12 @@ def test_sample_raster_at_point():
     val_bl = sample_raster_at_point(80.1, 6.1, raster, bounds)
     assert 0.05 <= val_bl <= 0.3
 
-    # Sample outside bounds returns 0.0
+    # Sample outside bounds returns nan (or nodata if specified), not treating unknown as safe
     val_out = sample_raster_at_point(82.0, 5.0, raster, bounds)
-    assert val_out == 0.0
+    assert np.isnan(val_out)
+
+    val_nodata = sample_raster_at_point(82.0, 5.0, raster, bounds, nodata=0.0)
+    assert val_nodata == 0.0
 
 
 def test_compute_edge_raster_hazard():
