@@ -100,43 +100,50 @@ export function NetworkGraph({ summary, boundaries, mask }: Props) {
   const [showBoundary, setShowBoundary] = useState(true)
   const [enabledTypes, setEnabledTypes] = useState<Set<string>>(new Set(HW_TYPES.map(t => t.key)))
 
-  // Load the whole province once on mount using a 2×2 initial grid so
-  // four parallel requests start immediately — each may quad-split further.
+  // Load the whole province on mount using a 3×2 grid (6 tiles) fired in
+  // parallel. Roads are rendered progressively as each tile arrives — the
+  // user sees the map filling in rather than waiting for all tiles.
   useEffect(() => {
     const [w, s, e, n] = PROVINCE_BBOX
-    const mLon = (w + e) / 2, mLat = (s + n) / 2
-    const quadrants = [
-      [w, s, mLon, mLat],
-      [mLon, s, e, mLat],
-      [w, mLat, mLon, n],
-      [mLon, mLat, e, n],
-    ]
+    const cols = 3, rows = 2
+    const dLon = (e - w) / cols, dLat = (n - s) / rows
+    const tiles: number[][] = []
+    for (let r = 0; r < rows; r++)
+      for (let c = 0; c < cols; c++)
+        tiles.push([w + c * dLon, s + r * dLat, w + (c + 1) * dLon, s + (r + 1) * dLat])
 
     let done = 0
-    const results: FeatureCollection[] = []
+    const results: FeatureCollection[] = new Array(tiles.length)
+    let cancelled = false
 
-    const fetchAll = quadrants.map((q, i) =>
-      fetchTile(q).then(fc => {
-        results[i] = fc
-        done++
-        setProgress(Math.round((done / quadrants.length) * 100))
-      })
-    )
+    tiles.forEach((tile, i) => {
+      fetchTile(tile)
+        .then(fc => {
+          if (cancelled) return
+          results[i] = fc
+          done++
+          setProgress(Math.round((done / tiles.length) * 100))
+          // Show roads immediately as each tile finishes
+          const merged: FeatureCollection = {
+            type: 'FeatureCollection',
+            features: results.filter(Boolean).flatMap(r => r.features),
+          }
+          allRoadsRef.current = merged
+          setRoads({ ...merged })
+          if (done === tiles.length) setLoading(false)
+        })
+        .catch((err: unknown) => {
+          if (cancelled) return
+          done++
+          setProgress(Math.round((done / tiles.length) * 100))
+          if (done === tiles.length) {
+            setLoadError(err instanceof Error ? err.message : 'Failed to load road network')
+            setLoading(false)
+          }
+        })
+    })
 
-    Promise.all(fetchAll)
-      .then(() => {
-        const merged: FeatureCollection = {
-          type: 'FeatureCollection',
-          features: results.flatMap(fc => fc?.features ?? []),
-        }
-        allRoadsRef.current = merged
-        setRoads(merged)
-        setLoading(false)
-      })
-      .catch((e: unknown) => {
-        setLoadError(e instanceof Error ? e.message : 'Failed to load road network')
-        setLoading(false)
-      })
+    return () => { cancelled = true }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
