@@ -98,6 +98,21 @@ def test_recommend_optimal_route(routing_setup):
     assert "=== Component 3 Route Recommendation Audit ===" in result.audit_notes
 
 
+def test_recommend_fallback_when_all_exceed_ceiling(routing_setup):
+    """Test that when all candidates exceed hazard ceiling, the ceiling is relaxed across all candidates."""
+    G = routing_setup
+    origin = "node_0_0"
+    destination = "node_4_4"
+
+    baselines = run_all_baselines(G, origin, destination)
+    candidate_list = [{"path": path, "algorithm": name} for name, path in baselines.items() if path]
+
+    # Force user_max_hazard to 0.0001 so all candidates breach ceiling
+    result = recommend_optimal_route(G, candidate_list, user_max_hazard=0.0001)
+    assert "RELAXED - all paths exceed limit" in result.audit_notes
+    assert result.node_path is not None
+
+
 def test_no_path_handling():
     """Test graceful handling when no path exists between disconnected components."""
     G = nx.DiGraph()
