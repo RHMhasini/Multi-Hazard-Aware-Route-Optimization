@@ -107,7 +107,7 @@ def pareto_sweep_weighted_sum(
 ) -> List[Dict[str, Any]]:
     """Discover Pareto frontier routes using a systematic weighted-sum alpha sweep.
 
-    Sweeps alpha from 0.0 (quickest) to 1.0 (safest) in discrete steps.
+    Sweeps alpha from 1.0 (quickest/time only) to 0.0 (safest/risk only) in discrete steps.
 
     Args:
         graph: Routing graph.
@@ -219,7 +219,7 @@ def bi_criteria_label_setting(
                 dominated = True
                 break
 
-        if dominated and len(node_labels[cur_node]) > 1:
+        if dominated:
             continue
 
         for neighbor in graph.successors(cur_node):
@@ -233,6 +233,11 @@ def bi_criteria_label_setting(
             new_time = cur_time + edge_time
             new_risk = cur_risk + edge_risk
             new_pt = (new_time, new_risk)
+
+            # Prune if already dominated by any solution reaching the destination
+            if destination_solutions:
+                if any(is_dominated(new_pt, (float(d["travel_time"]), float(d["hazard_exposure"]))) for d in destination_solutions):
+                    continue
 
             # Dominance check against neighbor's existing labels
             is_neighbor_dominated = False
