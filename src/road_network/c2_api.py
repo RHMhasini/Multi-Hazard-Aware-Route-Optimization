@@ -36,8 +36,8 @@ DEFAULT_BASELINE = ROOT / "outputs" / "component2_evaluation" / "c2_raw_network_
 DEFAULT_REPAIR_REPORT = ROOT / "outputs" / "component2_evaluation" / "c2_topology_repair_report.json"
 DEFAULT_PROVINCE_BOUNDARY = ROOT / "data" / "raw" / "c2_sabaragamuwa_boundary.geojson"
 DEFAULT_DISTRICT_BOUNDARIES = ROOT / "data" / "raw" / "c2_sabaragamuwa_district_boundaries.geojson"
-MAX_FEATURES = 5000
-MAX_BBOX_AREA = 1.0
+MAX_FEATURES = 30000
+MAX_BBOX_AREA = 3.0
 DISTRICT_NAMES = frozenset({"Ratnapura", "Kegalle"})
 
 
