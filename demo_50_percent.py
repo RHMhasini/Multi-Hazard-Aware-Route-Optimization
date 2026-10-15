@@ -87,29 +87,32 @@ def run_pipeline():
     # Step 2: Emergency Query Coordinate Snapping
     # -------------------------------------------------------------------------
     print("\n[Step 2] Snapping Emergency Dispatch Query Coordinates...")
-    # Ratnapura General Hospital -> Elapatha Relief Center
-    hospital_coord = (80.4035, 6.6850)
-    relief_center_coord = (80.3800, 6.6450)
+    # Ratnapura General Hospital (North-West) -> Elapatha / Kahawatta Emergency Relief Camp (South-East)
+    # This realistic trajectory traverses the valley corridor where the central hotspot lies,
+    # enabling distinct trade-offs between the direct high-hazard path and safe detours.
+    hospital_coord = (80.3620, 6.7020)
+    relief_center_coord = (80.4550, 6.6450)
 
     snap_info = snap_od_coordinates(
         grid_graph,
         origin_coord=hospital_coord,
         destination_coord=relief_center_coord,
         max_distance_m=5000.0,
+        require_connected=True,
     )
     origin_node = snap_info["origin_node"]
     dest_node = snap_info["destination_node"]
 
     print(f"  -> Origin: Ratnapura General Hospital {hospital_coord}")
     print(f"     Snapped to node '{origin_node}' (distance: {snap_info['origin_dist_m']:.1f}m)")
-    print(f"  -> Destination: Elapatha Relief Center {relief_center_coord}")
+    print(f"  -> Destination: Relief Dispatch Station {relief_center_coord}")
     print(f"     Snapped to node '{dest_node}' (distance: {snap_info['destination_dist_m']:.1f}m)")
 
     # -------------------------------------------------------------------------
     # Step 3: Spatial Hazard-to-Edge Attachment: R_e = max M(x)
     # -------------------------------------------------------------------------
     print("\n[Step 3] Spatially Attaching Multi-Hazard Surface to Road Edges (R_e = max M(x))...")
-    attach_hazard_to_graph(grid_graph, hazard_data, num_samples_per_edge=12)
+    attach_hazard_to_graph(grid_graph, hazard_data)
 
     hazard_values = [d["hazard_score"] for _, _, d in grid_graph.edges(data=True)]
     print(f"  -> Attached Hazard Summary: Min={min(hazard_values):.3f}, Mean={sum(hazard_values)/len(hazard_values):.3f}, Max={max(hazard_values):.3f}")
@@ -118,6 +121,7 @@ def run_pipeline():
     # Step 4: Routing Graph Construction & Edge Impedance
     # -------------------------------------------------------------------------
     print("\n[Step 4] Constructing Routing Graph with Dynamic Edge Impedance...")
+    # In accordance with proposal: Primary exposure is (length * hazard_score)
     routing_graph = build_routing_graph(grid_graph)
     print(f"  -> Routing Graph ready: {len(routing_graph.nodes())} vertices, {len(routing_graph.edges())} edges")
 
@@ -125,7 +129,7 @@ def run_pipeline():
     # Step 5: Baseline Routing Benchmarks
     # -------------------------------------------------------------------------
     print("\n[Step 5] Computing Baseline Routing Benchmarks...")
-    baselines = run_all_baselines(routing_graph, origin_node, dest_node, intermediate_alphas=[0.25, 0.50, 0.75])
+    baselines = run_all_baselines(routing_graph, origin_node, dest_node, intermediate_alphas=[0.75, 0.50, 0.25])
     comparison_df = compare_routes(routing_graph, baselines)
 
     print("\n--- Baseline Routes Comparison Table ---")
@@ -161,7 +165,7 @@ def run_pipeline():
 
     pruned_graph = apply_hazard_exclusion(routing_graph, hazard_threshold=0.75, inplace=False)
     is_reachable = check_scenario_reachability(pruned_graph, origin_node, dest_node)
-    print(f"  -> Reachability post-closure (threshold 0.75): {'REACHABLE' if is_reachable else 'ISOLATED'}")
+    print(f"  -> Reachability post-closure (threshold 0.75): {'REACHABLE via detour' if is_reachable else 'ISOLATED'}")
 
     # -------------------------------------------------------------------------
     # Step 8: Explainable Knee-Point Recommendation
