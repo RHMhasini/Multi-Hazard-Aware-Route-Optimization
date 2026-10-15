@@ -131,7 +131,27 @@ def load_c1_hazard_raster(
         if not path.exists():
             raise FileNotFoundError(f"Component 1 hazard file not found at: {path}")
 
-        if path.suffix.lower() == ".json":
+        if path.suffix.lower() in [".tif", ".tiff", ".geotiff"]:
+            try:
+                import rasterio
+                with rasterio.open(path) as src:
+                    band1 = src.read(1).astype(np.float64)
+                    bounds = (float(src.bounds.left), float(src.bounds.bottom), float(src.bounds.right), float(src.bounds.top))
+                    nodata = float(src.nodata) if src.nodata is not None else None
+                    transform = src.transform
+                    crs_str = str(src.crs) if src.crs else "EPSG:4326"
+                hazard_data = {
+                    "raster": band1,
+                    "bounds": bounds,
+                    "crs": crs_str,
+                    "dimensions": band1.shape,
+                    "nodata_value": nodata,
+                    "origin_upper": True,
+                    "transform": transform,
+                }
+            except ImportError:
+                raise ImportError("rasterio is required to load GeoTIFF files. Install via pip install rasterio.")
+        elif path.suffix.lower() == ".json":
             with open(path, "r", encoding="utf-8") as f:
                 raw_json = json.load(f)
             hazard_data = {
@@ -139,20 +159,55 @@ def load_c1_hazard_raster(
                 "bounds": tuple(raw_json["bounds"]),
                 "crs": raw_json.get("crs", "EPSG:4326"),
                 "dimensions": tuple(raw_json.get("dimensions", (len(raw_json["raster"]), len(raw_json["raster"][0])))),
+                "nodata_value": raw_json.get("nodata_value"),
+                "origin_upper": raw_json.get("origin_upper", False),
             }
-        elif path.suffix.lower() in [".npy", ".npz"]:
-            array = np.load(path)
+        elif path.suffix.lower() == ".npz":
+            npz_data = np.load(path)
+            raster_arr = npz_data["raster"] if "raster" in npz_data else npz_data[npz_data.files[0]]
+            bounds_tuple = tuple(npz_data["bounds"]) if "bounds" in npz_data else (80.35, 6.65, 80.55, 6.85)
+            crs_val = str(npz_data["crs"]) if "crs" in npz_data else "EPSG:4326"
             hazard_data = {
-                "raster": array if isinstance(array, np.ndarray) else array["raster"],
-                "bounds": (80.35, 6.65, 80.55, 6.85), # Default Sabaragamuwa bounds
-                "crs": "EPSG:4326",
+                "raster": raster_arr.astype(np.float64),
+                "bounds": bounds_tuple,
+                "crs": crs_val,
+                "dimensions": raster_arr.shape,
+                "nodata_value": float(npz_data["nodata_value"]) if "nodata_value" in npz_data else None,
+                "origin_upper": bool(npz_data["origin_upper"]) if "origin_upper" in npz_data else False,
+            }
+        elif path.suffix.lower() == ".npy":
+            array = np.load(path)
+            meta_path = path.with_suffix(".json")
+            if meta_path.exists():
+                with open(meta_path, "r", encoding="utf-8") as mf:
+                    meta = json.load(mf)
+                bounds_tuple = tuple(meta.get("bounds", (80.35, 6.65, 80.55, 6.85)))
+                crs_val = meta.get("crs", "EPSG:4326")
+                nodata = meta.get("nodata_value")
+                origin_upper = meta.get("origin_upper", False)
+            else:
+                bounds_tuple = (80.35, 6.65, 80.55, 6.85)
+                crs_val = "EPSG:4326"
+                nodata = None
+                origin_upper = False
+            hazard_data = {
+                "raster": array.astype(np.float64),
+                "bounds": bounds_tuple,
+                "crs": crs_val,
                 "dimensions": array.shape,
+                "nodata_value": nodata,
+                "origin_upper": origin_upper,
             }
         else:
             raise ValueError(f"Unsupported hazard file type: {path.suffix}")
 
-    # Ensure raster values are in [0.0, 1.0]
-    hazard_data["raster"] = np.clip(np.nan_to_num(hazard_data["raster"], nan=0.0), 0.0, 1.0)
+    # Clip valid data to [0.0, 1.0], preserving NaN for nodata if specified
+    nodata_val = hazard_data.get("nodata_value")
+    if nodata_val is not None:
+        mask = (hazard_data["raster"] != nodata_val) & ~np.isnan(hazard_data["raster"])
+        hazard_data["raster"][mask] = np.clip(hazard_data["raster"][mask], 0.0, 1.0)
+    else:
+        hazard_data["raster"] = np.clip(np.nan_to_num(hazard_data["raster"], nan=0.0), 0.0, 1.0)
     rows, cols = hazard_data["raster"].shape
     min_lon, min_lat, max_lon, max_lat = hazard_data["bounds"]
 
