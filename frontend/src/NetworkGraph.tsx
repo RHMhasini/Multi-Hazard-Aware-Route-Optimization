@@ -1,5 +1,5 @@
 import { useState, useMemo, useCallback, useEffect } from 'react'
-import { MapContainer, TileLayer, GeoJSON, CircleMarker, useMapEvents } from 'react-leaflet'
+import { MapContainer, GeoJSON, CircleMarker, useMapEvents } from 'react-leaflet'
 import type { FeatureCollection, GeoJsonObject } from 'geojson'
 import type { PathOptions } from 'leaflet'
 
@@ -262,19 +262,19 @@ export function NetworkGraph({ summary, boundaries, mask }: Props) {
           </div>
         )}
 
-        <MapContainer center={[7.225, 80.225]} zoom={10} className="h-full w-full">
-          <TileLayer
-            attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>'
-            url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
-            subdomains="abcd"
-            maxZoom={20}
-          />
+        <MapContainer
+          center={[7.225, 80.225]}
+          zoom={10}
+          className="h-full w-full"
+          style={{ background: '#0f172a' }}
+        >
+          {/* No external tile layer — pure dark canvas so graph edges pop */}
           <MapController onViewChange={handleViewChange} />
 
-          {/* Dim the area outside the province */}
+          {/* Slightly dim the area outside the province so it reads as "out of scope" */}
           {mask && (
             <GeoJSON key="mask" data={mask as GeoJsonObject} interactive={false}
-              style={{ color: 'transparent', weight: 0, fillColor: '#000000', fillOpacity: 0.45 }} />
+              style={{ color: 'transparent', weight: 0, fillColor: '#000000', fillOpacity: 0.55 }} />
           )}
 
           {/* Province boundary */}
