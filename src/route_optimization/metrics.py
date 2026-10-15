@@ -66,7 +66,9 @@ def calculate_route_metrics(
 
         total_distance += length
         total_time += time
-        cumulative_exposure += (length * h_score)
+        # Use attached edge hazard_exposure if present to ensure route metric equals exact sum of edge values (NFR2)
+        edge_exposure = float(edge.get("hazard_exposure", length * h_score))
+        cumulative_exposure += edge_exposure
         max_hazard = max(max_hazard, h_score)
 
         # Apply safety penalty if edge exceeds critical threshold
