@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect, useRef } from 'react'
+import { useState, useMemo, useEffect } from 'react'
 import { MapContainer, GeoJSON, CircleMarker, useMapEvents } from 'react-leaflet'
 import type { FeatureCollection, GeoJsonObject } from 'geojson'
 import type { PathOptions } from 'leaflet'
@@ -27,9 +27,9 @@ function hwMeta(hw: string | undefined) {
 // ── Types ───────────────────────────────────────────────────────────────────
 
 type RoadProps = {
-  source?: string; target?: string; edge_key?: string
+  source?: string; target?: string
   highway?: string; name?: string; length?: number; maxspeed?: string
-  oneway_normalized?: string; direction_source?: string
+  oneway_normalized?: string
   source_lon?: number; source_lat?: number
   target_lon?: number; target_lat?: number
 }
@@ -40,38 +40,7 @@ type Summary = {
   repairs: { accepted: number }
 }
 
-// ── Province bounds (Sabaragamuwa: Ratnapura + Kegalle) ─────────────────────
-// Slightly padded so boundary edges are fully included.
-const PROVINCE_BBOX = [79.85, 6.2, 81.4, 7.9]
-
-// ── API helpers ─────────────────────────────────────────────────────────────
-
-const SPLITTABLE = ['too broad', 'too many road segments']
-
-async function fetchTile(bounds: number[], depth = 0): Promise<FeatureCollection> {
-  const bbox = bounds.join(',')
-  const districts = encodeURIComponent('Ratnapura,Kegalle')
-  let r: Response
-  try { r = await fetch(`/api/roads?districts=${districts}&bbox=${encodeURIComponent(bbox)}`) }
-  catch { throw new Error('Network error — is the API running?') }
-
-  if (!r.ok) {
-    const body = await r.text().catch(() => '')
-    let msg = `HTTP ${r.status}`
-    try { msg = (JSON.parse(body) as { error?: string }).error ?? msg } catch { /* */ }
-    if (depth < 8 && SPLITTABLE.some(s => msg.toLowerCase().includes(s))) {
-      const [w, s, e, n] = bounds
-      const mLon = (w + e) / 2, mLat = (s + n) / 2
-      const quads = [[w, s, mLon, mLat], [mLon, s, e, mLat], [w, mLat, mLon, n], [mLon, mLat, e, n]]
-      const parts = await Promise.all(quads.map(q => fetchTile(q, depth + 1)))
-      return { type: 'FeatureCollection', features: parts.flatMap(p => p.features) }
-    }
-    throw new Error(msg)
-  }
-  return r.json() as Promise<FeatureCollection>
-}
-
-// ── Zoom tracker (no fetch side-effects) ────────────────────────────────────
+// ── Zoom tracker ─────────────────────────────────────────────────────────────
 
 function ZoomTracker({ onZoom }: { onZoom: (z: number) => void }) {
   useMapEvents({ zoomend: e => onZoom((e.target as { getZoom(): number }).getZoom()) })
@@ -87,12 +56,9 @@ type Props = {
 }
 
 export function NetworkGraph({ summary, boundaries, mask }: Props) {
-  // All roads cached after initial province load — never cleared
-  const allRoadsRef = useRef<FeatureCollection | null>(null)
   const [roads, setRoads]               = useState<FeatureCollection | null>(null)
   const [loading, setLoading]           = useState(true)
   const [loadError, setLoadError]       = useState<string | null>(null)
-  const [progress, setProgress]         = useState(0)     // 0-100
   const [zoom, setZoom]                 = useState(10)
   const [selectedRoad, setSelectedRoad] = useState<RoadProps | null>(null)
   const [showNodes, setShowNodes]       = useState(true)
@@ -100,63 +66,32 @@ export function NetworkGraph({ summary, boundaries, mask }: Props) {
   const [showBoundary, setShowBoundary] = useState(true)
   const [enabledTypes, setEnabledTypes] = useState<Set<string>>(new Set(HW_TYPES.map(t => t.key)))
 
-  // Load the whole province on mount using a 3×2 grid (6 tiles) fired in
-  // parallel. Roads are rendered progressively as each tile arrives — the
-  // user sees the map filling in rather than waiting for all tiles.
+  // Load the pre-exported static GeoJSON once — no API splitting needed
   useEffect(() => {
-    const [w, s, e, n] = PROVINCE_BBOX
-    const cols = 3, rows = 2
-    const dLon = (e - w) / cols, dLat = (n - s) / rows
-    const tiles: number[][] = []
-    for (let r = 0; r < rows; r++)
-      for (let c = 0; c < cols; c++)
-        tiles.push([w + c * dLon, s + r * dLat, w + (c + 1) * dLon, s + (r + 1) * dLat])
-
-    let done = 0
-    const results: FeatureCollection[] = new Array(tiles.length)
-    let cancelled = false
-
-    tiles.forEach((tile, i) => {
-      fetchTile(tile)
-        .then(fc => {
-          if (cancelled) return
-          results[i] = fc
-          done++
-          setProgress(Math.round((done / tiles.length) * 100))
-          // Show roads immediately as each tile finishes
-          const merged: FeatureCollection = {
-            type: 'FeatureCollection',
-            features: results.filter(Boolean).flatMap(r => r.features),
-          }
-          allRoadsRef.current = merged
-          setRoads({ ...merged })
-          if (done === tiles.length) setLoading(false)
-        })
-        .catch((err: unknown) => {
-          if (cancelled) return
-          done++
-          setProgress(Math.round((done / tiles.length) * 100))
-          if (done === tiles.length) {
-            setLoadError(err instanceof Error ? err.message : 'Failed to load road network')
-            setLoading(false)
-          }
-        })
-    })
-
-    return () => { cancelled = true }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    fetch('/roads.geojson')
+      .then(r => {
+        if (!r.ok) throw new Error(`Failed to load roads.geojson (HTTP ${r.status})`)
+        return r.json() as Promise<FeatureCollection>
+      })
+      .then(fc => { setRoads(fc); setLoading(false) })
+      .catch((e: unknown) => {
+        setLoadError(e instanceof Error ? e.message : 'Failed to load road data')
+        setLoading(false)
+      })
   }, [])
 
   const filteredRoads = useMemo(() => {
     if (!roads) return null
     return {
       type: 'FeatureCollection' as const,
-      features: roads.features.filter(f => enabledTypes.has(hwGroup((f.properties as RoadProps).highway))),
+      features: roads.features.filter(f =>
+        enabledTypes.has(hwGroup((f.properties as RoadProps).highway))
+      ),
     }
   }, [roads, enabledTypes])
 
   const junctionNodes = useMemo(() => {
-    if (!roads || !showNodes || zoom < 13) return []
+    if (!roads || !showNodes || zoom < 14) return []
     const seen = new Map<string, [number, number]>()
     for (const f of roads.features) {
       const p = f.properties as RoadProps
@@ -165,7 +100,7 @@ export function NetworkGraph({ summary, boundaries, mask }: Props) {
       if (p.target && p.target_lat != null && p.target_lon != null)
         seen.set(p.target, [p.target_lat as number, p.target_lon as number])
     }
-    return Array.from(seen.values()).map(([lat, lon]) => ({ lat, lon }))
+    return Array.from(seen.values())
   }, [roads, zoom, showNodes])
 
   const hwCounts = useMemo(() => {
@@ -180,7 +115,7 @@ export function NetworkGraph({ summary, boundaries, mask }: Props) {
 
   const province  = boundaries?.features.find(f => f.properties?.boundary_type === 'province')
   const districts = boundaries?.features.filter(f => f.properties?.boundary_type === 'district') ?? []
-  const nodeRadius = zoom >= 16 ? 5 : zoom >= 15 ? 4 : zoom >= 14 ? 3 : 2.5
+  const nodeRadius = zoom >= 16 ? 5 : zoom >= 15 ? 4 : 3
 
   return (
     <div className="flex overflow-hidden rounded-2xl border border-slate-700 shadow-xl"
@@ -215,8 +150,8 @@ export function NetworkGraph({ summary, boundaries, mask }: Props) {
           <div className="space-y-2">
             {([
               ['Road segments', showRoads, () => setShowRoads(v => !v)],
-              [zoom < 13
-                ? 'Junctions (zoom ≥ 13)'
+              [zoom < 14
+                ? 'Junctions (zoom ≥ 14)'
                 : `Junctions (${junctionNodes.length.toLocaleString()})`,
                showNodes, () => setShowNodes(v => !v)],
               ['Boundaries', showBoundary, () => setShowBoundary(v => !v)],
@@ -254,58 +189,52 @@ export function NetworkGraph({ summary, boundaries, mask }: Props) {
           </div>
         </div>
 
-        {/* Load progress */}
-        {loading && (
-          <div className="border-t border-slate-700 px-4 py-3">
-            <div className="mb-1 flex justify-between text-[10px] text-slate-400">
-              <span>Loading province…</span><span>{progress}%</span>
-            </div>
-            <div className="h-1.5 overflow-hidden rounded-full bg-slate-700">
-              <div className="h-full rounded-full bg-blue-500 transition-all duration-300"
-                style={{ width: `${progress}%` }} />
-            </div>
-          </div>
-        )}
-
         <div className="border-t border-slate-700 px-4 py-2 text-[10px] text-slate-600">
-          Zoom {zoom} · EPSG:4326{roads ? ` · ${roads.features.length.toLocaleString()} segments` : ''}
+          {loading
+            ? 'Loading road network…'
+            : roads
+              ? `${roads.features.length.toLocaleString()} segments loaded`
+              : 'No data'}
+          {' · '}Zoom {zoom}
         </div>
       </aside>
 
       {/* ── Map ── */}
       <div className="relative flex-1">
+        {loading && (
+          <div className="absolute inset-0 z-[1000] flex items-center justify-center bg-slate-900/80">
+            <div className="text-center">
+              <div className="mx-auto mb-3 h-8 w-8 animate-spin rounded-full border-2 border-slate-600 border-t-blue-500" />
+              <p className="text-sm text-slate-300">Loading road network…</p>
+            </div>
+          </div>
+        )}
         {loadError && (
-          <div className="absolute bottom-3 left-3 right-3 z-[1000] flex items-center justify-between rounded bg-red-900/80 px-3 py-2 text-xs text-red-200 shadow">
-            <span>{loadError}</span>
-            <button type="button" className="ml-3 rounded border border-red-600 px-2 py-0.5 hover:bg-red-800"
-              onClick={() => window.location.reload()}>Reload</button>
+          <div className="absolute bottom-3 left-3 right-3 z-[1000] rounded bg-red-900/80 px-3 py-2 text-xs text-red-200 shadow">
+            {loadError}
           </div>
         )}
 
-        <MapContainer center={[7.225, 80.625]} zoom={10} className="h-full w-full"
+        <MapContainer center={[7.225, 80.625]} zoom={10} preferCanvas className="h-full w-full"
           style={{ background: '#0f172a' }}>
           <ZoomTracker onZoom={setZoom} />
 
-          {/* Outside-province dim */}
           {mask && (
             <GeoJSON key="mask" data={mask as GeoJsonObject} interactive={false}
               style={{ color: 'transparent', weight: 0, fillColor: '#000', fillOpacity: 0.55 }} />
           )}
 
-          {/* Province boundary */}
           {showBoundary && province && (
             <GeoJSON key="province" data={province as GeoJsonObject}
               style={{ color: '#f8fafc', weight: 2, fill: false } as PathOptions} />
           )}
 
-          {/* District boundaries */}
           {showBoundary && districts.length > 0 && (
             <GeoJSON key="districts"
               data={{ type: 'FeatureCollection', features: districts } as GeoJsonObject}
               style={{ color: '#60a5fa', weight: 1.5, fill: false, dashArray: '6 3' } as PathOptions} />
           )}
 
-          {/* Road edges */}
           {showRoads && filteredRoads && (
             <GeoJSON
               key={`roads-${filteredRoads.features.length}-${Array.from(enabledTypes).sort().join()}`}
@@ -323,8 +252,7 @@ export function NetworkGraph({ summary, boundaries, mask }: Props) {
             />
           )}
 
-          {/* Junction nodes at high zoom */}
-          {showNodes && zoom >= 13 && junctionNodes.map(({ lat, lon }, i) => (
+          {showNodes && zoom >= 14 && junctionNodes.map(([lat, lon], i) => (
             <CircleMarker key={i} center={[lat, lon]} radius={nodeRadius}
               pathOptions={{ color: '#0f172a', weight: 1, fillColor: '#fff', fillOpacity: 1 }} />
           ))}

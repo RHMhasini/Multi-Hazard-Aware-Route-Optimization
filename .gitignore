@@ -28,6 +28,9 @@ htmlcov/
 cache/
 .ox_cache/
 
+# Generated static GeoJSON served by the frontend (re-run scripts/export_roads_geojson.py)
+frontend/public/roads.geojson
+
 # Large geospatial datasets / raw artifacts (allow metadata/config to be tracked)
 data/raw/*
 !data/raw/.gitkeep
