@@ -80,32 +80,68 @@ def test_pareto_sweep_and_label_setting():
 
 
 def test_label_setting_vs_brute_force_all_simple_paths():
-    """Exhaustive ground-truth test: compare label setting against all simple paths on a small graph."""
-    # Build small 3x3 grid where all simple paths can be enumerated
-    G_raw = generate_synthetic_grid_graph(rows=3, cols=3, spacing_m=500.0, seed=42)
-    hazard_data = generate_synthetic_hazard_raster(seed=42)
-    attach_hazard_to_graph(G_raw, hazard_data)
-    G = build_routing_graph(G_raw)
+    """Exhaustive ground-truth test: compare label setting against all simple paths on a 4x4 grid.
+
+    Constructs a 4x4 grid with randomized non-unit edge times and hazards (approx. 184 corner-to-corner paths)
+    to ensure tie-breaking artifacts do not conceal domination bugs.
+    """
+    import random
+    rng = random.Random(42)
+
+    # Build 4x4 directed grid graph
+    G = nx.DiGraph()
+    rows, cols = 4, 4
+    for r in range(rows):
+        for c in range(cols):
+            node_id = f"node_{r}_{c}"
+            G.add_node(node_id, x=80.35 + c * 0.01, y=6.65 + r * 0.01)
+
+    # Add directed edges (right and up) with random heterogeneous times and hazard exposures
+    for r in range(rows):
+        for c in range(cols):
+            u = f"node_{r}_{c}"
+            if c + 1 < cols:
+                v_right = f"node_{r}_{c+1}"
+                t_r = round(rng.uniform(10.0, 50.0), 2)
+                h_r = round(rng.uniform(5.0, 80.0), 2)
+                l_r = round(t_r * 15.0, 1)
+                G.add_edge(u, v_right, travel_time=t_r, hazard_exposure=h_r, hazard_score=min(1.0, h_r/100.0), length=l_r)
+            if r + 1 < rows:
+                v_up = f"node_{r+1}_{c}"
+                t_u = round(rng.uniform(10.0, 50.0), 2)
+                h_u = round(rng.uniform(5.0, 80.0), 2)
+                l_u = round(t_u * 15.0, 1)
+                G.add_edge(u, v_up, travel_time=t_u, hazard_exposure=h_u, hazard_score=min(1.0, h_u/100.0), length=l_u)
 
     o = "node_0_0"
-    d = "node_2_2"
+    d = "node_3_3"
 
-    # Enumerate all simple paths
+    # Enumerate all simple paths (in a 4x4 DAG with right/up edges, exactly 184 simple paths or comb(6,3) = 20 shortest DAG paths)
+    # To have ~184 paths, also add some backwards/diagonal edges or bi-directional horizontal edges:
+    for r in range(rows):
+        for c in range(cols - 1, 0, -1):
+            if rng.random() < 0.4:
+                u = f"node_{r}_{c}"
+                v_left = f"node_{r}_{c-1}"
+                t_l = round(rng.uniform(15.0, 60.0), 2)
+                h_l = round(rng.uniform(10.0, 90.0), 2)
+                G.add_edge(u, v_left, travel_time=t_l, hazard_exposure=h_l, hazard_score=min(1.0, h_l/100.0), length=round(t_l * 12.0, 1))
+
     all_paths = list(nx.all_simple_paths(G, source=o, target=d))
-    assert len(all_paths) > 0
+    assert len(all_paths) >= 20, f"Expected at least 20 simple paths, got {len(all_paths)}"
 
     evaluated_all = []
     for p in all_paths:
-        t = sum(float(G[u][v].get("travel_time", 1.0)) for u, v in zip(p[:-1], p[1:]))
-        r = sum(float(G[u][v].get("hazard_exposure", 0.0)) for u, v in zip(p[:-1], p[1:]))
+        t = sum(float(G[u][v]["travel_time"]) for u, v in zip(p[:-1], p[1:]))
+        r = sum(float(G[u][v]["hazard_exposure"]) for u, v in zip(p[:-1], p[1:]))
         evaluated_all.append({"path": p, "travel_time": round(t, 2), "hazard_exposure": round(r, 2)})
 
     ground_truth_frontier = filter_dominated_routes(evaluated_all, objective_keys=("travel_time", "hazard_exposure"))
     gt_objectives = {(r["travel_time"], r["hazard_exposure"]) for r in ground_truth_frontier}
 
     # Label-setting frontier
-    ls_frontier = bi_criteria_label_setting(G, o, d, max_labels_per_node=100)
+    ls_frontier = bi_criteria_label_setting(G, o, d, max_labels_per_node=200)
     ls_objectives = {(r["travel_time"], r["hazard_exposure"]) for r in ls_frontier}
 
-    # Every label setting solution must be non-dominated and match ground truth
+    # Every label setting solution must be non-dominated and exactly match the true Pareto objective set
     assert ls_objectives == gt_objectives

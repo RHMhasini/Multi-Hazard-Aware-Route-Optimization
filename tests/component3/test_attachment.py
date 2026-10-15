@@ -68,5 +68,79 @@ def test_attach_hazard_to_graph():
         assert "mean_hazard" in data
         assert "hazard_exposure" in data
         assert 0.0 <= data["hazard_score"] <= 1.0
-        assert data["hazard_score"] == data["max_hazard"]
-        assert data["hazard_exposure"] == pytest.approx(data["length"] * data["hazard_score"], rel=1e-2)
+
+
+def test_tiny_geotiff_north_up_orientation(tmp_path):
+    """Test creating and reading a tiny GeoTIFF with known north-up orientation."""
+    try:
+        import rasterio
+        from rasterio.transform import from_bounds
+    except ImportError:
+        pytest.skip("rasterio not installed")
+
+    from src.route_optimization.loaders import load_c1_hazard_raster
+
+    # Create a 2x2 raster:
+    # Row 0 (North): [0.99, 0.88]
+    # Row 1 (South): [0.11, 0.22]
+    data = np.array([[0.99, 0.88], [0.11, 0.22]], dtype=np.float32)
+    bounds = (80.0, 6.0, 81.0, 7.0)
+    transform = from_bounds(80.0, 6.0, 81.0, 7.0, 2, 2)
+
+    tif_path = tmp_path / "test_hazard.tif"
+    with rasterio.open(
+        tif_path,
+        "w",
+        driver="GTiff",
+        height=2,
+        width=2,
+        count=1,
+        dtype=data.dtype,
+        crs="EPSG:4326",
+        transform=transform,
+        nodata=-9999.0,
+    ) as dst:
+        dst.write(data, 1)
+
+    loaded = load_c1_hazard_raster(tif_path)
+    assert loaded["origin_upper"] is True
+    assert loaded["raster"].shape == (2, 2)
+
+    # Sample north point (lat=6.8) -> should sample row 0 (approx 0.99 or 0.88)
+    val_north = sample_raster_at_point(
+        80.2, 6.8, loaded["raster"], loaded["bounds"], origin_upper=True, transform=loaded.get("transform")
+    )
+    assert val_north > 0.8
+
+    # Sample south point (lat=6.2) -> should sample row 1 (approx 0.11 or 0.22)
+    val_south = sample_raster_at_point(
+        80.2, 6.2, loaded["raster"], loaded["bounds"], origin_upper=True, transform=loaded.get("transform")
+    )
+    assert val_south < 0.3
+
+
+def test_wkt_edge_geometry_attachment():
+    """Test that GraphML/OSMnx WKT string geometries are parsed and sampled correctly."""
+    G = nx.DiGraph()
+    G.add_node("U", x=80.1, y=6.1)
+    G.add_node("V", x=80.9, y=6.1)
+
+    # Curved detour geometry in WKT string format bowing north towards (80.5, 6.8)
+    wkt_geom = "LINESTRING (80.1 6.1, 80.5 6.8, 80.9 6.1)"
+    G.add_edge("U", "V", geometry=wkt_geom, length=1500.0)
+
+    # Hazard raster has hot cell at north (lat=6.8) and cold at south (lat=6.1)
+    hazard_raster = np.array([[0.95, 0.95], [0.05, 0.05]], dtype=np.float64)
+    hazard_data = {
+        "raster": hazard_raster,
+        "bounds": (80.0, 6.0, 81.0, 7.0),
+        "origin_upper": True,
+    }
+
+    attach_hazard_to_graph(G, hazard_data)
+    edge_data = G["U"]["V"]
+
+    # Since the curve went through the north (lat 6.8), max_hazard should pick up ~0.95
+    assert edge_data["max_hazard"] > 0.8
+    assert edge_data["hazard_score"] == edge_data["max_hazard"]
+    assert edge_data["hazard_exposure"] == pytest.approx(edge_data["length"] * edge_data["hazard_score"], rel=1e-2)

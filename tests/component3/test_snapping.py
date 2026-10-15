@@ -65,3 +65,37 @@ def test_max_distance_exceeded(sample_graph):
     snapper = CoordinateSnapper(sample_graph)
     with pytest.raises(ValueError, match="exceeds the maximum snapping threshold"):
         snapper.snap_coordinate(far_lon, far_lat, max_distance_m=2000.0)
+
+
+def test_snapping_to_largest_connected_component():
+    """Verify that snapping ignores an isolated node when require_largest_component=True."""
+    G = nx.DiGraph()
+    # Main connected cycle: A <-> B <-> C <-> A
+    G.add_node("A", x=80.0, y=6.0)
+    G.add_node("B", x=80.01, y=6.0)
+    G.add_node("C", x=80.01, y=6.01)
+    G.add_edge("A", "B", length=100.0)
+    G.add_edge("B", "A", length=100.0)
+    G.add_edge("B", "C", length=100.0)
+    G.add_edge("C", "B", length=100.0)
+    G.add_edge("C", "A", length=100.0)
+    G.add_edge("A", "C", length=100.0)
+
+    # Isolated unreachable singleton node closer to query
+    G.add_node("isolated", x=80.004, y=6.004)
+
+    # Query coordinate is closest to 'isolated'
+    query_lon, query_lat = 80.0041, 6.0041
+
+    # Build one shared snapper
+    snapper = CoordinateSnapper(G)
+
+    # Without filter: snaps to the geometrically nearest node including 'isolated'
+    node_unconstrained, _ = snapper.snap_coordinate(query_lon, query_lat, require_largest_component=False)
+    assert node_unconstrained == "isolated"
+
+    # With filter: skips 'isolated', snaps to the largest SCC {A, B, C}
+    node_connected, _ = snapper.snap_coordinate(query_lon, query_lat, require_largest_component=True)
+    assert node_connected in {"A", "B", "C"}
+    assert node_connected != "isolated"
+

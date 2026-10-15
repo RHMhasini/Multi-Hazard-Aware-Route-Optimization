@@ -122,3 +122,38 @@ def test_no_path_handling():
 
     path = compute_shortest_time_route(G, "A", "B")
     assert path is None
+
+
+def test_safest_route_longer_hop_count():
+    """Verify that safest route can take a detour that is longer in hop count than fastest route."""
+    G = nx.DiGraph()
+    # Path 1 (Fast direct corridor, 2 hops): A -> B -> C
+    # Path 2 (Safe detour, 4 hops): A -> D -> E -> F -> C
+    for n in ["A", "B", "C", "D", "E", "F"]:
+        G.add_node(n, x=80.0, y=6.0)
+
+    # Path 1: 2 hops, travel_time = 20s each (40s), severe hazard exposure = 1000 each (2000 haz·m)
+    G.add_edge("A", "B", travel_time=20.0, hazard_exposure=1000.0, hazard_score=0.9, length=1000.0)
+    G.add_edge("B", "C", travel_time=20.0, hazard_exposure=1000.0, hazard_score=0.9, length=1000.0)
+
+    # Path 2: 4 hops, travel_time = 15s each (60s), zero hazard exposure (0 haz·m)
+    G.add_edge("A", "D", travel_time=15.0, hazard_exposure=0.0, hazard_score=0.0, length=500.0)
+    G.add_edge("D", "E", travel_time=15.0, hazard_exposure=0.0, hazard_score=0.0, length=500.0)
+    G.add_edge("E", "F", travel_time=15.0, hazard_exposure=0.0, hazard_score=0.0, length=500.0)
+    G.add_edge("F", "C", travel_time=15.0, hazard_exposure=0.0, hazard_score=0.0, length=500.0)
+
+    fast_p = compute_shortest_time_route(G, "A", "C")
+    safe_p = compute_risk_min_route(G, "A", "C")
+
+    assert fast_p == ["A", "B", "C"]
+    assert len(fast_p) - 1 == 2  # 2 hops
+
+    assert safe_p == ["A", "D", "E", "F", "C"]
+    assert len(safe_p) - 1 == 4  # 4 hops (longer hop detour)
+
+    m_fast = calculate_route_metrics(G, fast_p)
+    m_safe = calculate_route_metrics(G, safe_p)
+
+    assert m_fast.total_travel_time_sec < m_safe.total_travel_time_sec
+    assert m_safe.cumulative_hazard_exposure < m_fast.cumulative_hazard_exposure
+    assert m_safe.edge_count > m_fast.edge_count
