@@ -149,6 +149,8 @@ def export_routes_to_geojson(
                 "distance_km": round(metrics.total_distance_m / 1000.0, 2),
                 "distance_m": metrics.total_distance_m,
                 "cumulative_hazard_exposure": metrics.cumulative_hazard_exposure,
+                "cumulative_hazard_exposure_haz_m": metrics.cumulative_hazard_exposure,
+                "hazard_exposure_unit": "hazard·metres",
                 "max_edge_hazard": metrics.max_edge_hazard,
                 "threshold_penalty": metrics.threshold_penalty,
                 "edge_count": metrics.edge_count,

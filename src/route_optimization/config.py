@@ -27,11 +27,13 @@ class RouteOptimizationConfig:
     alpha_tradeoff: float = 0.5            # 1.0 = travel time only, 0.0 = hazard exposure only (matches proposal lambda)
     exponential_beta: float = 3.0          # Scaling factor for exponential risk formula option
 
-    # Hazard & safety thresholds
-    hazard_warning_threshold: float = 0.5  # Moderate risk threshold
-    hazard_critical_threshold: float = 0.7 # High risk threshold (triggers penalty / detour)
-    hazard_impassable_threshold: float = 0.95 # Impassable hazard level (edge effectively closed)
-    threshold_penalty_multiplier: float = 10.0 # Penalty factor applied to edges >= critical threshold
+    # Hazard & safety thresholds (Susceptibility scores are continuous in [0, 1].
+    # These threshold values represent operational scenario policy settings rather than fixed physical constants;
+    # their sensitivity and impact on network reachability are evaluated dynamically in scenarios.py / run_experiments.py).
+    hazard_warning_threshold: float = 0.5  # Moderate risk advisory threshold
+    hazard_critical_threshold: float = 0.7 # High risk threshold (triggers penalty / detour evaluation)
+    hazard_impassable_threshold: float = 0.95 # Impassable hazard level (edge effectively severed/closed)
+    threshold_penalty_multiplier: float = 10.0 # Multiplier applied to excess hazard for edges >= critical threshold
 
     # Coordinate Reference Systems
     crs_source: str = "EPSG:4326"          # Default geographic CRS (WGS84 lat/lon)

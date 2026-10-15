@@ -114,8 +114,10 @@ def recommend_optimal_route(
     # Step 5: Construct transparent audit trail
     audit_lines = [
         "=== Component 3 Route Recommendation Audit ===",
-        f"1. Baseline Quickest: Time={quickest['time']:.1f}s, MaxHazard={quickest['max_h']:.3f}, Exposure={quickest['risk']:.1f}",
-        f"2. Baseline Safest: Time={safest['time']:.1f}s, MaxHazard={safest['max_h']:.3f}, Exposure={safest['risk']:.1f}",
+        "NOTE: Route recommendation is an auditable, multi-criteria decision rule (Utopian Knee-Point).",
+        "The selection depends on the candidate pool and normalization bounds, pending final supervisor policy alignment.",
+        f"1. Baseline Quickest: Time={quickest['time']:.1f}s, MaxHazard={quickest['max_h']:.3f}, Exposure={quickest['risk']:.1f} hazard·metres",
+        f"2. Baseline Safest: Time={safest['time']:.1f}s, MaxHazard={safest['max_h']:.3f}, Exposure={safest['risk']:.1f} hazard·metres",
         f"3. Safety Ceiling: Hazard Threshold <= {max_hazard_limit:.2f} ({'ENFORCED' if not safety_fallback else 'RELAXED - all paths exceed limit'})",
         f"4. Detour Budget: Time <= {max_allowed_time:.1f}s ({detour_limit * 100:.0f}% of fastest route)",
     ]
@@ -126,7 +128,7 @@ def recommend_optimal_route(
     audit_lines.append(
         f"5. Recommendation Decision: Selected '{best_candidate['algorithm']}'. "
         f"Achieves {risk_reduction_pct:.1f}% risk reduction over fastest route with only "
-        f"{time_diff_pct:.1f}% time detour (Distance to Ideal: {min_distance_to_ideal:.3f})."
+        f"{time_diff_pct:.1f}% time detour (Normalized L2 Distance to Utopian Point: {min_distance_to_ideal:.3f})."
     )
 
     return C3RouteResultContract(

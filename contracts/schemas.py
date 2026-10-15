@@ -132,7 +132,7 @@ class C3EvaluationMetricsContract(BaseModel):
     total_distance_m: float = Field(ge=0.0, description="Total route distance in meters")
     cumulative_hazard_exposure: float = Field(
         ge=0.0,
-        description="Integrated hazard exposure (length * hazard or time * hazard)"
+        description="Integrated hazard exposure in hazard·metres (sum of edge length_m * edge hazard_score)"
     )
     max_edge_hazard: float = Field(
         ge=0.0,

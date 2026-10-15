@@ -132,13 +132,17 @@ def compute_weighted_sum_route(
         calc_r = sum(float(graph[u][v].get("hazard_exposure", 0.0)) for u, v in zip(fast_path[:-1], fast_path[1:]))
 
         if t_ref is None:
-            t_ref = max(1.0, calc_t)
+            t_ref = max(1e-4, calc_t)
         if r_ref is None:
             # If fastest path has zero exposure, check safest path exposure or default
-            if calc_r <= 0:
+            if calc_r <= 1e-4:
                 safe_p = compute_risk_min_route(graph, origin, destination)
-                calc_r = sum(float(graph[u][v].get("hazard_exposure", 0.0)) for u, v in zip(safe_p[:-1], safe_p[1:])) if safe_p else 100.0
-            r_ref = max(1.0, calc_r)
+                calc_r = sum(float(graph[u][v].get("hazard_exposure", 0.0)) for u, v in zip(safe_p[:-1], safe_p[1:])) if safe_p else 0.0
+            r_ref = max(1e-4, calc_r if calc_r > 1e-4 else 100.0)
+    else:
+        # User or caller supplied references: guard against zero division
+        t_ref = max(1e-4, float(t_ref))
+        r_ref = max(1e-4, float(r_ref))
 
     def cost_func(u, v, data):
         time = float(data.get("travel_time", 1.0))

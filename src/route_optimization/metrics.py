@@ -113,6 +113,7 @@ def compare_routes(
             "travel_time_sec": metrics.total_travel_time_sec,
             "travel_time_min": round(metrics.total_travel_time_sec / 60.0, 2),
             "distance_km": round(metrics.total_distance_m / 1000.0, 2),
+            "cumulative_exposure_haz_m": metrics.cumulative_hazard_exposure,
             "cumulative_exposure": metrics.cumulative_hazard_exposure,
             "max_edge_hazard": metrics.max_edge_hazard,
             "threshold_penalty": metrics.threshold_penalty,

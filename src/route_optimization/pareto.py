@@ -9,10 +9,13 @@ Provides:
 from __future__ import annotations
 
 import heapq
+import logging
 from typing import Dict, List, Optional, Set, Tuple, Union, Any
 import networkx as nx
 
 from src.route_optimization.baselines import compute_weighted_sum_route
+
+logger = logging.getLogger(__name__)
 
 
 def is_dominated(
@@ -259,6 +262,12 @@ def bi_criteria_label_setting(
                     # Combined priority heuristic
                     priority_val = new_time + new_risk * 0.1
                     heapq.heappush(heap, (priority_val, new_time, new_risk, neighbor, new_path))
+                else:
+                    logger.warning(
+                        "Label cap reached: node '%s' exceeded max_labels_per_node=%d (label dropped). Exactness may be compromised.",
+                        neighbor,
+                        max_labels_per_node,
+                    )
 
     # Add extra path metadata for destination solutions
     for sol in destination_solutions:
