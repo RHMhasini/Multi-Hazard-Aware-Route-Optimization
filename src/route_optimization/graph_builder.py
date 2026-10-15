@@ -141,6 +141,8 @@ def build_routing_graph(
             "impedance": round(impedance, 4),
             "highway": str(highway),
         }
+        if "geometry" in data:
+            edge_attrs["geometry"] = data["geometry"]
 
         # Handle parallel edges
         if routing_graph.has_edge(u, v) and simplify_multigraph:
