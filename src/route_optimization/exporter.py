@@ -22,6 +22,7 @@ def export_routes_to_geojson(
     origin_coord: Optional[Union[List[float], Tuple[float, float]]] = None,
     destination_coord: Optional[Union[List[float], Tuple[float, float]]] = None,
     output_filepath: Optional[Union[str, Path]] = None,
+    target_region: Optional[str] = None,
 ) -> Dict[str, Any]:
     """Convert candidate and recommended routing solutions into standard GeoJSON format.
 
@@ -32,6 +33,7 @@ def export_routes_to_geojson(
         origin_coord: Optional original query (lon, lat) of emergency origin.
         destination_coord: Optional original query (lon, lat) of emergency destination.
         output_filepath: Optional file path to save the resulting .geojson file.
+        target_region: Study area name (default: "Ratnapura District, Sabaragamuwa Province, Sri Lanka").
 
     Returns:
         Dict: Standard GeoJSON FeatureCollection dictionary.
@@ -65,6 +67,9 @@ def export_routes_to_geojson(
             },
         })
 
+    # Track seen path node tuples to avoid exporting identical duplicate routes
+    seen_paths: Dict[Tuple[Any, ...], str] = {}
+
     # 2. Add LineString features for each candidate route
     for route_key, route_val in routes.items():
         if route_val is None:
@@ -76,35 +81,56 @@ def export_routes_to_geojson(
             algorithm_name = route_val.algorithm
             audit_notes = route_val.audit_notes
             metrics = route_val.metrics
-            is_rec = True
+            is_rec = (recommended_route_id is None or str(route_key) == str(recommended_route_id) or route_val.route_id == str(recommended_route_id))
+            is_pareto = getattr(metrics, "is_pareto_optimal", None)
         elif isinstance(route_val, dict) and "path" in route_val:
             path = route_val["path"]
             algorithm_name = route_val.get("algorithm", route_key)
             audit_notes = route_val.get("audit_notes")
             metrics = calculate_route_metrics(graph, path)
-            is_rec = (route_key == recommended_route_id or route_val.get("is_recommended", False))
+            is_rec = (str(route_key) == str(recommended_route_id) or route_val.get("is_recommended", False))
+            is_pareto = route_val.get("is_pareto_optimal", None)
         elif isinstance(route_val, list):
             path = route_val
             algorithm_name = str(route_key)
             audit_notes = None
             metrics = calculate_route_metrics(graph, path)
-            is_rec = (route_key == recommended_route_id)
+            is_rec = (str(route_key) == str(recommended_route_id))
+            is_pareto = None
         else:
             continue
 
         if len(path) < 2:
             continue
 
+        path_tuple = tuple(path)
+        if path_tuple in seen_paths and not is_rec:
+            # Skip exact duplicate paths unless it's the explicitly recommended route
+            continue
+        seen_paths[path_tuple] = str(route_key)
+
         # Build coordinate line: list of [lon, lat]
         coordinates: List[List[float]] = []
-        for node in path:
+        for i, node in enumerate(path):
             if node in graph and "x" in graph.nodes[node] and "y" in graph.nodes[node]:
                 lon = float(graph.nodes[node]["x"])
                 lat = float(graph.nodes[node]["y"])
+                
+                # Check for curved edge geometry if moving to next node
+                if i < len(path) - 1:
+                    next_node = path[i+1]
+                    edge_data = graph[node][next_node]
+                    edge_geom = edge_data.get("geometry")
+                    if edge_geom is not None and hasattr(edge_geom, "coords"):
+                        for pt in edge_geom.coords[:-1]:
+                            coordinates.append([round(float(pt[0]), 6), round(float(pt[1]), 6)])
+                        continue
                 coordinates.append([round(lon, 6), round(lat, 6)])
 
         if len(coordinates) < 2:
             continue
+
+        is_feasible = (metrics.max_edge_hazard < 0.95)
 
         feature = {
             "type": "Feature",
@@ -115,7 +141,9 @@ def export_routes_to_geojson(
             "properties": {
                 "route_id": str(route_key),
                 "algorithm": algorithm_name,
-                "is_recommended": is_rec,
+                "is_recommended": bool(is_rec),
+                "is_feasible": is_feasible,
+                "is_pareto_optimal": is_pareto,
                 "travel_time_sec": metrics.total_travel_time_sec,
                 "travel_time_min": round(metrics.total_travel_time_sec / 60.0, 2),
                 "distance_km": round(metrics.total_distance_m / 1000.0, 2),
@@ -130,6 +158,7 @@ def export_routes_to_geojson(
         }
         features.append(feature)
 
+    region_title = target_region or "Ratnapura District, Sabaragamuwa Province, Sri Lanka"
     feature_collection = {
         "type": "FeatureCollection",
         "crs": {
@@ -138,7 +167,7 @@ def export_routes_to_geojson(
         },
         "metadata": {
             "generator": "Multi-Hazard-Aware Route Optimization Engine (Component 3)",
-            "target_region": "Ratnapura District, Sabaragamuwa Province, Sri Lanka",
+            "target_region": region_title,
             "feature_count": len(features),
         },
         "features": features,
