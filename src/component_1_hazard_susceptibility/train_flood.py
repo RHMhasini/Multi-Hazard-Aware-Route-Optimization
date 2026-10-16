@@ -1,6 +1,9 @@
 
-"""Train a Random Forest on synthetic flood susceptibility labels."""
+"""Train and save a Random Forest on synthetic flood susceptibility labels."""
 
+from pathlib import Path
+
+import joblib
 from sklearn.ensemble import RandomForestClassifier
 
 from data_loader import load_synthetic_data
@@ -8,10 +11,11 @@ from data_validation import validate_dataset
 from train_test_split import prepare_split
 
 RANDOM_STATE = 42
+MODEL_DIR = Path(__file__).resolve().parents[2] / "outputs" / "models"
 
 
 def train_flood_model(data):
-    """Train a class-weighted synthetic flood classifier."""
+    """Train and save a class-weighted synthetic flood classifier."""
 
     X_train, X_test, y_train, y_test = prepare_split(
         data, "flood_sim"
@@ -36,6 +40,12 @@ def train_flood_model(data):
     print(f"Testing samples reserved: {len(X_test)}")
     print(f"Number of features: {model.n_features_in_}")
     print(f"Model classes: {model.classes_.tolist()}")
+
+    MODEL_DIR.mkdir(parents=True, exist_ok=True)
+    model_path = MODEL_DIR / "flood_rf_synthetic.joblib"
+
+    joblib.dump(model, model_path)
+    print(f"Model saved to: {model_path}")
 
     return model, X_test, y_test
 
