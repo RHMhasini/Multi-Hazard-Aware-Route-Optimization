@@ -1,0 +1,23 @@
+﻿# Python cache
+__pycache__/
+*.py[cod]
+
+# Virtual environments
+.venv/
+venv/
+env/
+
+# Python tooling
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# Editor and OS files
+.vscode/
+.DS_Store
+Thumbs.db
+
+# Large generated GIS rasters
+outputs/susceptibility_maps/
+
+# Trained .joblib models are allowed
