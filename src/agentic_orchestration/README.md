@@ -1,4 +1,4 @@
-# Component 4: mission contracts and safety validation
+# Component 4: mission validation and experimental ranking
 
 This standalone, standard-library-only milestone provides frozen Python
 dataclasses for `c4.mission-request/1.0.0` and
@@ -71,7 +71,7 @@ this interface is not authentication or a security boundary. Tests use an exact
 synthetic-record oracle, not real verification. Travel-time and distance metrics
 remain caller assertions; this milestone adds no independent checks for them.
 
-The response reports eligible IDs in input order; it does **not** select or rank
+The validation response reports eligible IDs in input order; it does **not** select or rank
 a route, establish graph-wide infeasibility, or dispatch a mission. Statuses are
 the validation-only subset proposed for this milestone, not an agreed upstream
 integration standard. Python 3.10+ syntax is used. No JSON parser, API, LLM,
@@ -81,6 +81,70 @@ are identifiers, not verified hashes or guarantees of data integrity. Freshness
 alone does not establish scientific validity or calibration. The versioned
 contracts remain a draft; newly added evidence requirements deliberately make
 old unbound evidence ineligible for a pass.
+
+## Deterministic mission-aware ranking baseline
+
+`ranking.py::rank_candidates(request, candidates, policy, as_of=..., verifier=...)`
+first invokes the existing validator on the exact records being ranked. It does
+not accept an externally supplied eligibility flag or an old validation result.
+Only eligible routes enter the comparison set; rejected and unknown candidates
+never affect normalization. The complete validation response is retained in the
+ranking result, including request/mission IDs, snapshot IDs, and evaluation time.
+No hard limit or evidence requirement is relaxed by ranking.
+
+`RankingPolicy` is an explicit `c4.ranking-policy/1.0.0` contract with a policy
+ID, numeric `major.minor.patch` policy version, exact mission-type label, and
+time/exposure weights. The policy's mission type must match the request. There
+is no automatic policy selection, urgency-based weighting, free-text inference,
+or built-in operational policy. Policy owners must change the version when
+changing its meaning or weights; no policy registry is included.
+
+Weights must be finite, nonnegative, at most one, and sum to one within `1e-12`.
+The implementation divides by their total to remove permitted floating-point
+sum drift and returns the effective weights. At least one weight is positive.
+
+Every eligible route must have finite, nonnegative `travel_time_sec` (seconds)
+and `cumulative_hazard_exposure` (hazard-metres, conventionally sum of edge
+length in metres times dimensionless susceptibility). Both metrics are required
+even if one has zero weight. Missing values, negative sentinels, numeric strings,
+booleans, NaN and infinities are not replaced with zero. Exposure is a caller
+assertion; its integration formula, scientific validity and binding to upstream
+artifacts are not independently verified here. It is not a failure probability.
+
+For the full eligible set C, normalize each minimization objective using:
+
+```text
+normalized_time     = (time - min_time(C)) / (max_time(C) - min_time(C))
+normalized_exposure = (exposure - min_exposure(C)) / (max_exposure(C) - min_exposure(C))
+score = effective_time_weight * normalized_time
+      + effective_exposure_weight * normalized_exposure
+```
+
+An objective constant over C contributes normalized value zero because it cannot
+distinguish candidates; this includes a singleton comparison set. That zero is
+not an imputation for missing data. Lower scores rank first. Exact computed-score
+ties break by case-sensitive Python string ordering of route ID, independent of
+input order; no display rounding or tie tolerance is applied. A singleton can be
+selected but has no evidence of superiority to unsupplied alternatives.
+
+The `c4.mission-ranking/1.0.0` result contains the full policy, effective weights,
+sorted comparison route IDs, normalization bounds, candidate ranks, raw metric
+values, normalized values, weighted contributions, scores, selected ID, and
+structured metric issues. Outcomes are:
+
+- `no_eligible_candidates`: validation produced no eligible routes; its nested
+  response distinguishes empty input, definite violations, and unknown evidence.
+- `insufficient_ranking_data`: at least one eligible candidate lacks a valid
+  ranking metric. Return issues with no ranking, bounds or selected route; do
+  not silently compare a smaller subset.
+- `selected`: every eligible route has both metrics; return the complete ranking
+  and the first route's ID.
+
+Scores depend on C and cannot be compared across different candidate sets or
+evaluations. This is an experimental weighted scoring baseline, **not a validated
+emergency-routing policy** or a globally optimal route search. Selection is
+scoped to supplied eligible candidates and the evaluation instant; no live
+re-routing, dispatch, metric provenance adapter, LLM, API or dashboard is added.
 
 Run the synthetic unit tests from the repository root:
 

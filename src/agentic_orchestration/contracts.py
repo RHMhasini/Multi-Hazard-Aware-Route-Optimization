@@ -158,6 +158,8 @@ class RouteCandidate:
     travel_time_sec: float | None = None
     distance_m: float | None = None
     vehicle_evidence: VehicleEvidence | None = None
+    # Ranking input only, in hazard-metres; hard validation is unchanged.
+    cumulative_hazard_exposure: float | None = None
 
     def __post_init__(self) -> None:
         _nonempty(self.route_id, "route_id")

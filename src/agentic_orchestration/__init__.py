@@ -20,6 +20,10 @@ from .contracts import (
     VerificationStatus,
 )
 from .validation import validate_candidates
+from .ranking import (
+    NormalizationBounds, RankedRoute, RankingMetricIssue, RankingPolicy,
+    RankingResult, RankingStatus, rank_candidates,
+)
 
 __all__ = [
     "CandidateAssessment", "CandidateStatus", "CheckStatus", "ConstraintCheck",
@@ -28,4 +32,6 @@ __all__ = [
     "validate_candidates",
     "CoverageResult", "EvidenceVerifier", "FreshnessResult", "VehicleEvidence",
     "VerificationStatus",
+    "NormalizationBounds", "RankedRoute", "RankingMetricIssue", "RankingPolicy",
+    "RankingResult", "RankingStatus", "rank_candidates",
 ]
