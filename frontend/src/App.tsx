@@ -70,7 +70,6 @@ function App() {
       <header className="border-b border-slate-200 bg-white px-6 py-4 shadow-sm">
         <div className="mx-auto flex max-w-[1600px] items-baseline gap-4">
           <div>
-            <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-blue-700">Component 2</p>
             <h1 className="text-xl font-bold text-slate-950">Sabaragamuwa Province — Road Network Graph</h1>
           </div>
           <p className="hidden text-sm text-slate-500 sm:block">

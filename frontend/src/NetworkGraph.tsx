@@ -127,7 +127,7 @@ export function NetworkGraph({ summary, boundaries, mask }: Props) {
       <aside className="flex w-60 flex-shrink-0 flex-col overflow-hidden bg-slate-900 text-slate-100">
         <div className="border-b border-slate-700 p-4">
           <p className="text-[10px] font-bold uppercase tracking-widest text-blue-400">Sabaragamuwa Province</p>
-          <p className="mt-0.5 text-[11px] text-slate-400">Road Network Graph — Component 2</p>
+          <p className="mt-0.5 text-[11px] text-slate-400">Road Network Graph</p>
           {summary ? (
             <div className="mt-3 grid grid-cols-2 gap-1.5">
               {([
