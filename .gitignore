@@ -17,7 +17,12 @@ env/
 .DS_Store
 Thumbs.db
 
-# Large generated GIS rasters
-outputs/susceptibility_maps/
+# Generated ML models - keep local
+models/*.pkl
+models/*.joblib
 
-# Trained .joblib models are allowed
+# Generated GIS raster outputs - keep local
+outputs/*.tif
+outputs/**/*.tif
+outputs/*.aux.xml
+outputs/**/*.aux.xml
