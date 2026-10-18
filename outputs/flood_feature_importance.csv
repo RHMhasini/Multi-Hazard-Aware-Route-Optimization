@@ -1,0 +1,11 @@
+Feature,Importance
+Elevation,0.14901705
+Distance_to_Stream,0.1093247
+TRI,0.10317581
+TWI,0.09699665
+Drainage_Density,0.0962943
+Profile_Curvature,0.0954385
+Aspect,0.09520346
+Flow_Accumulation,0.08725263
+Tangential_Curvature,0.08410875
+Slope,0.08318812

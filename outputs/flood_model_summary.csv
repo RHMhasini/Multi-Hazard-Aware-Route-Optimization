@@ -1,0 +1,4 @@
+Model,ROC_AUC_Mean,ROC_AUC_SD,F1_Mean,F1_SD,Precision_Mean,Precision_SD,Recall_Mean,Recall_SD
+LightGBM,0.536,0.074,0.509,0.04,0.52,0.076,0.518,0.104
+Random Forest,0.541,0.058,0.521,0.078,0.516,0.053,0.552,0.178
+XGBoost,0.542,0.069,0.519,0.078,0.525,0.076,0.543,0.179
