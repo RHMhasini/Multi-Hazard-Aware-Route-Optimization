@@ -61,6 +61,47 @@ class ExecutionBudget(Protocol):
     def checkpoint(self, *, reserve_provider_call: bool = False) -> BudgetSnapshot: ...
 
 
+class BudgetGuard:
+    """Validate a host budget's immutable responses across a workflow boundary."""
+
+    def __init__(self, budget: ExecutionBudget):
+        self._budget = budget
+        self.checks: list[BudgetSnapshot] = []
+
+    def checkpoint(self, *, reserve_provider_call: bool = False) -> bool:
+        snapshot = self._budget.checkpoint(reserve_provider_call=reserve_provider_call)
+        if type(snapshot) is not BudgetSnapshot:
+            raise ValueError("Invalid budget response")
+        # All fields are checked before retaining the record; no arbitrary payload.
+        if (type(snapshot.exhausted) is not bool
+                or type(snapshot.scope_id) is not str or not snapshot.scope_id.strip()
+                or type(snapshot.provider_calls) is not int or snapshot.provider_calls < 0
+                or type(snapshot.max_provider_calls) is not int
+                or snapshot.max_provider_calls < snapshot.provider_calls
+                or type(snapshot.elapsed_sec) not in (int, float)
+                or not finite_number(snapshot.elapsed_sec) or snapshot.elapsed_sec < 0
+                or type(snapshot.max_duration_sec) not in (int, float)
+                or not finite_number(snapshot.max_duration_sec) or snapshot.max_duration_sec <= 0
+                or (snapshot.reason is not None and type(snapshot.reason) is not str)
+                or (not snapshot.exhausted and snapshot.elapsed_sec >= snapshot.max_duration_sec)):
+            raise ValueError("Invalid budget snapshot")
+        if self.checks:
+            previous = self.checks[-1]
+            if ((snapshot.scope_id, snapshot.max_provider_calls, snapshot.max_duration_sec)
+                    != (previous.scope_id, previous.max_provider_calls, previous.max_duration_sec)
+                    or snapshot.provider_calls < previous.provider_calls
+                    or snapshot.elapsed_sec < previous.elapsed_sec
+                    or (previous.exhausted and not snapshot.exhausted)
+                    or (reserve_provider_call and not snapshot.exhausted
+                        and snapshot.provider_calls <= previous.provider_calls)):
+                raise ValueError("Budget scope or counters changed")
+        self.checks.append(BudgetSnapshot(
+            snapshot.scope_id, snapshot.max_provider_calls, snapshot.provider_calls,
+            snapshot.max_duration_sec, snapshot.elapsed_sec, snapshot.exhausted, snapshot.reason,
+        ))
+        return not snapshot.exhausted
+
+
 class HostExecutionBudget:
     """Shared, sticky, count/deadline budget. Cannot interrupt a blocking callback.
 

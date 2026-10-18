@@ -283,8 +283,8 @@ This replays the evaluation, not elapsed-time budget use or a current completion
 gate. Unsupported trace/runner versions, including old version-1 traces, and
 failed acquisition without an evaluation are rejected rather than guessed at.
 
-`tests/component4/test_orchestration.py` contains the only synthetic provider and
-authority implementations. Its fixed expected hazard, vehicle and metric records
+`tests/component4/test_orchestration.py` contains synthetic provider and
+authority fixtures reused by the controller tests. Its fixed expected hazard, vehicle and metric records
 are built separately from provider claims. These are labelled test fixtures,
 not genuine trusted upstream records or evidence of scientific accuracy.
 
@@ -295,6 +295,84 @@ the same deterministic gate. No LLM, LangGraph, multi-agent framework, dashboard
 or API is introduced. There is no backoff, hard per-call interruption, cancellation
 or live re-routing. Real upstream verification and an authoritative operational
 clock source remain integration tasks; tests use synthetic clocks and records.
+
+## Bounded controller and scripted planner baseline
+
+`agent_controller.py::run_controller()` adds a single bounded action loop. The
+host supplies the request, ranking policy, provider, verification dependencies,
+evidence-bundle identity, shared execution budget, evaluation mode/time/clock,
+planner implementation identity, retry policy and maximum action count. None of
+these dependencies or safety settings is accepted through a planner action.
+The existing request/policy preflight runs before planning or provider I/O.
+
+`Planner.propose(PlannerObservation)` proposes exactly one `PlannerAction` at a
+time. Observations are frozen summaries: step/state, identity labels (truncated
+to 128 characters for observation only), missing snapshot-input names, allowed
+actions, and candidate count. They contain no raw evidence, candidate route IDs,
+policy weights, hard constraints, tools, verifiers, clock or budget object.
+The full original identities remain in the host trace. The closed allowlist is:
+
+- `acquire_alternatives`: no arguments. Calls `acquire_mission()` through the
+  existing typed provider interface, guarded response handling, snapshots,
+  transient-only retry policy and provider-call budget. This stage never ranks.
+- `evaluate_alternatives`: no arguments and valid only after acquisition. Calls
+  `evaluate_mission()` on the controller-held snapshot, without another provider
+  call/reservation. Both new stage functions and the unchanged `run_mission()`
+  entry point use one execution implementation. Only its existing
+  `rank_candidates()` gate can select, including all hard/evidence/metric checks
+  and current-mode completion freshness checks.
+- `request_clarification`: one typed topic (expected graph snapshot, expected
+  hazard snapshot, or host review). Terminates with `unresolved_input`; it does
+  not invent missing values or suspend for a reply.
+- `stop`: no arguments. Also terminates with `unresolved_input`, never a choice.
+
+Repeated action kinds, evaluation before acquisition, acquisition with missing
+snapshot inputs, unsupported actions and arguments are terminal rejections.
+There is no action for selecting a route, changing limits/weights/snapshots,
+marking evidence verified, replacing authority data or resetting the budget.
+Malformed dictionaries are rejected rather than coerced; the audit retains
+only a bounded projection of their action name and argument names, not values.
+Host configuration errors raise `ValueError`; planner/tool exceptions are
+recorded as terminal failures. Process-level termination exceptions propagate.
+
+`ScriptedPlanner` asks for clarification when required snapshot inputs are
+missing, otherwise acquires then evaluates according to the observed state.
+It is deterministic, observation-dependent workflow planning, **not an LLM
+agent**, and does not establish a research advantage over the existing runner.
+Evaluation outcomes are terminal, including insufficient evidence and no
+eligible candidates; the planner cannot retry evidence failures to force a pass.
+
+The frozen `c4.agent-controller/1.0.0` trace records sanitized proposals,
+accepted/rejected actions, observations, next states, full stage tool traces,
+errors, dependencies, host limits/budget checkpoints and final outcome.
+`trace.selected_route_id` is available only for a final `selected` outcome.
+Nested stage rankings remain provisional if any later host gate withholds
+selection. `trace.evaluation` can be passed to `replay_evaluation()` under the
+existing historical-replay rules; there is no automatic controller/action replay
+or durable trace storage. Fixed clocks/inputs/planner/budget observations and the
+same independently retained synthetic authority allow deterministic tests.
+
+`BudgetGuard` is shared with the mission runner to validate budget responses.
+The host retains the **same budget object across the entire controller session
+and subsequent run IDs**. Planning is checked before/after each proposal, tools
+before/after execution, with additional reservations/checks inside the runner.
+The host action limit bounds planning locally; the shared deadline and provider
+call count survive a new run ID. Neither counter is controlled by the planner.
+Synchronous planner/provider/verifier calls cannot be forcibly interrupted: an
+overrun is detected after return and blocks subsequent actions or release.
+Untrusted Python callbacks are not sandboxed by these frozen contracts. A future
+remote planner needs host-enforced transport timeouts or process isolation;
+deployment-wide durable budgets remain a separate task.
+
+A future ReAct-style LLM planner can replace only `Planner.propose()` behind a
+strict closed-schema decoder: observe a sanitized summary, propose an allowed
+action, receive the next summary. The host executes permitted tools and owns the
+decision. Do not grant the model direct tool handles, Python execution, verifier
+or budget wiring, raw instructions from upstream artifacts, or authority to
+change a mission. There is no LLM provider, prompt implementation, reasoning
+trace, API, UI, multi-agent system or production adapter in this milestone.
+Real authoritative artifacts and clocks remain integration work; synthetic
+fixture authority is not evidence of real-world trust or safety.
 
 Run the synthetic unit tests from the repository root:
 

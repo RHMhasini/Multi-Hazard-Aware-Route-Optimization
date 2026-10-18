@@ -7,9 +7,9 @@ from typing import Protocol
 
 from .contracts import (
     CheckStatus, DecisionStatus, EvidenceVerifier, FreshnessResult, MissionRequest, RankingMetricVerifier,
-    RouteCandidate, finite_number, utc_datetime,
+    RouteCandidate, utc_datetime,
 )
-from .execution import BudgetSnapshot, EvaluationClock, ExecutionBudget, RunDependencies
+from .execution import BudgetGuard, BudgetSnapshot, EvaluationClock, ExecutionBudget, RunDependencies
 from .ranking import RankingPolicy, RankingResult, RankingStatus, rank_candidates, validate_mission_policy
 from .snapshots import immutable_snapshot
 from .validation import evaluate_freshness
@@ -29,6 +29,7 @@ class RunState(str, Enum):
 
 
 class RunOutcome(str, Enum):
+    ALTERNATIVES_AVAILABLE = "alternatives_available"
     SELECTED = "selected"
     INSUFFICIENT_DATA = "insufficient_data"
     NO_ELIGIBLE_CANDIDATES = "no_eligible_candidates"
@@ -164,15 +165,17 @@ def _error(code: str, exc: Exception) -> RunError:
     return RunError(code, detail)
 
 
-def run_mission(
+def _execute_mission(
     run_id: str, request: MissionRequest, policy: RankingPolicy,
-    provider: RouteAlternativesProvider, *, as_of: datetime,
+    provider: RouteAlternativesProvider | None, *, as_of: datetime,
     budget: ExecutionBudget, dependencies: RunDependencies,
     verifier: EvidenceVerifier | None = None,
     metric_verifier: RankingMetricVerifier | None = None,
     retry_policy: RetryPolicy = RetryPolicy(),
     mode: EvaluationMode = EvaluationMode.HISTORICAL,
     clock: EvaluationClock | None = None,
+    acquire_only: bool = False,
+    supplied_alternatives: RouteAlternatives | None = None,
 ) -> MissionRunTrace:
     """Acquire once, retry explicit transient failures, then use the ranking gate.
 
@@ -198,7 +201,8 @@ def run_mission(
         raise ValueError("A valid timezone-aware as_of is required for a mission run")
 
     calls = []
-    budget_checks = []
+    guard = BudgetGuard(budget)
+    budget_checks = guard.checks
     boundary_error = None
     completed_at = None
     completion_checks = []
@@ -217,31 +221,8 @@ def run_mission(
     def checkpoint(*, reserve=False) -> bool:
         nonlocal boundary_error
         try:
-            snapshot = budget.checkpoint(reserve_provider_call=reserve)
-            if type(snapshot) is not BudgetSnapshot:
-                raise ValueError("Invalid budget response")
-            snapshot = _snapshot(snapshot)
-            if (type(snapshot.exhausted) is not bool
-                    or type(snapshot.scope_id) is not str or not snapshot.scope_id.strip()
-                    or type(snapshot.provider_calls) is not int or snapshot.provider_calls < 0
-                    or type(snapshot.max_provider_calls) is not int
-                    or snapshot.max_provider_calls < snapshot.provider_calls
-                    or not finite_number(snapshot.elapsed_sec) or snapshot.elapsed_sec < 0
-                    or not finite_number(snapshot.max_duration_sec) or snapshot.max_duration_sec <= 0
-                    or (snapshot.reason is not None and type(snapshot.reason) is not str)
-                    or (not snapshot.exhausted and snapshot.elapsed_sec >= snapshot.max_duration_sec)):
-                raise ValueError("Invalid budget snapshot")
-            if budget_checks:
-                previous = budget_checks[-1]
-                if ((snapshot.scope_id, snapshot.max_provider_calls, snapshot.max_duration_sec)
-                        != (previous.scope_id, previous.max_provider_calls, previous.max_duration_sec)
-                        or snapshot.provider_calls < previous.provider_calls
-                        or snapshot.elapsed_sec < previous.elapsed_sec
-                        or (reserve and not snapshot.exhausted
-                            and snapshot.provider_calls <= previous.provider_calls)):
-                    raise ValueError("Budget scope or counters changed")
-            budget_checks.append(snapshot)
-            if snapshot.exhausted:
+            if not guard.checkpoint(reserve_provider_call=reserve):
+                snapshot = budget_checks[-1]
                 boundary_error = RunError("budget_exhausted", snapshot.reason or "Budget unavailable")
                 return False
         except Exception as exc:
@@ -259,13 +240,15 @@ def run_mission(
         return finish(RunOutcome.BUDGET_EXHAUSTED)
 
     for attempt in range(1, retry_policy.max_attempts + 1):
-        if not checkpoint(reserve=True):
+        acquiring = supplied_alternatives is None
+        if not checkpoint(reserve=acquiring):
             return finish(RunOutcome.BUDGET_EXHAUSTED)
-        transition(RunState.ACQUIRING, "request_alternatives")
+        if acquiring:
+            transition(RunState.ACQUIRING, "request_alternatives")
         call = AlternativesCall(run_id, f"{run_id}:alternatives:{attempt}", attempt,
                                 request, evaluation_time)
         try:
-            raw_response = provider.get_alternatives(call)
+            raw_response = provider.get_alternatives(call) if acquiring else supplied_alternatives
         except TransientProviderError as exc:
             calls.append(ProviderCallRecord(call, None, _error("provider_transient", exc)))
             if not checkpoint():
@@ -288,9 +271,12 @@ def run_mission(
         except Exception as exc:
             calls.append(ProviderCallRecord(call, None, _error("provider_invalid_response", exc)))
             return finish(RunOutcome.PROVIDER_FAILURE)
-        calls.append(ProviderCallRecord(call, response, None))
+        if acquiring:
+            calls.append(ProviderCallRecord(call, response, None))
         if not checkpoint():
             return finish(RunOutcome.BUDGET_EXHAUSTED)
+        if acquire_only:
+            return finish(RunOutcome.ALTERNATIVES_AVAILABLE)
         transition(RunState.EVALUATING, "rank_candidates")
         evaluation_id = f"{run_id}:evaluate"
         evaluated_at = evaluation_time
@@ -347,6 +333,58 @@ def run_mission(
         else:
             outcome = RunOutcome.NO_ELIGIBLE_CANDIDATES
         return finish(outcome, evaluation)
+
+
+def run_mission(
+    run_id: str, request: MissionRequest, policy: RankingPolicy,
+    provider: RouteAlternativesProvider, *, as_of: datetime,
+    budget: ExecutionBudget, dependencies: RunDependencies,
+    verifier: EvidenceVerifier | None = None,
+    metric_verifier: RankingMetricVerifier | None = None,
+    retry_policy: RetryPolicy = RetryPolicy(),
+    mode: EvaluationMode = EvaluationMode.HISTORICAL,
+    clock: EvaluationClock | None = None,
+) -> MissionRunTrace:
+    """Acquire and evaluate using the shared deterministic execution boundary."""
+    return _execute_mission(
+        run_id, request, policy, provider, as_of=as_of, budget=budget, dependencies=dependencies,
+        verifier=verifier, metric_verifier=metric_verifier, retry_policy=retry_policy,
+        mode=mode, clock=clock,
+    )
+
+
+def acquire_mission(
+    run_id: str, request: MissionRequest, policy: RankingPolicy,
+    provider: RouteAlternativesProvider, *, as_of: datetime,
+    budget: ExecutionBudget, dependencies: RunDependencies,
+    retry_policy: RetryPolicy = RetryPolicy(),
+    mode: EvaluationMode = EvaluationMode.HISTORICAL,
+    clock: EvaluationClock | None = None,
+) -> MissionRunTrace:
+    """Acquisition stage only: no verification, ranking or selection."""
+    return _execute_mission(
+        run_id, request, policy, provider, as_of=as_of, budget=budget, dependencies=dependencies,
+        retry_policy=retry_policy, mode=mode, clock=clock, acquire_only=True,
+    )
+
+
+def evaluate_mission(
+    run_id: str, request: MissionRequest, policy: RankingPolicy,
+    alternatives: RouteAlternatives, *, as_of: datetime,
+    budget: ExecutionBudget, dependencies: RunDependencies,
+    verifier: EvidenceVerifier | None = None,
+    metric_verifier: RankingMetricVerifier | None = None,
+    mode: EvaluationMode = EvaluationMode.HISTORICAL,
+    clock: EvaluationClock | None = None,
+) -> MissionRunTrace:
+    """Evaluate held alternatives through the SAME gate; no provider reservation."""
+    if type(alternatives) is not RouteAlternatives:
+        raise ValueError("alternatives must be RouteAlternatives")
+    return _execute_mission(
+        run_id, request, policy, None, as_of=as_of, budget=budget, dependencies=dependencies,
+        verifier=verifier, metric_verifier=metric_verifier, mode=mode, clock=clock,
+        supplied_alternatives=alternatives,
+    )
 
 
 @dataclass(frozen=True, slots=True)

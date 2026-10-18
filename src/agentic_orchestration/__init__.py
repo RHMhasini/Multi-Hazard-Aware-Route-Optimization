@@ -37,6 +37,12 @@ from .orchestration import (
     RunError, RunOutcome, RunState, StateTransition, TransientProviderError,
     replay_evaluation, run_mission,
     CompletionFreshness, EvaluationMode, ReplayResult,
+    acquire_mission, evaluate_mission,
+)
+from .agent_controller import (
+    ActionKind, ActionRecord, ClarificationTopic, ControllerOutcome, ControllerState,
+    ControllerTrace, Planner, PlannerAction, PlannerObservation, RecordedProposal,
+    ScriptedPlanner, run_controller,
 )
 
 __all__ = [
@@ -56,4 +62,8 @@ __all__ = [
     "BudgetSnapshot", "DependencyIdentity", "EvaluationClock", "ExecutionBudget",
     "HostExecutionBudget", "RunDependencies", "CompletionFreshness", "EvaluationMode",
     "ReplayResult", "validate_mission_policy",
+    "acquire_mission", "evaluate_mission",
+    "ActionKind", "ActionRecord", "ClarificationTopic", "ControllerOutcome",
+    "ControllerState", "ControllerTrace", "Planner", "PlannerAction",
+    "PlannerObservation", "RecordedProposal", "ScriptedPlanner", "run_controller",
 ]
