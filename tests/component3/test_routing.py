@@ -157,3 +157,45 @@ def test_safest_route_longer_hop_count():
     assert m_fast.total_travel_time_sec < m_safe.total_travel_time_sec
     assert m_safe.cumulative_hazard_exposure < m_fast.cumulative_hazard_exposure
     assert m_safe.edge_count > m_fast.edge_count
+
+
+def test_recommend_enforces_detour_budget_when_no_candidate_satisfies_both():
+    """Test that when safe candidates exceed detour budget, detour budget is enforced and audit flag is returned."""
+    # Build graph with:
+    # Path 1: Fast direct route (time=100s, max_hazard=0.8)
+    # Path 2: Safe route (time=160s, max_hazard=0.2)
+    G = nx.DiGraph()
+    G.add_node("A", x=80.0, y=6.0)
+    G.add_node("B", x=80.1, y=6.0)
+    G.add_node("C", x=80.0, y=6.1)
+
+    # Fast edge: A -> B
+    G.add_edge("A", "B", travel_time=100.0, hazard_exposure=800.0, hazard_score=0.8, length=1000.0)
+    # Safe detour edges: A -> C -> B
+    G.add_edge("A", "C", travel_time=80.0, hazard_exposure=100.0, hazard_score=0.2, length=1000.0)
+    G.add_edge("C", "B", travel_time=80.0, hazard_exposure=100.0, hazard_score=0.2, length=1000.0)
+
+    candidate_list = [
+        {"path": ["A", "B"], "algorithm": "fastest_path"},
+        {"path": ["A", "C", "B"], "algorithm": "safe_detour_path"}
+    ]
+
+    # fastest is 100s. With max_detour_ratio=1.4, max allowed time is 140s.
+    # safe candidate has max_h=0.2 (<= 0.50), but time=160s (> 140s).
+    # Thus, no candidate satisfies BOTH max_hazard <= 0.50 AND time <= 140s.
+    result = recommend_optimal_route(
+        G,
+        candidate_list,
+        user_max_hazard=0.50,
+        user_max_detour_ratio=1.40,
+    )
+
+    # 1. Recommended time must strictly satisfy time <= max_detour_ratio * time(fastest)
+    assert result.metrics.total_travel_time_sec <= 1.40 * 100.0 + 1e-3
+    assert result.node_path == ["A", "B"]
+
+    # 2. Audit notes must explicitly report the conflict status flag rather than silently ignoring budget
+    assert "STATUS_FLAG: NO_CANDIDATE_SATISFIES_BOTH_BUDGET_ENFORCED_CEILING_RELAXED" in result.audit_notes
+    assert "(ENFORCED)" in result.audit_notes
+
+

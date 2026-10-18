@@ -77,8 +77,6 @@ def recommend_optimal_route(
     safe_candidates = [c for c in evaluated_candidates if c["max_h"] <= max_hazard_limit]
     safety_fallback = False
     if not safe_candidates:
-        # If no route is below threshold, relax ceiling to keep all candidate routes
-        # allowing the knee-point compromise selection to evaluate the full trade-off spectrum
         safety_fallback = True
         safe_candidates = list(evaluated_candidates)
 
@@ -86,9 +84,23 @@ def recommend_optimal_route(
     max_allowed_time = min_time * detour_limit
     admissible = [c for c in safe_candidates if c["time"] <= max_allowed_time]
     detour_fallback = False
+    status_flag = "NORMAL"
+
     if not admissible:
         detour_fallback = True
-        admissible = safe_candidates
+        # Check if any candidate in the entire pool satisfies the detour budget
+        pool_within_detour = [c for c in evaluated_candidates if c["time"] <= max_allowed_time]
+        if pool_within_detour:
+            # Enforce the detour budget: choose from candidates meeting detour budget,
+            # even if they breach the hazard ceiling
+            admissible = pool_within_detour
+            status_flag = "NO_CANDIDATE_SATISFIES_BOTH_BUDGET_ENFORCED_CEILING_RELAXED"
+        else:
+            # If even the fastest route somehow cannot be within budget (e.g. detour_limit < 1.0), fallback to quickest
+            admissible = [quickest]
+            status_flag = "NO_CANDIDATE_WITHIN_DETOUR_BUDGET"
+    elif safety_fallback:
+        status_flag = "SAFETY_CEILING_RELAXED"
 
     # Step 4: Knee-Point Compromise Selection
     # Normalize objectives to [0, 1]
@@ -116,10 +128,11 @@ def recommend_optimal_route(
         "=== Component 3 Route Recommendation Audit ===",
         "NOTE: Route recommendation is an auditable, multi-criteria decision rule (Utopian Knee-Point).",
         "The selection depends on the candidate pool and normalization bounds, pending final supervisor policy alignment.",
+        f"STATUS_FLAG: {status_flag}",
         f"1. Baseline Quickest: Time={quickest['time']:.1f}s, MaxHazard={quickest['max_h']:.3f}, Exposure={quickest['risk']:.1f} hazard·metres",
         f"2. Baseline Safest: Time={safest['time']:.1f}s, MaxHazard={safest['max_h']:.3f}, Exposure={safest['risk']:.1f} hazard·metres",
-        f"3. Safety Ceiling: Hazard Threshold <= {max_hazard_limit:.2f} ({'ENFORCED' if not safety_fallback else 'RELAXED - all paths exceed limit'})",
-        f"4. Detour Budget: Time <= {max_allowed_time:.1f}s ({detour_limit * 100:.0f}% of fastest route)",
+        f"3. Safety Ceiling: Hazard Threshold <= {max_hazard_limit:.2f} ({'ENFORCED' if not safety_fallback and status_flag == 'NORMAL' else ('RELAXED - all paths exceed limit' if safety_fallback else 'RELAXED - conflicting with detour budget')})",
+        f"4. Detour Budget: Time <= {max_allowed_time:.1f}s ({detour_limit * 100:.0f}% of fastest route) ({'ENFORCED' if best_candidate['time'] <= max_allowed_time else 'BREACHED'})",
     ]
 
     time_diff_pct = ((best_candidate["time"] - min_time) / max(1e-4, min_time)) * 100.0
@@ -138,3 +151,4 @@ def recommend_optimal_route(
         metrics=best_candidate["metrics"],
         audit_notes="\n".join(audit_lines),
     )
+
