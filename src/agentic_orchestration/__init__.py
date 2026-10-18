@@ -26,6 +26,12 @@ from .ranking import (
     NormalizationBounds, RankedRoute, RankingMetricIssue, RankingPolicy,
     RankingResult, RankingStatus, rank_candidates,
 )
+from .orchestration import (
+    AlternativesCall, EvaluationRecord, MissionRunTrace, ProviderCallRecord,
+    ProviderError, RetryPolicy, RouteAlternatives, RouteAlternativesProvider,
+    RunError, RunOutcome, RunState, StateTransition, TransientProviderError,
+    replay_evaluation, run_mission,
+)
 
 __all__ = [
     "CandidateAssessment", "CandidateStatus", "CheckStatus", "ConstraintCheck",
@@ -37,4 +43,8 @@ __all__ = [
     "NormalizationBounds", "RankedRoute", "RankingMetricIssue", "RankingPolicy",
     "RankingResult", "RankingStatus", "rank_candidates",
     "RankingMetricEvidence", "RankingMetricVerifier",
+    "AlternativesCall", "EvaluationRecord", "MissionRunTrace", "ProviderCallRecord",
+    "ProviderError", "RetryPolicy", "RouteAlternatives", "RouteAlternativesProvider",
+    "RunError", "RunOutcome", "RunState", "StateTransition", "TransientProviderError",
+    "replay_evaluation", "run_mission",
 ]

@@ -183,6 +183,62 @@ emergency-routing policy** or a globally optimal route search. Selection is
 scoped to supplied eligible candidates and the evaluation instant; no live
 re-routing, dispatch, metric provenance adapter, LLM, API or dashboard is added.
 
+## Deterministic synthetic mission-run orchestrator
+
+`orchestration.py::run_mission()` accepts a run ID, existing mission request,
+ranking policy, typed `RouteAlternativesProvider`, explicit evaluation time,
+existing verifier dependencies and a `RetryPolicy`. No production provider or
+Component 3 API is assumed or implemented. The provider receives an
+`AlternativesCall` containing the unchanged request, evaluation time, attempt
+number and deterministic call ID. It returns a `c4.route-alternatives/1.0.0`
+envelope with a response ID and tuple of existing route candidates.
+
+The runner records `created -> acquiring -> evaluating -> finished` transitions.
+Only `TransientProviderError` permits `retrying -> acquiring`, up to
+`max_attempts` (default two, including the initial call). `ProviderError` is
+permanent by default; unexpected exceptions and malformed/version-mismatched
+responses are terminal provider failures. There is no retry after ranking,
+evidence mismatch, missing data, or duplicate-ID rejection. The runner never
+changes snapshots, constraints, weights, evidence, or evaluation time to recover.
+
+`rank_candidates()` is the only route-selection gate. Terminal run outcomes are
+`selected`, `insufficient_data`, `no_eligible_candidates`, `provider_failure`,
+`retry_exhausted`, `invalid_input`, and `evaluation_failure`. Underlying ranking
+and validation outcomes remain in the trace: unresolved evidence is distinct
+from an empty set or definite constraint violations. A valid candidate may still
+be selected alongside rejected candidates, exactly as the existing gate permits.
+Invalid run configuration raises `ValueError` before provider acquisition.
+
+The returned frozen `MissionRunTrace` (`c4.mission-run/1.0.0`, runner version
+`synthetic-baseline/1.0.0`) captures the full request/policy, pinned UTC evaluation
+time, retry policy, ordered transitions, provider call arguments/responses/errors,
+and evaluation call ID, alternatives, full ranking/validation result or error.
+The selected ID is derived from the recorded ranking rather than chosen by the
+runner. This is an in-memory audit record, not a durable or tamper-proof journal;
+no persistence, serialization format or verifier implementation is added.
+
+`replay_evaluation(trace, verifier=..., metric_verifier=...)` re-runs the existing
+gate on the recorded request, policy, candidate inputs and evaluation time,
+without acquiring alternatives again. Exact reproduction requires retaining the
+same code and independently held authoritative evidence. Replaying does not
+trust the stored selection or flags. Without verifier support, or with changed
+authority data, it can return a different outcome; no old decision is silently
+accepted as current proof. Failed acquisition has no evaluation to replay.
+
+`tests/component4/test_orchestration.py` contains the only synthetic provider and
+authority implementations. Its fixed expected hazard, vehicle and metric records
+are built separately from provider claims. These are labelled test fixtures,
+not genuine trusted upstream records or evidence of scientific accuracy.
+
+This is deterministic workflow orchestration, **not agentic AI behavior**: it
+follows fixed transitions and retry rules. Future agentic experiments could
+compare permitted tool-planning strategies against this baseline while retaining
+the same deterministic gate. No LLM, LangGraph, multi-agent framework, dashboard
+or API is introduced. Retries are synchronous and count-bounded only; there is
+no backoff, per-call timeout, cancellation, live clock refresh or re-routing.
+The pinned time supports synthetic replay, not a guarantee that evidence remains
+fresh throughout a real operation. Real upstream integration remains separate.
+
 Run the synthetic unit tests from the repository root:
 
 ```text
