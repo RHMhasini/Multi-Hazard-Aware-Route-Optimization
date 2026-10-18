@@ -97,6 +97,16 @@ def _normalize(value: float, minimum: float, maximum: float) -> float:
     return 0.0 if maximum == minimum else (value - minimum) / (maximum - minimum)
 
 
+def validate_mission_policy(request: MissionRequest, policy: RankingPolicy) -> None:
+    """Shared preflight for ranking and orchestration; no tool calls."""
+    if not isinstance(request, MissionRequest):
+        raise ValueError("request must be MissionRequest")
+    if not isinstance(policy, RankingPolicy):
+        raise ValueError("policy must be RankingPolicy")
+    if policy.mission_type != request.mission_type:
+        raise ValueError("Policy mission_type must exactly match request mission_type")
+
+
 def _metric_claim_problem(
     request: MissionRequest, candidate: RouteCandidate, evidence: RankingMetricEvidence | None,
 ) -> str | None:
@@ -165,12 +175,7 @@ def rank_candidates(
     even at zero weight. Otherwise no partial ranking or selection is returned.
     This avoids silently changing the normalization population due to missing data.
     """
-    if not isinstance(request, MissionRequest):
-        raise ValueError("request must be MissionRequest")
-    if not isinstance(policy, RankingPolicy):
-        raise ValueError("policy must be RankingPolicy")
-    if policy.mission_type != request.mission_type:
-        raise ValueError("Policy mission_type must exactly match request mission_type")
+    validate_mission_policy(request, policy)
 
     candidates = tuple(candidates)
     validation = validate_candidates(request, candidates, as_of=as_of, verifier=verifier)

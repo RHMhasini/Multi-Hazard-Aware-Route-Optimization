@@ -56,7 +56,7 @@ def _evidence_check(
     )
 
 
-def _freshness(
+def evaluate_freshness(
     evidence: HazardEvidence | None, as_of: datetime | None, max_age: float,
     supported: bool,
 ) -> FreshnessResult:
@@ -196,7 +196,7 @@ def validate_candidates(
         vehicle_evidence = _evidence_check(request, candidate, candidate.vehicle_evidence, verifier, hazard=False)
         hazard_supported = hazard_evidence.status == CheckStatus.PASS
         vehicle_supported = vehicle_evidence.status == CheckStatus.PASS
-        freshness = _freshness(candidate.hazard, evaluation_time, limits.max_hazard_age_sec,
+        freshness = evaluate_freshness(candidate.hazard, evaluation_time, limits.max_hazard_age_sec,
                                hazard_supported)
         coverage = _coverage(candidate.hazard, hazard_supported)
         checks = [_hazard_check(request, candidate, hazard_supported, freshness, coverage),

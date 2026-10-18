@@ -185,45 +185,103 @@ re-routing, dispatch, metric provenance adapter, LLM, API or dashboard is added.
 
 ## Deterministic synthetic mission-run orchestrator
 
-`orchestration.py::run_mission()` accepts a run ID, existing mission request,
-ranking policy, typed `RouteAlternativesProvider`, explicit evaluation time,
-existing verifier dependencies and a `RetryPolicy`. No production provider or
-Component 3 API is assumed or implemented. The provider receives an
-`AlternativesCall` containing the unchanged request, evaluation time, attempt
-number and deterministic call ID. It returns a `c4.route-alternatives/1.0.0`
-envelope with a response ID and tuple of existing route candidates.
+`orchestration.py::run_mission()` accepts the existing request/policy/provider,
+evaluation-time hint, verifier dependencies and retry policy. It now also
+**requires** a host-owned `ExecutionBudget` and `RunDependencies` identities.
+Mission/policy compatibility uses the same `validate_mission_policy()` preflight
+as ranking, before provider invocation or budget reservation. No production
+provider or Component 3 API is assumed. The provider receives an `AlternativesCall`
+with request, time hint, attempt and deterministic call ID, returning a typed
+`c4.route-alternatives/1.0.0` envelope. JSON decoding/production transport is not
+implemented; unsupported raw bytes/dictionaries fail as invalid responses.
 
 The runner records `created -> acquiring -> evaluating -> finished` transitions.
 Only `TransientProviderError` permits `retrying -> acquiring`, up to
 `max_attempts` (default two, including the initial call). `ProviderError` is
 permanent by default; unexpected exceptions and malformed/version-mismatched
-responses are terminal provider failures. There is no retry after ranking,
-evidence mismatch, missing data, or duplicate-ID rejection. The runner never
-changes snapshots, constraints, weights, evidence, or evaluation time to recover.
+responses are terminal provider failures. Response snapshotting/inspection and
+error formatting are guarded. Only ordinary `Exception` is caught; process-level
+termination such as `KeyboardInterrupt` and `SystemExit` propagates. There is no
+retry after ranking, evidence mismatch, missing data, or duplicate-ID rejection.
+Snapshots, constraints, weights and evidence never change to force recovery.
 
 `rank_candidates()` is the only route-selection gate. Terminal run outcomes are
 `selected`, `insufficient_data`, `no_eligible_candidates`, `provider_failure`,
-`retry_exhausted`, `invalid_input`, and `evaluation_failure`. Underlying ranking
+`retry_exhausted`, `budget_exhausted`, `invalid_input`, and `evaluation_failure`. Underlying ranking
 and validation outcomes remain in the trace: unresolved evidence is distinct
 from an empty set or definite constraint violations. A valid candidate may still
 be selected alongside rejected candidates, exactly as the existing gate permits.
 Invalid run configuration raises `ValueError` before provider acquisition.
 
-The returned frozen `MissionRunTrace` (`c4.mission-run/1.0.0`, runner version
-`synthetic-baseline/1.0.0`) captures the full request/policy, pinned UTC evaluation
-time, retry policy, ordered transitions, provider call arguments/responses/errors,
-and evaluation call ID, alternatives, full ranking/validation result or error.
-The selected ID is derived from the recorded ranking rather than chosen by the
-runner. This is an in-memory audit record, not a durable or tamper-proof journal;
-no persistence, serialization format or verifier implementation is added.
+The returned frozen `MissionRunTrace` is now `c4.mission-run/2.0.0`, runner version
+`synthetic-baseline/2.0.0`. It captures the request/policy, time hint, actual
+evaluation time, mode, retry policy, budget checkpoints, ordered transitions,
+tool calls, errors, and full ranking/validation result. `RunDependencies` records
+versioned provider, verifier, metric-verifier and authoritative evidence-bundle
+references, plus a clock identity for current mode. These labels are audit
+metadata, not verification, authentication or proof that referenced bytes exist.
+
+`snapshots.py` rebuilds allowlisted data records and normalizes dates to UTC.
+It retains only immutable built-in scalar/tuple/frozenset data and known enums.
+Mutable/unsupported values become frozen `InvalidValue` markers, never usable
+measurement defaults; malformed structures fail closed. No caller-owned mutable
+payload or custom timezone is retained in recorded inputs/results. This is data
+isolation, not a sandbox against malicious in-process Python using reflection or
+`object.__setattr__`. The trace is still in-memory, not durable or tamper-proof.
+
+### Historical versus current evaluation
+
+`EvaluationMode.HISTORICAL` is the default for existing synthetic use: evidence
+is evaluated at `as_of`, independent of elapsed wall time. A historical selection
+is **not** a claim of current safety.
+
+`EvaluationMode.CURRENT` additionally requires a trusted host `EvaluationClock`
+and its identity. The runner obtains UTC time **after acquisition**, rejects
+invalid/regressing clock readings, and calls the existing ranking gate at that
+time. Before releasing a selection it obtains a completion time and reuses the
+existing freshness evaluator for the full eligible comparison set. Evidence
+expiring during evaluation prevents selection; there is no implicit reranking
+with a smaller set. The completion checks and clock failures are recorded.
+
+Consumers must inspect the run's `outcome`, `mode` and `selected_route_id`.
+The nested ranking is a recorded provisional evaluation: it can contain a chosen
+candidate even when a later budget/freshness gate withholds the final selection.
+A current result describes validity at its recorded completion check, never a
+guarantee about subsequent execution or actual emergency safety.
+
+### Shared host execution budget
+
+`execution.py::HostExecutionBudget(scope_id, max_provider_calls, max_duration_sec)`
+uses a monotonic clock and atomic reservation. The host must create one instance
+for the entire controller session and retain it outside controller/request
+control, passing it to every run. New run IDs do not reset counters or deadline.
+Do not expose budget creation/replacement, verifier wiring or evaluation-mode
+selection as AI-controlled actions. A host deliberately creating a new budget
+can of course reset its own scope; this is not an authentication boundary.
+
+The runner checks the budget before reserving provider calls, after successful
+acquisition, before ranking, after ranking/verifier work and before releasing a
+current selection. Explicit transient failures also check the shared budget
+before retry. Exhaustion/clock failure is sticky; unavailable or inconsistent
+budget responses fail closed. Local `max_attempts` remains an additional bound.
+
+There is **no hard interruption** of a blocking provider, verifier or clock.
+Callbacks may exceed the deadline; after control returns the runner withholds
+selection and performs no further external work once exhaustion is detected.
+External process isolation, cooperative transport timeouts/cancellation, durable
+budget storage and cross-process enforcement remain future integration tasks.
+No timeout thread or claim that synchronous Python can kill callbacks is added.
 
 `replay_evaluation(trace, verifier=..., metric_verifier=...)` re-runs the existing
-gate on the recorded request, policy, candidate inputs and evaluation time,
-without acquiring alternatives again. Exact reproduction requires retaining the
-same code and independently held authoritative evidence. Replaying does not
-trust the stored selection or flags. Without verifier support, or with changed
-authority data, it can return a different outcome; no old decision is silently
-accepted as current proof. Failed acquisition has no evaluation to replay.
+gate on recorded inputs at `EvaluationRecord.evaluated_at`, without acquiring
+alternatives again. It returns a `ReplayResult` explicitly marked **historical**,
+including the computed ranking and recorded dependency identities. Exact
+reproduction requires retaining the same implementation and independently held
+authoritative evidence bundle. Identity labels and recorded flags alone cannot
+authorize selection. Changed/missing authority can change the replay result.
+This replays the evaluation, not elapsed-time budget use or a current completion
+gate. Unsupported trace/runner versions, including old version-1 traces, and
+failed acquisition without an evaluation are rejected rather than guessed at.
 
 `tests/component4/test_orchestration.py` contains the only synthetic provider and
 authority implementations. Its fixed expected hazard, vehicle and metric records
@@ -234,10 +292,9 @@ This is deterministic workflow orchestration, **not agentic AI behavior**: it
 follows fixed transitions and retry rules. Future agentic experiments could
 compare permitted tool-planning strategies against this baseline while retaining
 the same deterministic gate. No LLM, LangGraph, multi-agent framework, dashboard
-or API is introduced. Retries are synchronous and count-bounded only; there is
-no backoff, per-call timeout, cancellation, live clock refresh or re-routing.
-The pinned time supports synthetic replay, not a guarantee that evidence remains
-fresh throughout a real operation. Real upstream integration remains separate.
+or API is introduced. There is no backoff, hard per-call interruption, cancellation
+or live re-routing. Real upstream verification and an authoritative operational
+clock source remain integration tasks; tests use synthetic clocks and records.
 
 Run the synthetic unit tests from the repository root:
 
