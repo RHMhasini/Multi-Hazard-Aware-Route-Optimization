@@ -150,6 +150,36 @@ class VehicleEvidence:
 
 
 @dataclass(frozen=True, slots=True)
+class RankingMetricEvidence:
+    """Submitted metric claim; metadata alone never establishes authenticity."""
+
+    route_id: str | None = None
+    graph_snapshot_id: str | None = None
+    hazard_snapshot_id: str | None = None
+    route_result_id: str | None = None
+    travel_time_sec: float | None = None
+    cumulative_hazard_exposure: float | None = None
+    travel_time_unit: str | None = None
+    exposure_unit: str | None = None
+    travel_time_model_version: str | None = None
+    exposure_formula_version: str | None = None
+    evidence_source: str | None = None
+    verification_status: VerificationStatus = VerificationStatus.UNVERIFIED
+
+
+class RankingMetricVerifier(Protocol):
+    """Trusted application dependency backed by independently checked route data.
+
+    Resolve the result ID against a trusted store or recompute the result. Never
+    echo request data or accept a caller-provided verifier. The returned record
+    must include authoritative values, canonical units, identities and versions.
+    This protocol itself provides neither a trusted data source nor artifact checks.
+    """
+
+    def get_authoritative_metrics(self, route_result_id: str) -> RankingMetricEvidence | None: ...
+
+
+@dataclass(frozen=True, slots=True)
 class RouteCandidate:
     route_id: str
     hazard: HazardEvidence | None = None
@@ -160,6 +190,7 @@ class RouteCandidate:
     vehicle_evidence: VehicleEvidence | None = None
     # Ranking input only, in hazard-metres; hard validation is unchanged.
     cumulative_hazard_exposure: float | None = None
+    ranking_metric_evidence: RankingMetricEvidence | None = None
 
     def __post_init__(self) -> None:
         _nonempty(self.route_id, "route_id")

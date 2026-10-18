@@ -68,8 +68,9 @@ source artifacts, snapshot identity, exact route binding, full-route coverage,
 and vehicle restrictions. No such adapter or artifact verification is included
 here. A dishonest or incorrectly wired verifier can still bless false claims;
 this interface is not authentication or a security boundary. Tests use an exact
-synthetic-record oracle, not real verification. Travel-time and distance metrics
-remain caller assertions; this milestone adds no independent checks for them.
+synthetic-record oracle, not real verification. Standalone hard validation still
+treats travel-time and distance metrics as caller assertions; ranking adds a
+separate metric-verification gate described below.
 
 The validation response reports eligible IDs in input order; it does **not** select or rank
 a route, establish graph-wide infeasibility, or dispatch a mission. Statuses are
@@ -84,7 +85,8 @@ old unbound evidence ineligible for a pass.
 
 ## Deterministic mission-aware ranking baseline
 
-`ranking.py::rank_candidates(request, candidates, policy, as_of=..., verifier=...)`
+`ranking.py::rank_candidates(request, candidates, policy, as_of=..., verifier=...,
+metric_verifier=...)`
 first invokes the existing validator on the exact records being ranked. It does
 not accept an externally supplied eligibility flag or an old validation result.
 Only eligible routes enter the comparison set; rejected and unknown candidates
@@ -107,9 +109,44 @@ Every eligible route must have finite, nonnegative `travel_time_sec` (seconds)
 and `cumulative_hazard_exposure` (hazard-metres, conventionally sum of edge
 length in metres times dimensionless susceptibility). Both metrics are required
 even if one has zero weight. Missing values, negative sentinels, numeric strings,
-booleans, NaN and infinities are not replaced with zero. Exposure is a caller
-assertion; its integration formula, scientific validity and binding to upstream
-artifacts are not independently verified here. It is not a failure probability.
+booleans, NaN and infinities are not replaced with zero. Each candidate also needs
+supported `RankingMetricEvidence`. Exposure is not a failure probability.
+
+### Ranking metric evidence and trust boundary
+
+`RankingMetricEvidence` binds both numeric values to the candidate's `route_id`,
+the request's expected graph/hazard snapshot IDs, and an authoritative
+`route_result_id`. It also records source reference, claimed verification status,
+travel-time-model version, exposure-formula version, and explicit canonical
+units: `s` and `hazard*m`. Model/formula versions must be nonempty identifiers
+matching the authoritative result. No unit conversion or numeric tolerance is
+applied: submitted evidence values must equal the values being ranked.
+
+Neither these fields nor a caller-supplied source name, `VERIFIED` flag, or hash
+is proof. Ranking requires a separately injected `RankingMetricVerifier` whose
+`get_authoritative_metrics(route_result_id)` loads an independently held route
+result or recomputes it from checked inputs. A boolean approval, digest or source
+label is not an authoritative result. Ranking validates the returned record's
+values, units, route identity, snapshots and model/formula versions, and compares
+the entire record with the submitted evidence. Successful ranked entries retain
+that matching evidence for inspection.
+
+The verifier is trusted application wiring, **not request data**. An upstream
+adapter must resolve result IDs through a trusted store/allowlist, check source
+artifacts and version bindings, and return canonical results; it must not echo
+candidate claims or merely compare self-reported hashes. Artifact validation,
+independent computation, source authentication, calibration, and real upstream
+integration are **not implemented by this interface**. A fabricated verifier can
+still fabricate authority. Tests use separately held synthetic records solely to
+exercise this contract, not as evidence of real-world verification.
+
+Missing/malformed evidence, identity/value/unit/version mismatches, unsupported
+records, a missing metric verifier, and verifier exceptions produce structured
+metric issues and `insufficient_ranking_data` for the full eligible set. No route
+is selected and no normalization bounds are computed. Noneligible routes are
+never scored or required to provide ranking metric evidence. The existing hard
+validator and duplicate-ID rejection are unchanged; metric verification is an
+additional ranking gate, not a relaxation or replacement of those checks.
 
 For the full eligible set C, normalize each minimization objective using:
 
@@ -130,14 +167,14 @@ selected but has no evidence of superiority to unsupplied alternatives.
 The `c4.mission-ranking/1.0.0` result contains the full policy, effective weights,
 sorted comparison route IDs, normalization bounds, candidate ranks, raw metric
 values, normalized values, weighted contributions, scores, selected ID, and
-structured metric issues. Outcomes are:
+matching metric evidence, and structured metric issues. Outcomes are:
 
 - `no_eligible_candidates`: validation produced no eligible routes; its nested
   response distinguishes empty input, definite violations, and unknown evidence.
-- `insufficient_ranking_data`: at least one eligible candidate lacks a valid
-  ranking metric. Return issues with no ranking, bounds or selected route; do
+- `insufficient_ranking_data`: at least one eligible candidate lacks a valid,
+  supported ranking metric. Return issues with no ranking, bounds or selected route; do
   not silently compare a smaller subset.
-- `selected`: every eligible route has both metrics; return the complete ranking
+- `selected`: every eligible route has both supported metrics; return the complete ranking
   and the first route's ID.
 
 Scores depend on C and cannot be compared across different candidate sets or

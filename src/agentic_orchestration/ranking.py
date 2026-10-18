@@ -8,7 +8,8 @@ from math import isclose
 import re
 
 from .contracts import (
-    DecisionResponse, EvidenceVerifier, MissionRequest, RouteCandidate, finite_number,
+    DecisionResponse, EvidenceVerifier, MissionRequest, RankingMetricEvidence,
+    RankingMetricVerifier, RouteCandidate, VerificationStatus, finite_number,
 )
 from .validation import validate_candidates
 
@@ -73,6 +74,7 @@ class RankedRoute:
     time_contribution: float
     exposure_contribution: float
     score: float
+    metric_evidence: RankingMetricEvidence
 
 
 @dataclass(frozen=True, slots=True)
@@ -95,6 +97,59 @@ def _normalize(value: float, minimum: float, maximum: float) -> float:
     return 0.0 if maximum == minimum else (value - minimum) / (maximum - minimum)
 
 
+def _metric_claim_problem(
+    request: MissionRequest, candidate: RouteCandidate, evidence: RankingMetricEvidence | None,
+) -> str | None:
+    if not isinstance(evidence, RankingMetricEvidence):
+        return "metric_evidence_missing_or_invalid"
+    bindings = ((evidence.route_id, candidate.route_id),
+                (evidence.graph_snapshot_id, request.expected_graph_snapshot_id),
+                (evidence.hazard_snapshot_id, request.expected_hazard_snapshot_id))
+    if any(not isinstance(value, str) or not value.strip()
+           for pair in bindings for value in pair):
+        return "metric_evidence_identifiers_missing"
+    if any(actual != expected for actual, expected in bindings):
+        return "metric_evidence_binding_mismatch"
+    for value in (evidence.route_result_id, evidence.evidence_source,
+                  evidence.travel_time_model_version, evidence.exposure_formula_version):
+        if not isinstance(value, str) or not value.strip():
+            return "metric_evidence_metadata_missing"
+    if evidence.verification_status is not VerificationStatus.VERIFIED:
+        return "metric_evidence_not_verified"
+    if evidence.travel_time_unit != "s" or evidence.exposure_unit != "hazard*m":
+        return "metric_evidence_units_mismatch"
+    for name in ("travel_time_sec", "cumulative_hazard_exposure"):
+        value = getattr(evidence, name)
+        if not finite_number(value) or value < 0:
+            return "metric_evidence_value_invalid"
+        if value != getattr(candidate, name):
+            return "metric_evidence_values_mismatch"
+    return None
+
+
+def _metric_evidence_problem(
+    request: MissionRequest, candidate: RouteCandidate, verifier: RankingMetricVerifier | None,
+) -> str | None:
+    evidence = candidate.ranking_metric_evidence
+    problem = _metric_claim_problem(request, candidate, evidence)
+    if problem is not None:
+        return problem
+    if verifier is None:
+        return "metric_verifier_missing"
+    try:
+        authoritative = verifier.get_authoritative_metrics(evidence.route_result_id)
+        # A boolean approval, source name or digest is not an authoritative record.
+        if not isinstance(authoritative, RankingMetricEvidence):
+            return "metric_evidence_unsupported"
+        if _metric_claim_problem(request, candidate, authoritative) is not None:
+            return "metric_authority_mismatch"
+        if authoritative != evidence:
+            return "metric_authority_mismatch"
+    except Exception:
+        return "metric_verifier_error"
+    return None
+
+
 def rank_candidates(
     request: MissionRequest,
     candidates: Iterable[RouteCandidate],
@@ -102,10 +157,11 @@ def rank_candidates(
     *,
     as_of: datetime,
     verifier: EvidenceVerifier | None = None,
+    metric_verifier: RankingMetricVerifier | None = None,
 ) -> RankingResult:
     """Validate the exact supplied records, then rank only eligible candidates.
 
-    Both metrics must be finite and nonnegative for EVERY eligible candidate,
+    Both metrics must be finite, nonnegative and independently supported for EVERY eligible candidate,
     even at zero weight. Otherwise no partial ranking or selection is returned.
     This avoids silently changing the normalization population due to missing data.
     """
@@ -137,12 +193,18 @@ def rank_candidates(
     issues = []
     for route_id in comparison_ids:
         candidate = by_id[route_id]
+        candidate_issues = []
         for name in ("travel_time_sec", "cumulative_hazard_exposure"):
             value = getattr(candidate, name)
             if not finite_number(value) or value < 0:
-                issues.append(RankingMetricIssue(
+                candidate_issues.append(RankingMetricIssue(
                     route_id, name, "metric_missing" if value is None else "metric_invalid",
                 ))
+        if not candidate_issues:
+            problem = _metric_evidence_problem(request, candidate, metric_verifier)
+            if problem is not None:
+                candidate_issues.append(RankingMetricIssue(route_id, "ranking_metric_evidence", problem))
+        issues.extend(candidate_issues)
     if issues:
         return result(RankingStatus.INSUFFICIENT_RANKING_DATA, issues=issues)
 
@@ -165,7 +227,7 @@ def rank_candidates(
     ranked = tuple(
         RankedRoute(index, candidate.route_id, candidate.travel_time_sec,
                     candidate.cumulative_hazard_exposure, time, exposure,
-                    time_term, exposure_term, score)
+                    time_term, exposure_term, score, candidate.ranking_metric_evidence)
         for index, (candidate, time, exposure, time_term, exposure_term, score)
         in enumerate(scored, start=1)
     )

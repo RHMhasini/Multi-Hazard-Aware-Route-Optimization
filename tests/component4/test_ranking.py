@@ -6,6 +6,7 @@ import unittest
 
 from src.agentic_orchestration import (
     CandidateStatus, DecisionStatus, RankingPolicy, RankingStatus, Urgency,
+    RankingMetricEvidence, VerificationStatus,
     rank_candidates, validate_candidates,
 )
 from test_validation import NOW, FixtureVerifier, mission, route
@@ -21,13 +22,41 @@ def policy(time_weight=0.75, exposure_weight=0.25, **changes):
 
 def candidate(route_id, time=100, exposure=50, **changes):
     return route(route_id, travel_time_sec=time,
-                 cumulative_hazard_exposure=exposure, **changes)
+                 cumulative_hazard_exposure=exposure,
+                 ranking_metric_evidence=RankingMetricEvidence(
+                     route_id=route_id, graph_snapshot_id="graph-1", hazard_snapshot_id="hazard-1",
+                     route_result_id=f"result/{route_id}", travel_time_sec=time,
+                     cumulative_hazard_exposure=exposure, travel_time_unit="s",
+                     exposure_unit="hazard*m", travel_time_model_version="synthetic-time/1",
+                     exposure_formula_version="synthetic-exposure/1", evidence_source="fixture/results",
+                     verification_status=VerificationStatus.VERIFIED,
+                 ), **changes)
 
 
-def rank(candidates, ranking_policy=None, request=None):
+class FixtureMetricVerifier:
+    """Independently held synthetic records, not a real upstream data source."""
+
+    def __init__(self, candidates):
+        self.records = {c.ranking_metric_evidence.route_result_id: c.ranking_metric_evidence
+                        for c in candidates
+                        if isinstance(c.ranking_metric_evidence, RankingMetricEvidence)}
+
+    def get_authoritative_metrics(self, route_result_id):
+        return self.records.get(route_result_id)
+
+
+DEFAULT_METRIC_VERIFIER = object()
+
+
+def rank(candidates, ranking_policy=None, request=None, *, metric_verifier=DEFAULT_METRIC_VERIFIER):
     candidates = tuple(candidates)
+    if metric_verifier is DEFAULT_METRIC_VERIFIER:
+        # Positive scoring tests explicitly assume synthetic authoritative records.
+        # Negative tests hold originals separately before tampering with claims.
+        metric_verifier = FixtureMetricVerifier(candidates)
     return rank_candidates(request or mission(), candidates, ranking_policy or policy(),
-                           as_of=NOW, verifier=FixtureVerifier(candidates))
+                           as_of=NOW, verifier=FixtureVerifier(candidates),
+                           metric_verifier=metric_verifier)
 
 
 class RankingTests(unittest.TestCase):
@@ -54,6 +83,7 @@ class RankingTests(unittest.TestCase):
         self.assertAlmostEqual(middle.time_contribution, 0.375)
         self.assertAlmostEqual(middle.exposure_contribution, 0.1)
         self.assertEqual(middle.score, middle.time_contribution + middle.exposure_contribution)
+        self.assertEqual(middle.metric_evidence.route_result_id, "result/middle")
 
     def test_equal_scores_break_by_route_id_independent_of_input_order(self):
         candidates = [candidate("b", 100, 100), candidate("a", 300, 0)]
@@ -189,6 +219,134 @@ class RankingTests(unittest.TestCase):
         self.assertEqual(first, rank(candidates))
         with self.assertRaises(ValueError):
             rank([candidate("same"), candidate("same")])
+
+
+class MetricEvidenceTests(unittest.TestCase):
+    def assert_blocked(self, result, reason):
+        self.assertEqual(result.status, RankingStatus.INSUFFICIENT_RANKING_DATA)
+        self.assertIsNone(result.selected_route_id)
+        self.assertIsNone(result.normalization)
+        self.assertEqual(result.ranked_routes, ())
+        self.assertIn(reason, [issue.reason_code for issue in result.metric_issues])
+
+    def test_bound_metrics_match_an_independent_record_and_preserve_scoring(self):
+        records = [candidate("fast", 100, 100), candidate("safe", 300, 0)]
+        result = rank(records, metric_verifier=FixtureMetricVerifier(records))
+        self.assertEqual(result.selected_route_id, "fast")
+        self.assertEqual([r.score for r in result.ranked_routes], [0.25, 0.75])
+        self.assertEqual(result.normalization.time_min_sec, 100)
+        self.assertEqual(result.normalization.exposure_max_haz_m, 100)
+        self.assertEqual(result.ranked_routes[0].metric_evidence, records[0].ranking_metric_evidence)
+
+    def test_missing_or_malformed_metric_evidence_blocks_the_whole_set(self):
+        for evidence in (None, {}, "sha256:claimed-digest"):
+            with self.subTest(evidence=evidence):
+                missing = replace(candidate("missing"), ranking_metric_evidence=evidence)
+                self.assert_blocked(rank([candidate("valid"), missing]),
+                                    "metric_evidence_missing_or_invalid")
+
+    def test_route_and_snapshot_identifiers_must_be_present_and_match(self):
+        original = candidate("route")
+        for field in ("route_id", "graph_snapshot_id", "hazard_snapshot_id"):
+            for value in (None, "", "different"):
+                with self.subTest(field=field, value=value):
+                    claim = replace(original.ranking_metric_evidence, **{field: value})
+                    changed = replace(original, ranking_metric_evidence=claim)
+                    self.assert_blocked(rank([changed]), "metric_evidence_binding_mismatch"
+                                        if value == "different" else "metric_evidence_identifiers_missing")
+
+    def test_values_in_evidence_must_match_values_being_ranked(self):
+        original = candidate("route")
+        for field in ("travel_time_sec", "cumulative_hazard_exposure"):
+            with self.subTest(field=field):
+                claim = replace(original.ranking_metric_evidence, **{field: 0})
+                self.assert_blocked(rank([replace(original, ranking_metric_evidence=claim)]),
+                                    "metric_evidence_values_mismatch")
+
+    def test_tampering_with_both_candidate_and_evidence_does_not_forge_authority(self):
+        original = candidate("route")
+        authority = FixtureMetricVerifier([original])
+        for field in ("travel_time_sec", "cumulative_hazard_exposure"):
+            with self.subTest(field=field):
+                changed = replace(original, **{field: 0}, ranking_metric_evidence=replace(
+                    original.ranking_metric_evidence, **{field: 0}))
+                self.assert_blocked(rank([changed], metric_verifier=authority), "metric_authority_mismatch")
+
+    def test_units_and_model_versions_are_checked_against_authority(self):
+        original = candidate("route")
+        authority = FixtureMetricVerifier([original])
+        for field, value, reason in (
+            ("travel_time_unit", "min", "metric_evidence_units_mismatch"),
+            ("exposure_unit", "probability", "metric_evidence_units_mismatch"),
+            ("travel_time_model_version", "different", "metric_authority_mismatch"),
+            ("exposure_formula_version", "different", "metric_authority_mismatch"),
+            ("evidence_source", "another-store", "metric_authority_mismatch"),
+        ):
+            with self.subTest(field=field):
+                changed = replace(original, ranking_metric_evidence=replace(
+                    original.ranking_metric_evidence, **{field: value}))
+                self.assert_blocked(rank([changed], metric_verifier=authority), reason)
+
+    def test_missing_metadata_or_unverified_claims_are_not_supported(self):
+        original = candidate("route")
+        for field, value, reason in (
+            ("route_result_id", None, "metric_evidence_metadata_missing"),
+            ("evidence_source", " ", "metric_evidence_metadata_missing"),
+            ("travel_time_model_version", None, "metric_evidence_metadata_missing"),
+            ("exposure_formula_version", "", "metric_evidence_metadata_missing"),
+            ("verification_status", VerificationStatus.UNVERIFIED, "metric_evidence_not_verified"),
+            ("verification_status", VerificationStatus.REJECTED, "metric_evidence_not_verified"),
+            ("verification_status", "verified", "metric_evidence_not_verified"),
+        ):
+            with self.subTest(field=field, value=value):
+                changed = replace(original, ranking_metric_evidence=replace(
+                    original.ranking_metric_evidence, **{field: value}))
+                self.assert_blocked(rank([changed]), reason)
+
+    def test_flags_and_source_labels_cannot_replace_a_metric_verifier(self):
+        self.assert_blocked(rank([candidate("claims-only")], metric_verifier=None),
+                            "metric_verifier_missing")
+
+    def test_unsupported_results_and_boolean_approvals_are_not_authoritative_records(self):
+        class UnsupportedVerifier:
+            def __init__(self, result):
+                self.result = result
+
+            def get_authoritative_metrics(self, route_result_id):
+                return self.result
+
+        for value in (None, True, 1, "sha256:claimed-digest", {}):
+            with self.subTest(value=value):
+                self.assert_blocked(rank([candidate("route")], metric_verifier=UnsupportedVerifier(value)),
+                                    "metric_evidence_unsupported")
+
+    def test_verifier_exception_prevents_partial_selection(self):
+        class BrokenVerifier(FixtureMetricVerifier):
+            def get_authoritative_metrics(self, route_result_id):
+                if route_result_id == "result/broken":
+                    raise OSError("Authoritative artifact unavailable")
+                return super().get_authoritative_metrics(route_result_id)
+
+        records = [candidate("valid"), candidate("broken")]
+        self.assert_blocked(rank(records, metric_verifier=BrokenVerifier(records)), "metric_verifier_error")
+
+    def test_malformed_or_mismatched_authoritative_records_do_not_pass(self):
+        original = candidate("route")
+        for changes in ({"travel_time_sec": True}, {"cumulative_hazard_exposure": float("nan")},
+                        {"travel_time_unit": "min"}, {"route_id": "wrong"},
+                        {"graph_snapshot_id": "wrong"}, {"hazard_snapshot_id": "wrong"},
+                        {"route_result_id": "wrong"}, {"travel_time_model_version": "wrong"},
+                        {"exposure_formula_version": "wrong"}):
+            with self.subTest(changes=changes):
+                authority = FixtureMetricVerifier([original])
+                authority.records["result/route"] = replace(original.ranking_metric_evidence, **changes)
+                self.assert_blocked(rank([original], metric_verifier=authority), "metric_authority_mismatch")
+
+    def test_rejected_candidates_do_not_require_metric_evidence(self):
+        rejected = replace(candidate("late", 901, 0), ranking_metric_evidence=None)
+        result = rank([rejected, candidate("eligible")])
+        self.assertEqual(result.selected_route_id, "eligible")
+        self.assertEqual(result.comparison_route_ids, ("eligible",))
 
 
 if __name__ == "__main__":
