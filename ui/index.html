@@ -1,0 +1,370 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Multi-Hazard-Aware Route Optimization | Component 3 Research UI</title>
+  <meta name="description" content="Interactive research dashboard for Component 3: Road-Risk Attachment & Disaster-Aware Bi-Criteria Route Optimization (Ratnapura, Sri Lanka)">
+
+  <!-- Google Fonts Inter & JetBrains Mono -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+
+  <!-- Leaflet CSS for Map -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
+  
+  <!-- Chart.js for Research Plots -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+
+  <!-- Custom CSS -->
+  <link rel="stylesheet" href="/static/index.css">
+</head>
+<body>
+
+  <!-- Top App Navigation Bar -->
+  <header class="app-header">
+    <div class="brand-section">
+      <div class="brand-badge">COMP-3</div>
+      <div>
+        <h1 class="brand-title">Multi-Hazard-Aware Route Optimization</h1>
+        <div class="brand-sub">
+          <span>Project J26-DS-301</span>
+          <span>&bull;</span>
+          <span>Study Region: Ratnapura District, Sri Lanka</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Tab Switching Navigation -->
+    <nav class="tab-nav">
+      <button class="tab-btn active" data-tab="tab-map">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 6v16l7-4 8 4 7-4V2l-7 4-8-4-7 4z"/><path d="M8 2v16"/><path d="M16 6v16"/></svg>
+        Interactive Routing
+      </button>
+      <button class="tab-btn" data-tab="tab-benchmarks">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="9" y1="21" x2="9" y2="9"/></svg>
+        Benchmark & Baselines
+      </button>
+      <button class="tab-btn" data-tab="tab-pareto">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+        Pareto & Trade-offs
+      </button>
+      <button class="tab-btn" data-tab="tab-research">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+        Research Evaluation
+      </button>
+    </nav>
+
+    <div class="header-meta">
+      <div class="status-pill">
+        <span class="pulse-dot"></span>
+        <span id="engineStatusText">Pipeline Active</span>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main Body Content -->
+  <main class="app-body">
+
+    <!-- KPI Metrics Banner -->
+    <section class="kpi-grid">
+      <div class="kpi-card">
+        <div class="kpi-title">Recommended Route</div>
+        <div class="kpi-val" id="kpiRecName">sweep_alpha_75</div>
+        <div class="kpi-hint" id="kpiRecAlgorithm">Bi-Criteria Utopian Compromise</div>
+      </div>
+      <div class="kpi-card emerald">
+        <div class="kpi-title">Risk Exposure Reduction</div>
+        <div class="kpi-val"><span id="kpiRiskRed">68.5</span><span class="kpi-unit">%</span></div>
+        <div class="kpi-hint">vs. Shortest Time Baseline</div>
+      </div>
+      <div class="kpi-card amber">
+        <div class="kpi-title">Detour Time Trade-off</div>
+        <div class="kpi-val"><span id="kpiDetourPct">+5.4</span><span class="kpi-unit">%</span></div>
+        <div class="kpi-hint">16.1 min vs 15.3 min baseline</div>
+      </div>
+      <div class="kpi-card purple">
+        <div class="kpi-title">Disaster Resilience</div>
+        <div class="kpi-val"><span id="kpiResilience">Reachable</span></div>
+        <div class="kpi-hint">Post edge exclusion (R_e &ge; 0.75)</div>
+      </div>
+    </section>
+
+    <!-- TAB 1: INTERACTIVE ROUTING MAP -->
+    <div id="tab-map" class="tab-pane active">
+      <div class="workspace-grid">
+        
+        <!-- Controls Column -->
+        <aside class="panel-card">
+          <div class="panel-heading">
+            <span>Query & Parameters</span>
+            <span class="badge">Component 3</span>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" for="presetRouteSelect">Emergency OD Scenario</label>
+            <select id="presetRouteSelect" class="form-select">
+              <option value="ratnapura_default">Ratnapura Hospital &rarr; Kahawatta Camp</option>
+              <option value="north_south">North Valley &rarr; South Mountain Relief</option>
+              <option value="diagonal_crossing">East-West Hazard Hotspot Traverse</option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" for="sliderMaxHazard">
+              <span>Max Hazard Threshold (Ceiling)</span>
+              <span id="labelMaxHazard" class="slider-val-badge">0.70</span>
+            </label>
+            <div class="slider-container">
+              <input type="range" id="sliderMaxHazard" min="0.10" max="0.95" step="0.05" value="0.70">
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" for="sliderDetourRatio">
+              <span>Max Allowable Detour Ratio</span>
+              <span id="labelDetourRatio" class="slider-val-badge">1.50x</span>
+            </label>
+            <div class="slider-container">
+              <input type="range" id="sliderDetourRatio" min="1.00" max="2.00" step="0.05" value="1.50">
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" for="sliderExclusion">
+              <span>Disaster Closure Cutoff (R_e &ge;)</span>
+              <span id="labelExclusion" class="slider-val-badge">0.75</span>
+            </label>
+            <div class="slider-container">
+              <input type="range" id="sliderExclusion" min="0.50" max="0.95" step="0.05" value="0.75">
+            </div>
+          </div>
+
+          <button id="btnRunOptimization" class="btn-primary">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+            Re-run Optimization Pipeline
+          </button>
+
+          <!-- Route Layer Toggles -->
+          <div class="form-group" style="margin-top: 6px;">
+            <label class="form-label">Active Route Layers</label>
+            <div class="layer-toggles">
+              <label class="layer-toggle-item">
+                <div>
+                  <span class="route-color-pill" style="background:#10b981;"></span>
+                  <span>Recommended Knee-Point</span>
+                </div>
+                <input type="checkbox" id="toggleRec" checked>
+              </label>
+              <label class="layer-toggle-item">
+                <div>
+                  <span class="route-color-pill" style="background:#3b82f6;"></span>
+                  <span>Shortest Time (Quickest)</span>
+                </div>
+                <input type="checkbox" id="toggleTime" checked>
+              </label>
+              <label class="layer-toggle-item">
+                <div>
+                  <span class="route-color-pill" style="background:#06b6d4;"></span>
+                  <span>Risk Minimal (Safest)</span>
+                </div>
+                <input type="checkbox" id="toggleRisk" checked>
+              </label>
+              <label class="layer-toggle-item">
+                <div>
+                  <span class="route-color-pill" style="background:#f43f5e;"></span>
+                  <span>Shortest Distance</span>
+                </div>
+                <input type="checkbox" id="toggleDist" checked>
+              </label>
+              <label class="layer-toggle-item">
+                <div>
+                  <span class="route-color-pill" style="background:#f59e0b;"></span>
+                  <span>Multi-Hazard Surface Raster</span>
+                </div>
+                <input type="checkbox" id="toggleHazardRaster" checked>
+              </label>
+            </div>
+          </div>
+
+          <!-- Audit Decision Summary Box -->
+          <div class="audit-box" id="auditDecisionsContainer">
+            <strong>Decision Audit:</strong> Loading evaluation notes...
+          </div>
+        </aside>
+
+        <!-- Map Container -->
+        <section class="map-wrapper">
+          <div class="map-header-bar">
+            <div>
+              <strong>Spatial Network &amp; Multi-Hazard Overlay</strong>
+              <span style="color:var(--text-muted); font-size:11px; margin-left:8px;">Ratnapura Valley Road Network (6x6 Grid, Directed)</span>
+            </div>
+            <div style="font-size:11px; color:var(--text-dim);">
+              Coordinates: Ratnapura, Sri Lanka (~6.68&deg;N, 80.40&deg;E)
+            </div>
+          </div>
+          <div id="leafletMap"></div>
+        </section>
+
+      </div>
+    </div>
+
+    <!-- TAB 2: BENCHMARK & BASELINES -->
+    <div id="tab-benchmarks" class="tab-pane">
+      <div class="table-card">
+        <div class="panel-heading">
+          <span>Comparative Routing Benchmarks (Component 3 Performance Evaluation)</span>
+          <span class="badge">Baseline Suite</span>
+        </div>
+        <p style="font-size: 13px; color: var(--text-muted); margin-top: 8px;">
+          Evaluates standard single-objective baselines against multi-attribute weighted formulations. 
+          The recommended utopian knee-point achieves high safety with minimal time penalty.
+        </p>
+
+        <div style="overflow-x: auto;">
+          <table class="custom-table" id="baselinesTable">
+            <thead>
+              <tr>
+                <th>Route Name</th>
+                <th>Travel Time</th>
+                <th>Distance</th>
+                <th>Cumulative Exposure (H&times;m)</th>
+                <th>Max Edge Hazard</th>
+                <th>Time Detour</th>
+                <th>Edge Count</th>
+              </tr>
+            </thead>
+            <tbody id="baselinesTableBody">
+              <!-- Rendered via JS -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Network Degradation Table -->
+      <div class="table-card" style="margin-top: 20px;">
+        <div class="panel-heading">
+          <span>Disaster Scenario Network Degradation Assessment</span>
+          <span class="badge">Resilience Stress Test</span>
+        </div>
+        <div style="overflow-x: auto;">
+          <table class="custom-table" id="resilienceTable">
+            <thead>
+              <tr>
+                <th>Hazard Cutoff (R_e)</th>
+                <th>Initial Edges</th>
+                <th>Active Edges</th>
+                <th>Severed Edges</th>
+                <th>Severed %</th>
+                <th>Strongly Connected Components</th>
+                <th>Weakly Connected Components</th>
+              </tr>
+            </thead>
+            <tbody id="resilienceTableBody">
+              <!-- Rendered via JS -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- TAB 3: PARETO FRONTIER & TRADE-OFFS -->
+    <div id="tab-pareto" class="tab-pane">
+      <div class="research-grid">
+        <div class="chart-card">
+          <div class="chart-header">
+            <span>Bi-Criteria Pareto Frontier: Travel Time vs. Hazard Exposure</span>
+            <span class="badge">min [T(p), R(p)]</span>
+          </div>
+          <div class="chart-canvas-container">
+            <canvas id="paretoChart"></canvas>
+          </div>
+          <div style="font-size: 11.5px; color: var(--text-dim); margin-top: 10px;">
+            The green starred point highlights the recommended Knee-Point selected by Normalized Utopian L2 distance.
+          </div>
+        </div>
+
+        <div class="chart-card">
+          <div class="chart-header">
+            <span>Non-Dominated Solutions Table</span>
+            <span class="badge" id="paretoCountBadge">0 Solutions</span>
+          </div>
+          <div style="overflow-y: auto; max-height: 290px;">
+            <table class="custom-table" id="paretoSolutionsTable">
+              <thead>
+                <tr>
+                  <th>Algorithm</th>
+                  <th>Time (min)</th>
+                  <th>Exposure (H&middot;m)</th>
+                  <th>Max Hazard</th>
+                  <th>Distance</th>
+                </tr>
+              </thead>
+              <tbody id="paretoTableBody">
+                <!-- Rendered dynamically -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- TAB 4: RESEARCH EVALUATION & ARCHITECTURE -->
+    <div id="tab-research" class="tab-pane">
+      <!-- Monte Carlo Summary -->
+      <div class="research-grid" style="margin-bottom: 20px;">
+        <div class="chart-card">
+          <div class="chart-header">
+            <span>Scenario-Wise Resilience &amp; Exposure Reduction</span>
+            <span class="badge">480 Monte Carlo Runs</span>
+          </div>
+          <div class="chart-canvas-container">
+            <canvas id="scenarioChart"></canvas>
+          </div>
+        </div>
+
+        <div class="chart-card">
+          <div class="chart-header">
+            <span>Algorithm Execution Runtime (Sweep vs. Label-Setting)</span>
+            <span class="badge">Sub-millisecond</span>
+          </div>
+          <div class="chart-canvas-container">
+            <canvas id="runtimeChart"></canvas>
+          </div>
+        </div>
+      </div>
+
+      <!-- Architectural Methodology & Formulations -->
+      <div class="arch-card">
+        <h3>Component 3 Research Methodology &amp; Mathematical Formulation</h3>
+        <p>
+          In natural disasters such as monsoon floods and slope landslides in Ratnapura, shortest-distance paths frequently traverse 
+          hazardous valley bottlenecks. Component 3 integrates spatial hazard rasters directly with road graphs and formulates 
+          a bi-objective optimization problem to minimize both travel duration and hazard vulnerability.
+        </p>
+
+        <div class="formula-block">
+          Primary Edge Risk: R_e = max_{x &isin; e} M(x)<br>
+          Cumulative Route Exposure: R(p) = &sum;_{e &isin; p} \text{length}(e) &times; R_e<br>
+          Bi-Objective Problem: min_{p &isin; P} [T(p), R(p)] \quad \text{subject to } R_e \le \tau_{\text{ceiling}}
+        </div>
+
+        <p>
+          The system implements both a <strong>Weighted-Sum Pareto Sweep</strong> and an exact <strong>Bi-Criteria Label-Setting Algorithm</strong> 
+          to discover non-dominated solutions, filtered with Pareto dominance checks. An explainable Utopian Knee-Point decision rule 
+          selects the operationally optimal compromise route for emergency dispatch (Component 4).
+        </p>
+      </div>
+    </div>
+
+  </main>
+
+  <!-- Leaflet JS -->
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+
+  <!-- Application Logic -->
+  <script src="/static/app.js"></script>
+</body>
+</html>
