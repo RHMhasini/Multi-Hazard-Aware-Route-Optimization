@@ -1,9 +1,10 @@
 """Typed, in-memory prototype contracts; no upstream component dependencies."""
 
 from dataclasses import dataclass, field
-from datetime import datetime
+from datetime import datetime, timezone
 from enum import Enum
 from math import isfinite
+from typing import Protocol
 
 REQUEST_VERSION = "c4.mission-request/1.0.0"
 DECISION_VERSION = "c4.mission-decision/1.0.0"
@@ -21,6 +22,12 @@ class HazardStatus(str, Enum):
     UNKNOWN = "unknown"
     INVALID = "invalid"
     STALE = "stale"
+
+
+class VerificationStatus(str, Enum):
+    UNVERIFIED = "unverified"
+    VERIFIED = "verified"
+    REJECTED = "rejected"
 
 
 class CheckStatus(str, Enum):
@@ -52,12 +59,15 @@ def finite_number(value: object) -> bool:
         return False
 
 
-def aware_datetime(value: object) -> bool:
-    return (
-        isinstance(value, datetime)
-        and value.tzinfo is not None
-        and value.utcoffset() is not None
-    )
+def utc_datetime(value: object) -> datetime | None:
+    """Normalize untrusted timestamps, including custom tzinfo, without raising."""
+    try:
+        if not isinstance(value, datetime) or value.utcoffset() is None:
+            return None
+        return value.astimezone(timezone.utc)
+    except Exception:
+        # tzinfo is user-defined code; isolate failures at this input boundary.
+        return None
 
 
 def _nonempty(value: object, name: str) -> None:
@@ -94,6 +104,8 @@ class MissionRequest:
     urgency: Urgency
     hard_constraints: HardConstraints
     schema_version: str = REQUEST_VERSION
+    expected_graph_snapshot_id: str | None = None
+    expected_hazard_snapshot_id: str | None = None
 
     def __post_init__(self) -> None:
         for name in ("request_id", "mission_id", "mission_type", "vehicle_type"):
@@ -119,18 +131,48 @@ class HazardEvidence:
     observed_at: datetime | None = None
     valid_until: datetime | None = None
     complete_coverage: bool = False
+    route_id: str | None = None
+    graph_snapshot_id: str | None = None
+    hazard_snapshot_id: str | None = None
+    evidence_source: str | None = None
+    verification_status: VerificationStatus = VerificationStatus.UNVERIFIED
+
+
+@dataclass(frozen=True, slots=True)
+class VehicleEvidence:
+    """Route-scoped compatibility claim; source/status alone never prove it."""
+
+    compatible_vehicle_types: frozenset[str] | None = None
+    route_id: str | None = None
+    graph_snapshot_id: str | None = None
+    evidence_source: str | None = None
+    verification_status: VerificationStatus = VerificationStatus.UNVERIFIED
 
 
 @dataclass(frozen=True, slots=True)
 class RouteCandidate:
     route_id: str
     hazard: HazardEvidence | None = None
+    # Legacy claim retained for construction compatibility; never used to pass.
     compatible_vehicle_types: frozenset[str] | None = None
     travel_time_sec: float | None = None
     distance_m: float | None = None
+    vehicle_evidence: VehicleEvidence | None = None
 
     def __post_init__(self) -> None:
         _nonempty(self.route_id, "route_id")
+
+
+class EvidenceVerifier(Protocol):
+    """Trusted caller dependency, NEVER inferred from candidate-supplied fields.
+
+    Implementations must independently bind the full evidence to checked source
+    artifacts. This interface is not an artifact verifier or authentication.
+    """
+
+    def verify_hazard(self, evidence: HazardEvidence) -> bool: ...
+
+    def verify_vehicle(self, evidence: VehicleEvidence) -> bool: ...
 
 
 @dataclass(frozen=True, slots=True)
@@ -144,10 +186,29 @@ class ConstraintCheck:
 
 
 @dataclass(frozen=True, slots=True)
+class FreshnessResult:
+    status: CheckStatus
+    reason_code: str
+    observed_at: datetime | None
+    age_sec: float | None
+    valid_until: datetime | None
+    max_age_sec: float
+
+
+@dataclass(frozen=True, slots=True)
+class CoverageResult:
+    status: CheckStatus
+    reason_code: str
+    complete_coverage: bool | None
+
+
+@dataclass(frozen=True, slots=True)
 class CandidateAssessment:
     route_id: str
     status: CandidateStatus
     checks: tuple[ConstraintCheck, ...]
+    freshness: FreshnessResult
+    coverage: CoverageResult
 
 
 @dataclass(frozen=True, slots=True)
@@ -156,8 +217,11 @@ class DecisionResponse:
 
     request_id: str
     mission_id: str
-    evaluated_at: datetime
+    evaluated_at: datetime | None
     status: DecisionStatus
     eligible_route_ids: tuple[str, ...]
     candidate_assessments: tuple[CandidateAssessment, ...]
     schema_version: str = field(default=DECISION_VERSION, init=False)
+    evaluation_time_reason: str | None = None
+    expected_graph_snapshot_id: str | None = None
+    expected_hazard_snapshot_id: str | None = None

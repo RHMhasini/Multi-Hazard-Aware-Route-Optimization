@@ -13,6 +13,11 @@ from .contracts import (
     RouteCandidate,
     CheckStatus,
     Urgency,
+    CoverageResult,
+    EvidenceVerifier,
+    FreshnessResult,
+    VehicleEvidence,
+    VerificationStatus,
 )
 from .validation import validate_candidates
 
@@ -21,4 +26,6 @@ __all__ = [
     "DecisionResponse", "DecisionStatus", "HardConstraints", "HazardEvidence",
     "HazardStatus", "MissionRequest", "RouteCandidate", "Urgency",
     "validate_candidates",
+    "CoverageResult", "EvidenceVerifier", "FreshnessResult", "VehicleEvidence",
+    "VerificationStatus",
 ]
