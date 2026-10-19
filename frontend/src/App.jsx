@@ -251,6 +251,43 @@ function App() {
           />
         </div>
       </section>
+
+      <section className="section">
+        <h2 className="section-title">
+          Susceptibility Maps
+        </h2>
+
+        <div className="map-grid">
+          <div className="map-card">
+            <h2>Flood Susceptibility</h2>
+            <img
+              src="/maps/flood_susceptibility.png"
+              alt="Flood susceptibility map"
+            />
+          </div>
+
+          <div className="map-card">
+            <h2>Landslide Susceptibility</h2>
+            <img
+              src="/maps/landslide_susceptibility.png"
+              alt="Landslide susceptibility map"
+            />
+          </div>
+
+          <div className="map-card map-card-wide">
+            <h2>Multi-Hazard Susceptibility</h2>
+            <p className="map-note">
+              Pixel-wise MAX fusion of normalized flood and landslide scores.
+            </p>
+
+            <img
+              src="/maps/multi_hazard_max.png"
+              alt="Multi-hazard susceptibility map"
+            />
+          </div>
+        </div>
+      </section>
+
     </div>
   );
 }

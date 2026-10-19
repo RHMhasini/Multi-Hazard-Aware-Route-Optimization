@@ -185,3 +185,51 @@ th {
     padding: 24px;
   }
 }
+
+.map-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 24px;
+}
+
+.map-card {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 16px;
+  padding: 22px;
+  box-shadow: 0 5px 20px rgba(15, 23, 42, 0.06);
+}
+
+.map-card h2 {
+  margin-top: 0;
+}
+
+.map-card img {
+  display: block;
+  width: 100%;
+  max-height: 560px;
+  object-fit: contain;
+  border-radius: 10px;
+  background: #f8fafc;
+}
+
+.map-card-wide {
+  grid-column: 1 / -1;
+}
+
+.map-note {
+  margin-top: -5px;
+  margin-bottom: 16px;
+  color: #64748b;
+  font-size: 13px;
+}
+
+@media (max-width: 900px) {
+  .map-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .map-card-wide {
+    grid-column: auto;
+  }
+}
