@@ -112,7 +112,7 @@ def _undirected_neighbors(graph: nx.MultiDiGraph) -> dict[Any, set[Any]]:
             neighbors[v].add(u)
     return neighbors
 
-
+#calculate road point direction (0°–360°)
 def _endpoint_heading(
     graph: nx.MultiDiGraph, node: Any, neighbors: dict[Any, set[Any]]
 ) -> float | None:
@@ -125,7 +125,7 @@ def _endpoint_heading(
         return None
     return math.degrees(math.atan2(y2 - y1, x2 - x1)) % 360.0
 
-
+#Heading deviation formula - if point the road opposite directions, deviation =0°, othervise deviation =180°(upto line 132)
 def _heading_deviation(first: float, second: float) -> float:
     difference = abs((first - second) % 360.0)
     difference = min(difference, 360.0 - difference)
@@ -199,10 +199,11 @@ def detect_candidates(
     validated_crs = _validate_graph_crs(graph)
     _validate_coordinates(graph)
     neighbors = _undirected_neighbors(graph)
-    endpoints = sorted((node for node, values in neighbors.items() if len(values) == 1), key=_node_key)
-    transformer = Transformer.from_crs(SOURCE_CRS, METRIC_CRS, always_xy=True).transform
+    endpoints = sorted((node for node, values in neighbors.items() if len(values) == 1), key=_node_key)   #find endpoints for degree-1 nodes
+    transformer = Transformer.from_crs(SOURCE_CRS, METRIC_CRS, always_xy=True).transform    #convert coordinates from source CRS to metric CRS for distance calculations
     projected_points = [transform(transformer, Point(_node_xy(graph, node))) for node in endpoints]
-    tree = STRtree(projected_points)
+    # build spatial index for efficient nearest-neighbor queries(STRtree index- Proximity Snapping)(upto 218)
+    tree = STRtree(projected_points)    
     candidates: list[dict[str, Any]] = []
     status_counts: Counter[str] = Counter()
     reason_counts: Counter[str] = Counter()
@@ -212,7 +213,7 @@ def detect_candidates(
     for index, first_geometry in enumerate(projected_points):
         for match in tree.query(
             first_geometry,
-            predicate="dwithin",
+            predicate="dwithin",    #dwithin - find all endpoints in the 20m radius
             distance=search_distance_m,
         ):
             second_index = int(match)
@@ -242,11 +243,11 @@ def detect_candidates(
             semantic_status, conflicts, semantic_reasons = _semantic_assessment(
                 first_semantics, second_semantics
             )
-            reasons = list(semantic_reasons)
+            reasons = list(semantic_reasons) #check 45° threshold
             if heading_deviation is None:
                 status = "needs_review"
                 reasons.append("heading_unavailable")
-            elif heading_deviation > max_heading_deviation_degrees:
+            elif heading_deviation > max_heading_deviation_degrees:   #Deviation > 45° → rejected(point differenct directions)
                 status = "rejected"
                 reasons.append("heading_incompatible")
             else:
