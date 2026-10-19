@@ -1,0 +1,14 @@
+Test,Status,Details
+Raster alignment,PASS,"CRS=EPSG:32644, size=2978x4311"
+Flood score range,PASS,"min=0.000000, max=1.000000"
+Landslide score range,PASS,"min=0.000000, max=1.000000"
+Multi-hazard score range,PASS,"min=0.021352, max=1.000000"
+Pixel-wise MAX fusion,PASS,"Validated pixels=5,417,434"
+Unique road IDs,PASS,"rows=599,077, unique=599,077, missing=0"
+Road score range,PASS,"valid=595,039, NoData=4,038"
+Road-level MAX rule,PASS,"Validated roads=595,039"
+NoData consistency,PASS,"NoData roads=4,038"
+Road hazard coverage,PASS,coverage=99.33%
+Component 3 row count,PASS,"road_scores=599,077, handoff=599,077"
+Component 3 hazard_valid flag,PASS,"expected=595,039, handoff=595,039"
+Component 3 road ID preservation,PASS,Road IDs preserved in original order.
