@@ -185,8 +185,8 @@ def _empty_geojson() -> dict[str, Any]:
 
 def detect_candidates(
     graph: nx.MultiDiGraph,
-    search_distance_m: float = DEFAULT_SEARCH_DISTANCE_M,
-    max_heading_deviation_degrees: float = DEFAULT_MAX_HEADING_DEVIATION_DEGREES,
+    search_distance_m: float = DEFAULT_SEARCH_DISTANCE_M,    # proximity threshold
+    max_heading_deviation_degrees: float = DEFAULT_MAX_HEADING_DEVIATION_DEGREES,   # angular threshold
 ) -> tuple[dict[str, Any], dict[str, Any]]:
     """Detect possible endpoint connections without mutating ``graph``."""
     if not isinstance(graph, nx.MultiDiGraph):
