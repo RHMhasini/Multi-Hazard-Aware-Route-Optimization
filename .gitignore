@@ -31,3 +31,7 @@ outputs/**/*.aux.xml
 data/component2/*.graphml
 data/component2/*.gpkg
 data/component2/*.zip
+
+# Generated road hazard outputs - keep local
+outputs/road_hazard*.gpkg
+outputs/road_hazard*.csv
