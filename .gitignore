@@ -26,3 +26,8 @@ outputs/*.tif
 outputs/**/*.tif
 outputs/*.aux.xml
 outputs/**/*.aux.xml
+
+# Component 2 large road-network data - keep local
+data/component2/*.graphml
+data/component2/*.gpkg
+data/component2/*.zip
