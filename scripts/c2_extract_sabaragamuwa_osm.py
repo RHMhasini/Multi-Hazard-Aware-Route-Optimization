@@ -42,7 +42,7 @@ COUNTRY = "Sri Lanka"
 NETWORK_TYPE = "drive"
 CRS = "EPSG:4326"
 LOCATION_INDEX = "sparse_file_array"
-
+# Attributes extracted per edge
 ROAD_TAGS = (
     "highway",
     "oneway",
@@ -60,7 +60,7 @@ ROAD_TAGS = (
     "service",
 )
 GRAPHML_TAGS = ROAD_TAGS + ("oneway_osm",)
-DRIVE_HIGHWAY_TYPES = {
+DRIVE_HIGHWAY_TYPES = {        # Motor-vehicle road types only — footways/paths excluded
     "motorway",
     "motorway_link",
     "trunk",
@@ -97,18 +97,18 @@ def normalize_boundary(gdf: gpd.GeoDataFrame) -> tuple[gpd.GeoDataFrame, object]
     )
     return output, geometry
 
-
+# Province boundary geocode
 def geocode_boundary(study_area: str) -> tuple[gpd.GeoDataFrame, object]:
     """Obtain and validate the complete province boundary."""
     import osmnx as ox
 
     print("\n[1/5] Geocoding boundary: {!r} ...".format(study_area))
-    gdf = ox.geocode_to_gdf(study_area)
+    gdf = ox.geocode_to_gdf(study_area)    # Nominatim API
     if gdf.empty:
         raise RuntimeError("Nominatim returned no boundary for {!r}.".format(study_area))
     gdf, geometry = normalize_boundary(gdf)
     print("    Bounding box: {}".format(geometry.bounds))
-    return gdf, geometry
+    return gdf, geometry   # EPSG:4326 polygon
 
 
 def _tag_value(tags: object, key: str) -> str:
