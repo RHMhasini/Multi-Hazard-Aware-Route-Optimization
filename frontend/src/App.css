@@ -1,4 +1,90 @@
 .app {
   min-height: 100vh;
-  padding: 40px;
+  padding: 48px;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+header {
+  margin-bottom: 40px;
+}
+
+.eyebrow {
+  font-size: 14px;
+  font-weight: 700;
+  color: #2563eb;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+h1 {
+  margin: 8px 0;
+  font-size: 38px;
+}
+
+.subtitle {
+  color: #64748b;
+  font-size: 18px;
+}
+
+.cards {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 24px;
+}
+
+.model-card {
+  background: white;
+  border-radius: 16px;
+  padding: 28px;
+  box-shadow: 0 6px 24px rgba(15, 23, 42, 0.08);
+}
+
+.model-card h2 {
+  margin-top: 0;
+}
+
+.selected-model {
+  color: #475569;
+}
+
+.metrics {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 16px;
+  margin-top: 24px;
+}
+
+.metrics div {
+  background: #f8fafc;
+  padding: 16px;
+  border-radius: 10px;
+}
+
+.metrics span {
+  display: block;
+  color: #64748b;
+  font-size: 13px;
+  margin-bottom: 5px;
+}
+
+.metrics strong {
+  font-size: 22px;
+}
+
+.error {
+  color: #b91c1c;
+  background: #fee2e2;
+  padding: 12px;
+  border-radius: 8px;
+}
+
+@media (max-width: 800px) {
+  .cards {
+    grid-template-columns: 1fr;
+  }
+
+  .app {
+    padding: 24px;
+  }
 }
