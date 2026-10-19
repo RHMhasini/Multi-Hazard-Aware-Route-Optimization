@@ -76,8 +76,11 @@ function ComparisonTable({ title, data }) {
               >
                 <td>
                   {row.Model}
+
                   {row.Model === data.selected_model && (
-                    <span className="best-badge">Best</span>
+                    <span className="best-badge">
+                      Best
+                    </span>
                   )}
                 </td>
 
@@ -107,13 +110,18 @@ function FeatureImportance({ title, data }) {
 
       <div className="feature-list">
         {topFeatures.map((item, index) => (
-          <div className="feature-row" key={item.Feature}>
+          <div
+            className="feature-row"
+            key={item.Feature}
+          >
             <div className="feature-name">
               <span>{index + 1}</span>
               {item.Feature}
             </div>
 
-            <strong>{item.Importance.toFixed(3)}</strong>
+            <strong>
+              {item.Importance.toFixed(3)}
+            </strong>
           </div>
         ))}
       </div>
@@ -125,8 +133,14 @@ function App() {
   const [floodData, setFloodData] = useState(null);
   const [landslideData, setLandslideData] = useState(null);
 
-  const [floodFeatures, setFloodFeatures] = useState(null);
-  const [landslideFeatures, setLandslideFeatures] = useState(null);
+  const [floodFeatures, setFloodFeatures] =
+    useState(null);
+
+  const [landslideFeatures, setLandslideFeatures] =
+    useState(null);
+
+  const [roadSummary, setRoadSummary] =
+    useState(null);
 
   const [error, setError] = useState("");
 
@@ -138,24 +152,32 @@ function App() {
           landslideResponse,
           floodFeatureResponse,
           landslideFeatureResponse,
+          roadSummaryResponse,
         ] = await Promise.all([
           fetch(`${API_BASE}/models/flood`),
           fetch(`${API_BASE}/models/landslide`),
           fetch(`${API_BASE}/features/flood`),
           fetch(`${API_BASE}/features/landslide`),
+          fetch(`${API_BASE}/roads/summary`),
         ]);
 
         if (
           !floodResponse.ok ||
           !landslideResponse.ok ||
           !floodFeatureResponse.ok ||
-          !landslideFeatureResponse.ok
+          !landslideFeatureResponse.ok ||
+          !roadSummaryResponse.ok
         ) {
-          throw new Error("Failed to load prototype results.");
+          throw new Error(
+            "Failed to load prototype results."
+          );
         }
 
-        const flood = await floodResponse.json();
-        const landslide = await landslideResponse.json();
+        const flood =
+          await floodResponse.json();
+
+        const landslide =
+          await landslideResponse.json();
 
         const floodImportance =
           await floodFeatureResponse.json();
@@ -163,11 +185,20 @@ function App() {
         const landslideImportance =
           await landslideFeatureResponse.json();
 
+        const roadIntegrationSummary =
+          await roadSummaryResponse.json();
+
         setFloodData(flood);
         setLandslideData(landslide);
 
         setFloodFeatures(floodImportance);
-        setLandslideFeatures(landslideImportance);
+        setLandslideFeatures(
+          landslideImportance
+        );
+
+        setRoadSummary(
+          roadIntegrationSummary
+        );
       } catch (err) {
         setError(err.message);
       }
@@ -188,13 +219,14 @@ function App() {
         </h1>
 
         <p className="subtitle">
-          Flood and Landslide Susceptibility Modelling
-          for Sabaragamuwa Province
+          Flood and Landslide Susceptibility
+          Modelling for Sabaragamuwa Province
         </p>
 
         <p className="prototype-note">
-          DEM-only prototype using synthetic historical
-          hazard samples and 5-fold spatial cross-validation.
+          DEM-only prototype using synthetic
+          historical hazard samples and 5-fold
+          spatial cross-validation.
         </p>
       </header>
 
@@ -204,6 +236,7 @@ function App() {
         </p>
       )}
 
+      {/* Selected Models */}
       <section className="cards">
         <ModelCard
           title="Flood Susceptibility"
@@ -216,6 +249,7 @@ function App() {
         />
       </section>
 
+      {/* Model Comparison */}
       <section className="section">
         <h2 className="section-title">
           Baseline Model Comparison
@@ -234,6 +268,7 @@ function App() {
         </div>
       </section>
 
+      {/* Feature Importance */}
       <section className="section">
         <h2 className="section-title">
           Feature Importance
@@ -252,6 +287,7 @@ function App() {
         </div>
       </section>
 
+      {/* Susceptibility Maps */}
       <section className="section">
         <h2 className="section-title">
           Susceptibility Maps
@@ -259,7 +295,10 @@ function App() {
 
         <div className="map-grid">
           <div className="map-card">
-            <h2>Flood Susceptibility</h2>
+            <h2>
+              Flood Susceptibility
+            </h2>
+
             <img
               src="/maps/flood_susceptibility.png"
               alt="Flood susceptibility map"
@@ -267,7 +306,10 @@ function App() {
           </div>
 
           <div className="map-card">
-            <h2>Landslide Susceptibility</h2>
+            <h2>
+              Landslide Susceptibility
+            </h2>
+
             <img
               src="/maps/landslide_susceptibility.png"
               alt="Landslide susceptibility map"
@@ -275,9 +317,13 @@ function App() {
           </div>
 
           <div className="map-card map-card-wide">
-            <h2>Multi-Hazard Susceptibility</h2>
+            <h2>
+              Multi-Hazard Susceptibility
+            </h2>
+
             <p className="map-note">
-              Pixel-wise MAX fusion of normalized flood and landslide scores.
+              Pixel-wise MAX fusion of normalized
+              flood and landslide scores.
             </p>
 
             <img
@@ -288,6 +334,159 @@ function App() {
         </div>
       </section>
 
+      {/* Road Network Integration */}
+      {roadSummary && (
+        <section className="road-integration-section">
+          <div className="section-heading">
+            <div>
+              <span className="section-label">
+                COMPONENT INTEGRATION
+              </span>
+
+              <h2>
+                Road Network Hazard Integration
+              </h2>
+
+              <p>
+                Flood and landslide susceptibility
+                scores aggregated to the directed road
+                network received from Component 2.
+              </p>
+            </div>
+
+            <span className="integration-badge">
+              {roadSummary.coverage_percent.toFixed(2)}%
+              {" "}Scored
+            </span>
+          </div>
+
+          <div className="road-summary-grid">
+            <div className="road-stat-card">
+              <span>
+                Total Directed Edges
+              </span>
+
+              <strong>
+                {roadSummary.total_edges.toLocaleString()}
+              </strong>
+            </div>
+
+            <div className="road-stat-card">
+              <span>
+                Valid Hazard Scores
+              </span>
+
+              <strong>
+                {roadSummary.valid_edges.toLocaleString()}
+              </strong>
+            </div>
+
+            <div className="road-stat-card">
+              <span>
+                Coverage
+              </span>
+
+              <strong>
+                {roadSummary.coverage_percent.toFixed(2)}%
+              </strong>
+            </div>
+
+            <div className="road-stat-card">
+              <span>
+                NoData Edges
+              </span>
+
+              <strong>
+                {roadSummary.nodata_edges.toLocaleString()}
+              </strong>
+            </div>
+
+            <div className="road-stat-card">
+              <span>
+                Flood Dominant
+              </span>
+
+              <strong>
+                {roadSummary.flood_dominant.toLocaleString()}
+              </strong>
+            </div>
+
+            <div className="road-stat-card">
+              <span>
+                Landslide Dominant
+              </span>
+
+              <strong>
+                {roadSummary.landslide_dominant.toLocaleString()}
+              </strong>
+            </div>
+          </div>
+
+          <div className="road-score-summary">
+            <div>
+              <span>
+                Mean MAX Score
+              </span>
+
+              <strong>
+                {roadSummary.mean_final_score.toFixed(4)}
+              </strong>
+            </div>
+
+            <div>
+              <span>
+                Median MAX Score
+              </span>
+
+              <strong>
+                {roadSummary.median_final_score.toFixed(4)}
+              </strong>
+            </div>
+
+            <div>
+              <span>
+                Maximum MAX Score
+              </span>
+
+              <strong>
+                {roadSummary.max_final_score.toFixed(4)}
+              </strong>
+            </div>
+          </div>
+
+          <div className="integration-flow">
+            <span>
+              Component 2 Road Graph
+            </span>
+
+            <span>→</span>
+
+            <span>
+              Flood + Landslide Susceptibility
+            </span>
+
+            <span>→</span>
+
+            <span>
+              Road-Level MAX
+            </span>
+
+            <span>→</span>
+
+            <span>
+              Component 3
+            </span>
+          </div>
+
+          <p className="road-note">
+            4,038 road edges intersect NoData pixels
+            at the susceptibility raster boundary.
+            These edges are retained as NoData rather
+            than being incorrectly assigned zero
+            susceptibility.
+          </p>
+        </section>
+      )}
     </div>
   );
 }
