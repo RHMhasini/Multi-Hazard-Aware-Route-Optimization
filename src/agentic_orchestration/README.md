@@ -374,13 +374,13 @@ trace, API, UI, multi-agent system or production adapter in the controller basel
 Real authoritative artifacts and clocks remain integration work; synthetic
 fixture authority is not evidence of real-world trust or safety.
 
-## Structured planner adapter (fake clients only)
+## Structured planner adapter
 
 `llm_planner.py::StructuredLLMPlanner` implements the planner interface through a
 provider-independent `ModelClient.complete(ModelRequest) -> ModelReply` protocol.
-It is **LLM-ready**, with no live LLM integration, provider SDK, API key, network
-call, framework or upstream adapter. `ScriptedPlanner` remains the deterministic
-experimental baseline. The fake clients exist only in
+The adapter itself is provider-independent; the optional local HTTP transport
+is described below. It needs no provider SDK, API key or agent framework.
+`ScriptedPlanner` remains the deterministic experimental baseline. The fake clients exist only in
 `tests/component4/test_llm_planner.py` and do not demonstrate model intelligence,
 prompt-injection resistance or an agentic research advantage.
 
@@ -479,6 +479,119 @@ independently retained response fixtures/artifacts in addition to metadata; a
 hash alone cannot reconstruct text. Model regeneration is not guaranteed to be
 reproducible even with a seed. Existing `replay_evaluation()` still replays only
 deterministic evaluation at recorded historical time, never current safety.
+
+## Optional local Ollama HTTP transport
+
+`ollama_client.py::OllamaModelClient.complete(ModelRequest) -> ModelReply` uses
+only standard-library HTTP/JSON tools. It performs exactly one non-streaming
+`POST /api/chat` per call, with `format: "json"`, `think: false`, and no tools.
+It does not start Ollama, install an SDK, download/select a model automatically,
+retry, follow redirects, repair responses or make fallback calls.
+
+The constructor accepts a host-configured origin (default
+`http://127.0.0.1:11434`) and a separate `max_http_response_bytes` body-envelope
+cap (default 65536 bytes). Only numeric loopback addresses and `localhost` are
+accepted; localhost is mapped to 127.0.0.1 without DNS. IPv6 `::1` is supported.
+Remote/LAN hosts, credentials, path prefixes, query strings, fragments and HTTPS
+are rejected. Standard-library HTTP does not use environment proxy settings.
+The endpoint is never taken from a model action or mission observation.
+
+Fixed planner instructions become the system message; serialized observations
+remain separate user-message data. Temperature, output-token limit and optional
+seed map to `options.temperature`, `options.num_predict` and `options.seed`.
+Servers/models that do not support the requested behavior fail rather than
+triggering an unrecorded fallback. JSON mode assists generation; the existing
+strict action decoder remains the final acceptance boundary. Role separation
+does not guarantee protection from prompt injection.
+
+The transport derives a monotonic deadline from `request.timeout_sec` and checks
+it across serialization, connection, sending, response headers, body reads and
+response validation. Socket timeouts are updated to the remaining duration on
+each underlying read/write, including reads used by HTTP header parsing, so a
+slow trickle does not reset the total deadline. Sockets/files close on success
+and ordinary failures; process-level termination exceptions still propagate.
+The outer shared budget independently checks elapsed time before action release.
+Timeouts cannot guarantee exact OS scheduling or cancellation of Ollama's
+server-side inference; closing the client connection is not proof of cancellation.
+
+HTTP status must be 200 with a supported JSON content type. Compression,
+ambiguous framing and duplicate critical headers are rejected. Chunked HTTP
+transfer is supported for a single JSON body; model NDJSON streaming is not.
+Application body accumulation is bounded to the envelope cap plus a one-byte
+oversize sentinel, before UTF-8 decoding/JSON parsing. The HTTP parser additionally
+uses bounded standard-library header/read buffers. Declared oversized lengths are rejected before body
+reading; incomplete bodies, duplicate JSON keys, nonstandard constants, multiple
+objects and malformed JSON fail closed. The generated action text separately
+must fit `request.max_output_bytes`; token limits are not byte limits.
+
+Response policy is deliberately conservative: exact requested model ID,
+`done: true`, `done_reason: "stop"` or `"length"`, assistant role and text content.
+`length` produces `ModelReply.truncated=True`, causing adapter abstention even
+if the action text is parseable. Unknown envelope/message fields, finish reasons,
+tool/image outputs and nonempty thinking output are rejected. Aliased model names
+that the server normalizes differently will fail the identity check; configure
+the exact canonical model tag instead of silently rewriting the response.
+
+Native chat provides no dedicated refusal flag or verified model revision in
+this supported response shape. Revision remains `None`; no explicit refusal
+signal is fabricated. Natural-language refusals are passed unchanged and fail
+strict action decoding. Unsupported explicit refusal fields/reasons are rejected,
+not ignored. Reported prompt/output token counts are validated as nonnegative
+integers. If either count is absent, combined usage remains `None`; missing counts
+are never invented as zero. Provider identity/usage remain audit assertions, not
+artifact verification or proof of safety. A loopback endpoint does not authenticate
+the local process or prove which model weights it loaded.
+It also cannot prevent a local service from forwarding data elsewhere; the host
+must ensure its server/model configuration actually performs local-only inference.
+
+Setup prerequisites: the user independently manages a running local Ollama
+server and an already available model supporting chat/JSON mode and the requested
+options. No model or hardware choice is assumed. Set the model ID in host wiring,
+retain the same host budget for the adapter/controller, and inject
+`OllamaModelClient()` in place of the fake client. No controller, validation,
+ranking or Components 1–3 changes are required.
+
+### Optional manual local smoke test — NOT part of automated tests
+
+Only run this yourself when you intend to contact your local server. From the
+repository root, in a Python session, set `model_id` to an exact already-installed
+model tag and execute the following. This makes one real model request for a
+synthetic stop-only observation; it does not generate routes or dispatch a mission.
+No installation/download/start-server commands are part of this procedure.
+
+```python
+from src.agentic_orchestration import (
+    ActionKind, ControllerState, HostExecutionBudget, OllamaModelClient,
+    PlannerObservation, StructuredLLMPlanner,
+)
+
+model_id = "YOUR_ALREADY_INSTALLED_MODEL:TAG"
+budget = HostExecutionBudget(
+    "manual-local-smoke", max_provider_calls=0, max_duration_sec=60,
+    max_model_calls=1, max_model_output_bytes=4096,
+)
+planner = StructuredLLMPlanner(OllamaModelClient(), model_id=model_id, budget=budget)
+observation = PlannerObservation(
+    1, ControllerState.READY, "synthetic-request", "synthetic-mission",
+    "synthetic", "synthetic-policy", "1.0.0", (), (ActionKind.STOP,), None,
+)
+proposal = planner.propose(observation)
+assert proposal.action.kind is ActionKind.STOP
+print(proposal.model_call.outcome)
+```
+
+The stop assertion is a smoke-test expectation, not evidence of safety or model
+quality. Direct `propose()` does not replace controller state/allowlist checks;
+mission decisions must still use `run_controller()`. A 60-second timeout in this
+example is an experiment setting, not an operational routing threshold.
+
+All transport tests in `tests/component4/test_ollama_client.py` mock HTTP/socket
+data. They cover deadline behavior, caps, response validation, cleanup and an
+end-to-end controller/adapter run with separately held synthetic authority.
+No live request was used to validate this milestone. Compatibility with a
+particular installed Ollama version/model remains unverified until an optional
+manual test. Strict response-field checks may reject future API extensions;
+review supported formats explicitly rather than silently relaxing them.
 
 Run the synthetic unit tests from the repository root:
 

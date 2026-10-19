@@ -48,6 +48,7 @@ from .llm_planner import (
     ActionDecodeError, GenerationSettings, ModelCallRecord, ModelClient, ModelPlannerError,
     ModelProposal, ModelReply, ModelRequest, ModelUsage, StructuredLLMPlanner, decode_action,
 )
+from .ollama_client import OllamaModelClient, OllamaTransportError
 
 __all__ = [
     "CandidateAssessment", "CandidateStatus", "CheckStatus", "ConstraintCheck",
@@ -73,4 +74,5 @@ __all__ = [
     "ActionDecodeError", "GenerationSettings", "ModelCallRecord", "ModelClient",
     "ModelPlannerError", "ModelProposal", "ModelReply", "ModelRequest", "ModelUsage",
     "StructuredLLMPlanner", "decode_action",
+    "OllamaModelClient", "OllamaTransportError",
 ]
