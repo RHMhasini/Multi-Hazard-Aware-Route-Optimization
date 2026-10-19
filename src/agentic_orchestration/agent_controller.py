@@ -16,6 +16,9 @@ from .orchestration import (
     RunOutcome, _error, _snapshot, acquire_mission, evaluate_mission,
 )
 from .ranking import RankingPolicy, validate_mission_policy
+from .llm_planner import (
+    ModelCallRecord, ModelPlannerError, ModelProposal, StructuredLLMPlanner, snapshot_model_call,
+)
 
 
 class ActionKind(str, Enum):
@@ -80,7 +83,7 @@ class PlannerObservation:
 class Planner(Protocol):
     """Propose one action from a bounded summary; no host tools are provided."""
 
-    def propose(self, observation: PlannerObservation) -> PlannerAction: ...
+    def propose(self, observation: PlannerObservation) -> PlannerAction | ModelProposal: ...
 
 
 class ScriptedPlanner:
@@ -137,6 +140,7 @@ class ActionRecord:
     next_state: ControllerState
     tool_result: MissionRunTrace | None = None
     error: RunError | None = None
+    model_call: ModelCallRecord | None = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -195,6 +199,8 @@ def run_controller(
             or timestamp is None or type(mode) is not EvaluationMode
             or (mode == EvaluationMode.CURRENT and (clock is None or dependencies.clock is None))):
         raise ValueError("Invalid host controller configuration")
+    if isinstance(planner, StructuredLLMPlanner) and not planner.uses_budget(budget):
+        raise ValueError("Structured planner and controller must share the same host budget")
     guard = BudgetGuard(budget)
     records = []
     seen = set()
@@ -236,25 +242,40 @@ def run_controller(
             policy.policy_id[:128], policy.policy_version[:128], missing, allowed,
             len(held.candidates) if held is not None else None,
         )
+        model_call = None
         try:
-            proposed, action = _proposal(planner.propose(observation))
+            raw = planner.propose(observation)
+            if type(raw) is ModelProposal:
+                model_call, raw = snapshot_model_call(raw.model_call), raw.action
+            proposed, action = _proposal(raw)
         except Exception as exc:
             error = _error("planner_failed", exc)
-            records.append(ActionRecord(observation, None, False, ControllerState.FINISHED, error=error))
-            return finish(ControllerOutcome.PLANNER_FAILURE, error)
+            if isinstance(exc, ModelPlannerError):
+                try:
+                    model_call = snapshot_model_call(exc.record)
+                except Exception:
+                    model_call = None
+            records.append(ActionRecord(observation, None, False, ControllerState.FINISHED,
+                                        error=error, model_call=model_call))
+            outcome = (ControllerOutcome.BUDGET_EXHAUSTED if model_call is not None
+                       and model_call.outcome in ("budget_exhausted", "budget_unavailable")
+                       else ControllerOutcome.PLANNER_FAILURE)
+            return finish(outcome, error)
         if not checkpoint():
             records.append(ActionRecord(observation, proposed, False, ControllerState.FINISHED,
-                                        error=boundary_error))
+                                        error=boundary_error, model_call=model_call))
             return finish(ControllerOutcome.BUDGET_EXHAUSTED, boundary_error)
         if action is None or action.kind in seen or action.kind not in allowed:
             repeated = action is not None and action.kind in seen
             error = RunError("repeated_action" if repeated else "invalid_action",
                              "Proposal rejected by the host action allowlist")
-            records.append(ActionRecord(observation, proposed, False, ControllerState.FINISHED, error=error))
+            records.append(ActionRecord(observation, proposed, False, ControllerState.FINISHED,
+                                        error=error, model_call=model_call))
             return finish(ControllerOutcome.REPEATED_ACTION if repeated else ControllerOutcome.INVALID_ACTION, error)
         seen.add(action.kind)
         if action.kind in (ActionKind.CLARIFY, ActionKind.STOP):
-            records.append(ActionRecord(observation, proposed, True, ControllerState.FINISHED))
+            records.append(ActionRecord(observation, proposed, True, ControllerState.FINISHED,
+                                        model_call=model_call))
             return finish(ControllerOutcome.UNRESOLVED_INPUT)
         try:
             if action.kind == ActionKind.ACQUIRE:
@@ -272,7 +293,8 @@ def run_controller(
                 evaluation = result
         except Exception as exc:
             error = _error("controller_tool_failed", exc)
-            records.append(ActionRecord(observation, proposed, True, ControllerState.FINISHED, error=error))
+            records.append(ActionRecord(observation, proposed, True, ControllerState.FINISHED,
+                                        error=error, model_call=model_call))
             return finish(ControllerOutcome.TOOL_FAILURE, error)
         available = result.outcome == RunOutcome.ALTERNATIVES_AVAILABLE
         tool_error = result.boundary_error
@@ -284,9 +306,9 @@ def run_controller(
         state = ControllerState.ALTERNATIVES_AVAILABLE if available else ControllerState.FINISHED
         if not checkpoint():
             records.append(ActionRecord(observation, proposed, True, ControllerState.FINISHED,
-                                        result, boundary_error))
+                                        result, boundary_error, model_call))
             return finish(ControllerOutcome.BUDGET_EXHAUSTED, boundary_error)
-        records.append(ActionRecord(observation, proposed, True, state, result, tool_error))
+        records.append(ActionRecord(observation, proposed, True, state, result, tool_error, model_call))
         if not available:
             return finish(ControllerOutcome(result.outcome.value), tool_error)
         held = result.provider_calls[-1].response

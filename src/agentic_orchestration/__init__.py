@@ -44,6 +44,10 @@ from .agent_controller import (
     ControllerTrace, Planner, PlannerAction, PlannerObservation, RecordedProposal,
     ScriptedPlanner, run_controller,
 )
+from .llm_planner import (
+    ActionDecodeError, GenerationSettings, ModelCallRecord, ModelClient, ModelPlannerError,
+    ModelProposal, ModelReply, ModelRequest, ModelUsage, StructuredLLMPlanner, decode_action,
+)
 
 __all__ = [
     "CandidateAssessment", "CandidateStatus", "CheckStatus", "ConstraintCheck",
@@ -66,4 +70,7 @@ __all__ = [
     "ActionKind", "ActionRecord", "ClarificationTopic", "ControllerOutcome",
     "ControllerState", "ControllerTrace", "Planner", "PlannerAction",
     "PlannerObservation", "RecordedProposal", "ScriptedPlanner", "run_controller",
+    "ActionDecodeError", "GenerationSettings", "ModelCallRecord", "ModelClient",
+    "ModelPlannerError", "ModelProposal", "ModelReply", "ModelRequest", "ModelUsage",
+    "StructuredLLMPlanner", "decode_action",
 ]

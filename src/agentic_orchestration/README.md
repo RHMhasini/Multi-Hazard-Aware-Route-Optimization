@@ -370,9 +370,115 @@ action, receive the next summary. The host executes permitted tools and owns the
 decision. Do not grant the model direct tool handles, Python execution, verifier
 or budget wiring, raw instructions from upstream artifacts, or authority to
 change a mission. There is no LLM provider, prompt implementation, reasoning
-trace, API, UI, multi-agent system or production adapter in this milestone.
+trace, API, UI, multi-agent system or production adapter in the controller baseline.
 Real authoritative artifacts and clocks remain integration work; synthetic
 fixture authority is not evidence of real-world trust or safety.
+
+## Structured planner adapter (fake clients only)
+
+`llm_planner.py::StructuredLLMPlanner` implements the planner interface through a
+provider-independent `ModelClient.complete(ModelRequest) -> ModelReply` protocol.
+It is **LLM-ready**, with no live LLM integration, provider SDK, API key, network
+call, framework or upstream adapter. `ScriptedPlanner` remains the deterministic
+experimental baseline. The fake clients exist only in
+`tests/component4/test_llm_planner.py` and do not demonstrate model intelligence,
+prompt-injection resistance or an agentic research advantage.
+
+The versioned JSON action envelope is deliberately small:
+
+```json
+{"schema_version":"c4.planner-action/1.0.0","kind":"acquire_alternatives"}
+```
+
+```json
+{"schema_version":"c4.planner-action/1.0.0","kind":"request_clarification","clarification":"host_review"}
+```
+
+Only `schema_version` and `kind` are allowed for acquire/evaluate/stop.
+Clarification additionally requires one of the existing typed topic strings.
+Even `clarification:null` on other actions is rejected. `decode_action()` checks
+the UTF-8 byte limit before parsing, then rejects unknown versions/actions,
+duplicate keys (including escaped duplicates and nested objects), extra/missing
+fields, invalid value types, arrays/multiple actions, surrounding prose/code
+fences, nonstandard NaN/Infinity constants and malformed/deeply nested JSON.
+Ordinary JSON whitespace is allowed. No fields are filtered out, repaired or
+inferred, and model text is never executed.
+
+The decoder returns the existing `PlannerAction`. The adapter wraps it in
+`ModelProposal` with its call audit; the controller unwraps it and still applies
+its independent action allowlist, argument types, state and repetition checks.
+Decoding success cannot establish eligibility or select a route. Missing,
+stale, mismatched or unsupported evidence still encounters the same deterministic
+ranking/verification gate. No model output configures a constraint, weight,
+snapshot, verifier, evaluation time, budget or route ID.
+
+`ModelRequest` keeps fixed `instructions` separate from canonical
+`observation_json` data. Both are immutable strings, with prompt/decoder versions
+and generation settings recorded. Labels remain untrusted even when JSON-encoded;
+the model may follow embedded malicious instructions. A future transport must
+preserve this instruction/data separation and must not interpolate observation
+labels into privileged instructions. The host's closed action surface and safety
+gate remain necessary; prompt separation is not a semantic security guarantee.
+
+The host enables model calls explicitly with the existing budget:
+
+```python
+budget = HostExecutionBudget(
+    "experiment-session", max_provider_calls=4, max_duration_sec=60,
+    max_model_calls=4, max_model_output_bytes=4096,
+)
+planner = StructuredLLMPlanner(fake_client, model_id="fake/model", budget=budget)
+# Pass this exact budget object to run_controller(..., planner, budget=budget).
+```
+
+Model calls default to zero (disabled). The shared atomic budget now tracks
+provider calls, model calls, response-byte limit and total duration. The built-in
+adapter/controller reject different budget objects. Reusing the same budget
+across new run IDs or new adapter objects does not reset either counter or the
+deadline. Budget reservations are validated before client I/O, including a check
+that the model counter actually increments. Exhaustion and inconsistent budget
+responses fail closed. Older custom budgets can continue serving scripted runs,
+but must implement model reservations before supporting this adapter.
+
+Every proposal permits **one client attempt**, `attempt=1, max_attempts=1`.
+There is no internal retry, fallback model or output-repair request. Each later
+proposal reserves another shared model call. `ModelClient` is trusted host
+transport wiring and must not hide retries; this interface cannot inspect an
+arbitrary implementation's network behavior. Future transport retries require
+explicit host accounting, not SDK defaults.
+
+Requests carry the shared scope/call index, elapsed time at reservation, deadline
+relative to budget start, remaining `timeout_sec`, generation token limit and
+response-byte limit. These are cooperative limits, not hard interruption.
+Blocking clients can overrun; the adapter checks the budget after return and
+before releasing a decoded proposal. A future live transport must implement
+timeouts and bounded/streamed reads itself. The adapter checks response size
+after the client supplies text; it cannot prevent a client from allocating an
+oversized reply. No total-token/cost quota or process isolation is implemented.
+
+Refusals, truncation, malformed replies, decode failures and ordinary client
+exceptions terminate safely without retry or selection. Process termination
+exceptions propagate. Arbitrary client error messages are not copied into the
+trace, to avoid recording transport secrets. Shared budget failures become a
+controller `budget_exhausted` outcome; other adapter failures become
+`planner_failure`, with the specific diagnostic in the model-call record.
+
+Each controller `ActionRecord` now has optional `model_call` metadata, leaving
+scripted actions with `None`. The frozen `c4.model-call/1.0.0` record contains:
+model ID/reported revision, prompt/decoder versions, copied generation settings,
+immutable request, attempt, host-measured cooperative call latency in seconds,
+reported usage when available, refusal/truncation flags, outcome, budget
+checkpoints and a bounded response's byte count/SHA-256 when available. Unknown
+metadata remains `None`. Latency uses shared monotonic budget observations and
+includes checkpoint overhead; it is not provider-reported inference time.
+Model identity, revision, usage and hashes are audit metadata, not proof of
+authenticity, trust or safety. Traces remain in-memory and are not tamper-proof.
+
+Raw responses are not retained in controller traces. Exact decoder replay needs
+independently retained response fixtures/artifacts in addition to metadata; a
+hash alone cannot reconstruct text. Model regeneration is not guaranteed to be
+reproducible even with a seed. Existing `replay_evaluation()` still replays only
+deterministic evaluation at recorded historical time, never current safety.
 
 Run the synthetic unit tests from the repository root:
 
