@@ -1,3 +1,4 @@
+import csv
 from pathlib import Path
 
 import pandas as pd
@@ -89,3 +90,47 @@ def landslide_feature_importance():
     return load_csv(
         "landslide_feature_importance.csv"
     )
+
+
+@app.get("/roads/summary")
+def get_road_integration_summary():
+    summary_path = Path(
+        "outputs/road_integration_summary.csv"
+    )
+
+    if not summary_path.exists():
+        return {
+            "error": "Road integration summary not found."
+        }
+
+    with summary_path.open(
+        "r",
+        encoding="utf-8",
+        newline="",
+    ) as file:
+        reader = csv.DictReader(file)
+        row = next(reader)
+
+    return {
+        "total_edges": int(row["total_edges"]),
+        "valid_edges": int(row["valid_edges"]),
+        "nodata_edges": int(row["nodata_edges"]),
+        "coverage_percent": float(
+            row["coverage_percent"]
+        ),
+        "flood_dominant": int(
+            row["flood_dominant"]
+        ),
+        "landslide_dominant": int(
+            row["landslide_dominant"]
+        ),
+        "mean_final_score": float(
+            row["mean_final_score"]
+        ),
+        "median_final_score": float(
+            row["median_final_score"]
+        ),
+        "max_final_score": float(
+            row["max_final_score"]
+        ),
+    }

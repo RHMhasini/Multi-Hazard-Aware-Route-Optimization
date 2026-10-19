@@ -1,0 +1,2 @@
+total_edges,valid_edges,nodata_edges,coverage_percent,flood_dominant,landslide_dominant,mean_final_score,median_final_score,max_final_score
+599077,595039,4038,99.33,322592,272447,0.6688,0.6827,0.999
