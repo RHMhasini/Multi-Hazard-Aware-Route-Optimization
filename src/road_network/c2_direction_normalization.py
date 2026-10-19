@@ -38,17 +38,17 @@ def _source_value(data: dict[str, Any]) -> str:
 
 def classify_direction(data: dict[str, Any]) -> tuple[str, str]:
     """Classify the already-stored routing direction without changing topology."""
-    value = _source_value(data)
+    value = _source_value(data)         # reads oneway_osm or oneway tag
     junction = str(data.get("junction", "")).strip().lower()
     if value in {"yes", "true", "1"}:
-        return "forward", "existing_extraction_representation"
+        return "forward", "existing_extraction_representation"   # one-way
     if value == "-1":
-        return "reverse", "existing_extraction_representation"
+        return "reverse", "existing_extraction_representation"   # reverse one-way
     if value == "no":
         return "bidirectional", "existing_extraction_representation"
     if value == "" and junction == "roundabout":
-        return "forward", "roundabout_default"
-    if value == "":
+        return "forward", "roundabout_default"      # roundabout default
+    if value == "":         # conservative default
         return "bidirectional", "missing_oneway_default"
     return "bidirectional", "unknown_oneway_conservative_fallback"
 
@@ -119,7 +119,7 @@ def validate_preservation(
         ),
     }
 
-
+#save normalized graph
 def normalize_graph(graph: nx.MultiDiGraph) -> tuple[nx.MultiDiGraph, dict[str, Any]]:
     """Copy a graph and add direction metadata without adding/removing records."""
     if not isinstance(graph, nx.MultiDiGraph):
@@ -168,13 +168,13 @@ def normalize_graph(graph: nx.MultiDiGraph) -> tuple[nx.MultiDiGraph, dict[str, 
     }
 
 
-def normalize_file(input_path: Path, output_path: Path) -> dict[str, Any]:
+def normalize_file(input_path: Path, output_path: Path) -> dict[str, Any]:   #save normalized graph
     """Load, normalize, validate, save, and return the reproducibility report."""
     before = nx.read_graphml(input_path, force_multigraph=True, node_type=int)
     if not isinstance(before, nx.MultiDiGraph):
         raise TypeError("The cleaned graph did not load as a MultiDiGraph.")
     after, direction = normalize_graph(before)
-    preservation = validate_preservation(before, after)
+    preservation = validate_preservation(before, after)     # structure unchanged check
     if not all(preservation[key] for key in PRESERVATION_CHECKS):
         raise RuntimeError("Direction normalization changed graph structure or original attributes.")
     output_path.parent.mkdir(parents=True, exist_ok=True)
