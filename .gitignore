@@ -35,3 +35,6 @@ data/component2/*.zip
 # Generated road hazard outputs - keep local
 outputs/road_hazard*.gpkg
 outputs/road_hazard*.csv
+
+# Component 3 generated handoff - keep local
+outputs/component3_road_hazard_handoff.csv
