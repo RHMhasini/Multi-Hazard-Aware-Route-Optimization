@@ -1,22 +1,19 @@
 import argparse
+import math
 from pathlib import Path
 
 import geopandas as gpd
 import numpy as np
+import pandas as pd
+import pyogrio
 import rasterio
-
-from rasterio.features import geometry_mask, geometry_window
-from rasterio.transform import xy
-from rasterio.errors import WindowError
-from shapely.geometry import mapping
+from rasterio.transform import rowcol
 
 
 NODATA_SCORE = np.nan
 
 
 def validate_rasters(flood_src, landslide_src):
-    """Ensure flood and landslide rasters use the same grid."""
-
     if flood_src.crs != landslide_src.crs:
         raise ValueError("Flood and landslide CRS values do not match.")
 
@@ -24,51 +21,117 @@ def validate_rasters(flood_src, landslide_src):
         raise ValueError("Flood and landslide raster grids are not aligned.")
 
     if flood_src.width != landslide_src.width:
-        raise ValueError("Flood and landslide raster widths do not match.")
+        raise ValueError("Raster widths do not match.")
 
     if flood_src.height != landslide_src.height:
-        raise ValueError("Flood and landslide raster heights do not match.")
+        raise ValueError("Raster heights do not match.")
 
 
-def valid_values(array, nodata):
-    """Return mask for finite, non-NoData raster values."""
-
-    mask = np.isfinite(array)
-
-    if nodata is not None:
-        mask &= array != nodata
-
-    return mask
-
-
-def score_road_geometry(
+def get_sample_cells(
     geometry,
-    flood_src,
-    landslide_src,
+    transform,
+    width,
+    height,
+    spacing,
 ):
     """
-    Extract the maximum flood and landslide susceptibility
-    intersected by one road geometry.
+    Sample raster cells along a road geometry using regular
+    spacing smaller than the raster pixel size.
     """
 
     if geometry is None or geometry.is_empty:
-        return {
-            "flood_road_score": NODATA_SCORE,
-            "landslide_road_score": NODATA_SCORE,
-            "final_road_score": NODATA_SCORE,
-            "dominant_hazard": "NoData",
-            "critical_x": NODATA_SCORE,
-            "critical_y": NODATA_SCORE,
-        }
+        return np.array([], dtype=int), np.array([], dtype=int)
 
-    geom = mapping(geometry)
+    coords = np.asarray(geometry.coords)
 
-    try:
-        window = geometry_window(
-            flood_src,
-            [geom],
+    rows_all = []
+    cols_all = []
+
+    for i in range(len(coords) - 1):
+        x1, y1 = coords[i]
+        x2, y2 = coords[i + 1]
+
+        distance = math.hypot(
+            x2 - x1,
+            y2 - y1,
         )
-    except WindowError:
+
+        steps = max(
+            2,
+            int(math.ceil(distance / spacing)) + 1,
+        )
+
+        xs = np.linspace(
+            x1,
+            x2,
+            steps,
+        )
+
+        ys = np.linspace(
+            y1,
+            y2,
+            steps,
+        )
+
+        rows, cols = rowcol(
+            transform,
+            xs,
+            ys,
+        )
+
+        rows_all.extend(rows)
+        cols_all.extend(cols)
+
+    if not rows_all:
+        return np.array([], dtype=int), np.array([], dtype=int)
+
+    cells = np.column_stack(
+        (
+            np.asarray(rows_all, dtype=int),
+            np.asarray(cols_all, dtype=int),
+        )
+    )
+
+    valid_bounds = (
+        (cells[:, 0] >= 0)
+        & (cells[:, 0] < height)
+        & (cells[:, 1] >= 0)
+        & (cells[:, 1] < width)
+    )
+
+    cells = cells[valid_bounds]
+
+    if len(cells) == 0:
+        return np.array([], dtype=int), np.array([], dtype=int)
+
+    cells = np.unique(
+        cells,
+        axis=0,
+    )
+
+    return cells[:, 0], cells[:, 1]
+
+
+def score_geometry(
+    geometry,
+    flood_array,
+    landslide_array,
+    transform,
+    flood_nodata,
+    landslide_nodata,
+    width,
+    height,
+    spacing,
+):
+    rows, cols = get_sample_cells(
+        geometry=geometry,
+        transform=transform,
+        width=width,
+        height=height,
+        spacing=spacing,
+    )
+
+    if len(rows) == 0:
         return {
             "flood_road_score": NODATA_SCORE,
             "landslide_road_score": NODATA_SCORE,
@@ -78,31 +141,26 @@ def score_road_geometry(
             "critical_y": NODATA_SCORE,
         }
 
-    flood = flood_src.read(
-        1,
-        window=window,
-    ).astype(np.float32)
+    flood_values = flood_array[
+        rows,
+        cols,
+    ]
 
-    landslide = landslide_src.read(
-        1,
-        window=window,
-    ).astype(np.float32)
-
-    window_transform = flood_src.window_transform(window)
-
-    road_mask = geometry_mask(
-        [geom],
-        out_shape=flood.shape,
-        transform=window_transform,
-        invert=True,
-        all_touched=True,
-    )
+    landslide_values = landslide_array[
+        rows,
+        cols,
+    ]
 
     valid = (
-        road_mask
-        & valid_values(flood, flood_src.nodata)
-        & valid_values(landslide, landslide_src.nodata)
+        np.isfinite(flood_values)
+        & np.isfinite(landslide_values)
     )
+
+    if flood_nodata is not None:
+        valid &= flood_values != flood_nodata
+
+    if landslide_nodata is not None:
+        valid &= landslide_values != landslide_nodata
 
     if not np.any(valid):
         return {
@@ -114,12 +172,18 @@ def score_road_geometry(
             "critical_y": NODATA_SCORE,
         }
 
+    valid_rows = rows[valid]
+    valid_cols = cols[valid]
+
+    flood_values = flood_values[valid]
+    landslide_values = landslide_values[valid]
+
     flood_score = float(
-        np.max(flood[valid])
+        np.max(flood_values)
     )
 
     landslide_score = float(
-        np.max(landslide[valid])
+        np.max(landslide_values)
     )
 
     final_score = max(
@@ -134,26 +198,25 @@ def score_road_geometry(
     else:
         dominant_hazard = "Equal"
 
-    # Pixel-wise MAX along the road
-    combined = np.full(
-        flood.shape,
-        np.nan,
-        dtype=np.float32,
+    combined = np.maximum(
+        flood_values,
+        landslide_values,
     )
 
-    combined[valid] = np.maximum(
-        flood[valid],
-        landslide[valid],
+    critical_index = int(
+        np.argmax(combined)
     )
 
-    critical_flat_index = np.nanargmax(combined)
-    critical_row, critical_col = np.unravel_index(
-        critical_flat_index,
-        combined.shape,
-    )
+    critical_row = valid_rows[
+        critical_index
+    ]
 
-    critical_x, critical_y = xy(
-        window_transform,
+    critical_col = valid_cols[
+        critical_index
+    ]
+
+    critical_x, critical_y = rasterio.transform.xy(
+        transform,
         critical_row,
         critical_col,
         offset="center",
@@ -170,21 +233,29 @@ def score_road_geometry(
 
 
 def score_roads(
-    roads_path: Path,
-    flood_raster: Path,
-    landslide_raster: Path,
-    output_vector: Path,
-    output_csv: Path,
-    road_id_field: str,
+    roads_path,
+    flood_raster,
+    landslide_raster,
+    output_vector,
+    output_csv,
+    layer_name="road_edges",
+    batch_size=20000,
 ):
-    """Calculate hazard scores for every road segment."""
+    roads_path = Path(roads_path)
+    output_vector = Path(output_vector)
+    output_csv = Path(output_csv)
 
-    roads = gpd.read_file(roads_path)
+    info = pyogrio.read_info(
+        roads_path,
+        layer=layer_name,
+    )
 
-    if road_id_field not in roads.columns:
-        raise ValueError(
-            f"Road ID field '{road_id_field}' was not found."
-        )
+    total_roads = info["features"]
+
+    print(
+        f"Road segments found: "
+        f"{total_roads:,}"
+    )
 
     with rasterio.open(flood_raster) as flood_src, \
          rasterio.open(landslide_raster) as landslide_src:
@@ -194,96 +265,165 @@ def score_roads(
             landslide_src,
         )
 
-        if roads.crs is None:
-            raise ValueError(
-                "Road layer has no CRS."
+        flood_array = flood_src.read(
+            1
+        ).astype(np.float32)
+
+        landslide_array = landslide_src.read(
+            1
+        ).astype(np.float32)
+
+        transform = flood_src.transform
+        width = flood_src.width
+        height = flood_src.height
+
+        pixel_size = abs(
+            flood_src.transform.a
+        )
+
+        # 30 m raster -> approximately 10 m sampling
+        spacing = pixel_size / 3.0
+
+        print(
+            f"Raster sampling spacing: "
+            f"{spacing:.2f} m"
+        )
+
+        output_vector.parent.mkdir(
+            parents=True,
+            exist_ok=True,
+        )
+
+        output_csv.parent.mkdir(
+            parents=True,
+            exist_ok=True,
+        )
+
+        if output_vector.exists():
+            output_vector.unlink()
+
+        if output_csv.exists():
+            output_csv.unlink()
+
+        first_batch = True
+
+        processed = 0
+
+        for start in range(
+            0,
+            total_roads,
+            batch_size,
+        ):
+            current_size = min(
+                batch_size,
+                total_roads - start,
             )
 
-        if roads.crs != flood_src.crs:
-            print(
-                f"Reprojecting roads from "
-                f"{roads.crs} to {flood_src.crs}"
+            roads = pyogrio.read_dataframe(
+                roads_path,
+                layer=layer_name,
+                skip_features=start,
+                max_features=current_size,
             )
 
-            roads = roads.to_crs(
-                flood_src.crs
-            )
-
-        scores = []
-
-        total = len(roads)
-
-        for index, row in roads.iterrows():
-
-            result = score_road_geometry(
-                row.geometry,
-                flood_src,
-                landslide_src,
-            )
-
-            scores.append(result)
-
-            if (index + 1) % 100 == 0 or index + 1 == total:
-                print(
-                    f"Processed {index + 1}/{total} road segments"
+            if roads.crs != flood_src.crs:
+                roads = roads.to_crs(
+                    flood_src.crs
                 )
 
-    score_gdf = gpd.GeoDataFrame(
-        scores,
-        index=roads.index,
-    )
+            results = []
 
-    for column in score_gdf.columns:
-        roads[column] = score_gdf[column]
+            for geometry in roads.geometry:
+                result = score_geometry(
+                    geometry=geometry,
+                    flood_array=flood_array,
+                    landslide_array=landslide_array,
+                    transform=transform,
+                    flood_nodata=flood_src.nodata,
+                    landslide_nodata=landslide_src.nodata,
+                    width=width,
+                    height=height,
+                    spacing=spacing,
+                )
 
-    roads["explanation"] = roads.apply(
-        lambda row: (
-            f"Highest road susceptibility = "
-            f"{row['final_road_score']:.3f}; "
-            f"dominant hazard = {row['dominant_hazard']}"
-        )
-        if np.isfinite(row["final_road_score"])
-        else "No valid hazard raster data for this road segment",
-        axis=1,
-    )
+                results.append(result)
 
-    output_vector.parent.mkdir(
-        parents=True,
-        exist_ok=True,
-    )
+            result_df = pd.DataFrame(
+                results,
+                index=roads.index,
+            )
 
-    output_csv.parent.mkdir(
-        parents=True,
-        exist_ok=True,
-    )
+            for column in result_df.columns:
+                roads[column] = result_df[
+                    column
+                ].values
 
-    roads.to_file(
-        output_vector,
-        driver="GPKG",
-    )
+            roads["explanation"] = np.where(
+                np.isfinite(
+                    roads["final_road_score"]
+                ),
+                (
+                    "Highest road susceptibility = "
+                    + roads[
+                        "final_road_score"
+                    ].round(3).astype(str)
+                    + "; dominant hazard = "
+                    + roads[
+                        "dominant_hazard"
+                    ].astype(str)
+                ),
+                "No valid hazard raster data for this road segment",
+            )
 
-    csv_columns = [
-        road_id_field,
-        "flood_road_score",
-        "landslide_road_score",
-        "final_road_score",
-        "dominant_hazard",
-        "critical_x",
-        "critical_y",
-        "explanation",
-    ]
+            pyogrio.write_dataframe(
+                roads,
+                output_vector,
+                layer="road_hazard_scores",
+                driver="GPKG",
+                append=not first_batch,
+            )
 
-    roads[csv_columns].to_csv(
-        output_csv,
-        index=False,
+            csv_columns = [
+                "road_id",
+                "u",
+                "v",
+                "key",
+                "flood_road_score",
+                "landslide_road_score",
+                "final_road_score",
+                "dominant_hazard",
+                "critical_x",
+                "critical_y",
+                "explanation",
+            ]
+
+            roads[
+                csv_columns
+            ].to_csv(
+                output_csv,
+                mode="w" if first_batch else "a",
+                header=first_batch,
+                index=False,
+            )
+
+            first_batch = False
+
+            processed += len(roads)
+
+            print(
+                f"Processed "
+                f"{processed:,}/{total_roads:,} "
+                f"road segments"
+            )
+
+    print("\nRoad hazard scoring complete.")
+
+    print(
+        f"GeoPackage: {output_vector}"
     )
 
     print(
-        f"\nRoad hazard vector saved to: {output_vector}"
-    )
-
-    print(
-        f"Road hazard CSV saved to: {output_csv}"
+        f"CSV: {output_csv}"
     )
 
 
@@ -291,32 +431,23 @@ def main():
     parser = argparse.ArgumentParser(
         description=(
             "Aggregate flood and landslide susceptibility "
-            "scores to road segments using maximum raster values."
+            "scores to Component 2 road segments."
         )
     )
 
     parser.add_argument(
         "--roads",
         required=True,
-        help="Input road network vector layer.",
-    )
-
-    parser.add_argument(
-        "--road-id-field",
-        required=True,
-        help="Stable road segment ID field.",
     )
 
     parser.add_argument(
         "--flood",
         required=True,
-        help="Normalized flood susceptibility raster.",
     )
 
     parser.add_argument(
         "--landslide",
         required=True,
-        help="Normalized landslide susceptibility raster.",
     )
 
     parser.add_argument(
@@ -329,15 +460,21 @@ def main():
         default="outputs/road_hazard_scores.csv",
     )
 
+    parser.add_argument(
+        "--batch-size",
+        type=int,
+        default=20000,
+    )
+
     args = parser.parse_args()
 
     score_roads(
-        roads_path=Path(args.roads),
-        flood_raster=Path(args.flood),
-        landslide_raster=Path(args.landslide),
-        output_vector=Path(args.output_vector),
-        output_csv=Path(args.output_csv),
-        road_id_field=args.road_id_field,
+        roads_path=args.roads,
+        flood_raster=args.flood,
+        landslide_raster=args.landslide,
+        output_vector=args.output_vector,
+        output_csv=args.output_csv,
+        batch_size=args.batch_size,
     )
 
 
