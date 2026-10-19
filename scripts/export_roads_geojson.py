@@ -58,12 +58,12 @@ def _v(val):
         return None
     return val
 
-
+# Motor-vehicle filter
 def is_motor_accessible(hw: str | None, attrs: dict) -> bool:
     """Return True if a motorbike can legally use this road segment."""
     if not hw:
         return False
-    if hw.lower().strip() not in MOTOR_ACCESSIBLE:
+    if hw.lower().strip() not in MOTOR_ACCESSIBLE:   # footway/cycleway/path exclude
         return False
     # Honour explicit access restrictions stored in the graph
     if str(attrs.get("motor_vehicle", "")).lower() == "no":
@@ -86,8 +86,8 @@ def main() -> None:
     # Small isolated fragments are excluded — they are the "broken roads"
     # that the topology-repair step targets but could not connect.
     print("Finding main weakly-connected component …")
-    wcc = sorted(nx.weakly_connected_components(graph), key=len, reverse=True)
-    main_nodes = wcc[0]
+    wcc = sorted(nx.weakly_connected_components(graph), key=len, reverse=True)    # Main weakly-connected component — isolated fragments remove
+    main_nodes = wcc[0]    # 293,043 nodes — 195 fragments excluded
     isolated_edges = total_edges - graph.subgraph(main_nodes).number_of_edges()
     print(f"  Main component: {len(main_nodes):,} / {total_nodes:,} nodes")
     print(f"  Removing {len(wcc) - 1:,} isolated fragments ({isolated_edges:,} edges)")
