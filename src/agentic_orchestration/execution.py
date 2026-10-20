@@ -181,3 +181,151 @@ class HostExecutionBudget:
                                   self._duration, self._elapsed, self._reason is not None,
                                   self._reason, self._max_model_calls, self._model_calls,
                                   self._output_bytes)
+
+
+@dataclass(frozen=True, slots=True)
+class AdaptiveLimits:
+    """Explicit research-run limits, not operational emergency policy defaults."""
+
+    max_steps: int
+    max_tool_attempts: int
+    max_recovery_attempts: int
+    max_retries_per_input: int
+    max_no_progress: int
+
+    def __post_init__(self):
+        for value in (self.max_steps, self.max_tool_attempts, self.max_recovery_attempts,
+                      self.max_retries_per_input, self.max_no_progress):
+            if type(value) is not int or not 0 <= value <= 512:
+                raise ValueError("Adaptive limits must be integers in [0,512]")
+        if self.max_steps == 0 or self.max_no_progress == 0:
+            raise ValueError("Step and no-progress ceilings must be positive")
+
+
+@dataclass(frozen=True, slots=True)
+class AdaptiveBudgetSnapshot:
+    host: BudgetSnapshot
+    steps: int
+    tool_attempts: int
+    recovery_attempts: int
+    reason: str | None
+
+    @property
+    def exhausted(self):
+        return self.reason is not None or self.host.exhausted
+
+
+class AdaptiveExecutionBudget:
+    """Retained M3 ledger around the unchanged host budget.
+
+    Retain THIS instance across run IDs/controllers. Reservations are never
+    refunded, including rejected/late operations. Provider/model reservations
+    still belong to HostExecutionBudget; local evaluation costs time and one
+    tool attempt, but is not a provider operation. M2 has no nested external
+    operations: charge preparation/generation once, not again for verification.
+    Future adapters with multiple external operations need explicit reservations.
+    No durable crash recovery or forced interruption is provided.
+    """
+
+    def __init__(self, host: ExecutionBudget, limits: AdaptiveLimits):
+        if type(limits) is not AdaptiveLimits:
+            raise ValueError("Expected AdaptiveLimits")
+        limits.__post_init__()
+        self.limits = limits
+        self._guard = BudgetGuard(host)
+        self._steps = self._tools = self._recoveries = 0
+        self._reason = None
+        self._attempts = {}  # input -> (attempt count, recovery count, retryable)
+        self._run_lock = Lock()
+        self._lock = Lock()
+        self.checkpoint()
+        if not self._guard.checks:
+            raise ValueError("Host budget supplied no valid initial snapshot")
+
+    def claim_run(self):
+        return self._run_lock.acquire(blocking=False)
+
+    def release_run(self):
+        self._run_lock.release()
+
+    def _check(self, **reservation):
+        if self._reason is not None:
+            return False
+        try:
+            if not self._guard.checkpoint(**reservation):
+                self._reason = self._guard.checks[-1].reason or "host_budget_exhausted"
+        except Exception:
+            self._reason = "host_budget_unavailable"
+        return self._reason is None
+
+    def checkpoint(self):
+        with self._lock:
+            return self._check()
+
+    def _stop(self, reason):
+        self._reason = self._reason or reason
+        return False
+
+    def reserve_step(self):
+        with self._lock:
+            if not self._check():
+                return False
+            if self._steps >= self.limits.max_steps:
+                return self._stop("steps_exhausted")
+            self._steps += 1
+            return True
+
+    def attempt_status(self, identity):
+        """Return (allowed, is_recovery); time/revision changes cannot reset it."""
+        with self._lock:
+            previous = self._attempts.get(identity)
+            if previous is None:
+                return True, False
+            _, recoveries, retryable = previous
+            return (retryable and recoveries < self.limits.max_retries_per_input
+                    and self._recoveries < self.limits.max_recovery_attempts), True
+
+    def reserve_tool(self, identity):
+        if type(identity) is not str or len(identity) != 64:
+            raise ValueError("Expected host input digest")
+        with self._lock:
+            if not self._check():
+                return False
+            if self._tools >= self.limits.max_tool_attempts:
+                return self._stop("tool_attempts_exhausted")
+            attempts, recoveries, retryable = self._attempts.get(identity, (0, 0, False))
+            if attempts:
+                if not retryable or recoveries >= self.limits.max_retries_per_input:
+                    return False
+                if self._recoveries >= self.limits.max_recovery_attempts:
+                    return self._stop("recovery_attempts_exhausted")
+                self._recoveries += 1
+                recoveries += 1
+            self._tools += 1
+            self._attempts[identity] = (attempts + 1, recoveries, False)
+            return True
+
+    def finish_tool(self, identity, *, retryable: bool):
+        if type(retryable) is not bool:
+            raise ValueError("Expected host retry classification")
+        with self._lock:
+            attempts, recoveries, _ = self._attempts[identity]
+            self._attempts[identity] = (attempts, recoveries, retryable)
+
+    def reserve_provider(self):
+        with self._lock:
+            return self._check(reserve_provider_call=True)
+
+    def reserve_model(self):
+        """Future M4 host hook; the M3 rule planner never calls this method."""
+        with self._lock:
+            return self._check(reserve_model_call=True)
+
+    @property
+    def snapshot(self):
+        with self._lock:
+            # A failed initial host checkpoint has no valid snapshot to expose.
+            if not self._guard.checks:
+                raise ValueError("Host budget unavailable")
+            return AdaptiveBudgetSnapshot(self._guard.checks[-1], self._steps,
+                                          self._tools, self._recoveries, self._reason)

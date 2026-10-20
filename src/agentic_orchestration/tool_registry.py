@@ -10,6 +10,8 @@ from datetime import datetime
 from enum import Enum
 import hashlib
 import json
+from threading import Lock
+from collections.abc import Callable
 from typing import Protocol
 
 from .adaptive_contracts import DependencyState, EvidenceStatus, Tool, ToolOption, _ref
@@ -168,6 +170,10 @@ class ToolRegistry:
         self._state = self._with_capabilities(state)
         self._issued = ()
         self._records = []
+        self._control = None
+        self._dispatch_lock = Lock()
+        self._meta_lock = Lock()
+        self._sequence = 0
 
     def _with_capabilities(self, state):
         return replace(state, capabilities=tuple(
@@ -180,19 +186,67 @@ class ToolRegistry:
 
     @property
     def records(self) -> tuple[ToolResult, ...]:
-        return tuple(self._records)
+        return tuple(sorted(self._records, key=lambda r: r.call_id))
 
-    def options(self) -> tuple[ToolOption, ...]:
+    def claim_control(self):
+        """Exclusive in-process M3 lease; never expose it to a planner or tool."""
+        with self._meta_lock:
+            if self._control is not None or self._dispatch_lock.locked():
+                raise ToolRejected(FailureKind.UNAUTHORIZED, "registry_already_controlled")
+            self._control = object()
+            return self._control
+
+    def release_control(self, control):
+        with self._meta_lock:
+            self._check_control(control)
+            if self._dispatch_lock.locked():
+                raise ValueError("Cannot release during dispatch")
+            self._control = None
+
+    def _check_control(self, control):
+        if self._control is not control:
+            raise ToolRejected(FailureKind.UNAUTHORIZED, "registry_control_mismatch")
+
+    def operation_identity(self, tool: Tool, state: DependencyState | None = None) -> str:
+        """Stable input identity for recovery, excluding time/revision-only churn.
+
+        Configuration/targets are bound by registration_id. Parent identities
+        invalidate descendants. Unlike the M2 observation digest this identity
+        deliberately survives clock refresh and new run IDs.
+        """
+        if type(tool) is not Tool:
+            raise ValueError("Expected tool")
+        state = self._state if state is None else state
+        state.__post_init__()
+        graph = state.graph.snapshot.snapshot_id if state.graph.snapshot else None
+        hazard = state.hazard.snapshot.snapshot_id if state.hazard.snapshot else None
+        parents = ((hazard,) if tool is Tool.PREPARE_HAZARD else (graph,)
+                   if tool is Tool.PREPARE_NETWORK else (graph, hazard))
+        inputs = (self._registration_id, tool.value, state.mission_ref, state.policy_ref,
+                  state.od_ref, parents,
+                  state.alternatives.alternatives_ref if tool is Tool.EVALUATE else None)
+        return hashlib.sha256(json.dumps(inputs).encode()).hexdigest()
+
+    def options(self, *, control=None) -> tuple[ToolOption, ...]:
+        self._check_control(control)
+        if self._dispatch_lock.locked():
+            raise ToolRejected(FailureKind.UNAUTHORIZED, "registry_dispatch_active")
         options = derive_eligibility(self._state).options
         self._issued = tuple((o, replace(o)) for o in options)
         return options
 
-    def adopt_host_state(self, state: DependencyState):
+    def adopt_host_state(self, state: DependencyState, *, control=None):
         """Trusted fixture/permission event, not an agent-callable tool.
 
         The host must independently validate artifacts before calling this method.
         M2 has no concurrent transitions, storage, remote handles or resume API.
         """
+        self._check_control(control)
+        if self._dispatch_lock.locked():
+            raise ToolRejected(FailureKind.UNAUTHORIZED, "registry_dispatch_active")
+        self._adopt_state(state)
+
+    def _adopt_state(self, state):
         if type(state) is not DependencyState:
             raise ValueError("Expected dependency state")
         state.__post_init__()
@@ -205,15 +259,25 @@ class ToolRegistry:
         self._state = self._with_capabilities(state)
         self._issued = ()
 
-    def execute(self, option: ToolOption) -> ToolResult:
+    def execute(self, option: ToolOption, *, control=None,
+                before_invoke: Callable[[], None] | None = None,
+                before_adopt: Callable[[], None] | None = None) -> ToolResult:
         state = self._state
         tool = option.tool if type(option) is ToolOption and type(option.tool) is Tool else None
         canonical = json.dumps(_canonical(asdict(state)), sort_keys=True, separators=(",", ":"))
         key = hashlib.sha256((self._registration_id + ":m2.synthetic/1:" + str(tool) + canonical).encode()).hexdigest()
-        call_id = f"call-{len(self._records) + 1:06d}"
+        with self._meta_lock:
+            self._sequence += 1
+            call_id = f"call-{self._sequence:06d}"
         executed = False
+        acquired = False
         update = failure = None
         try:
+            self._check_control(control)
+            acquired = self._dispatch_lock.acquire(blocking=False)
+            if not acquired:
+                raise ToolRejected(FailureKind.UNAUTHORIZED, "registry_dispatch_active")
+            self._check_control(control)
             if type(option) is not ToolOption:
                 raise ToolRejected(FailureKind.FORGED_OPTION, "invalid_option_type")
             option.__post_init__()
@@ -234,13 +298,17 @@ class ToolRegistry:
             # Consume the issuance even on failure; explicit reissue is needed.
             self._issued = ()
             self._authority.preflight(tool, state)
+            if before_invoke is not None:
+                before_invoke()
             executed = True
             claim = self._adapter.invoke(tool, state)
             update = self._authority.verify(tool, state, claim)
             if type(update) is not VerifiedUpdate:
                 raise ToolRejected(FailureKind.INVALID_OUTPUT, "invalid_authority_result")
             update.__post_init__()
-            self.adopt_host_state(update.state)
+            if before_adopt is not None:
+                before_adopt()
+            self._adopt_state(update.state)
         except ToolRejected as exc:
             update = None
             try:
@@ -253,7 +321,16 @@ class ToolRegistry:
         except Exception:
             # Never expose arbitrary exception text/tool narrative as instructions.
             update, failure = None, ToolFailure(FailureKind.INVALID_OUTPUT, "tool_boundary_error")
-        result = ToolResult(call_id, tool, state.state_revision, self._state.state_revision,
-                            key, executed, update, failure)
-        self._records.append(result)
-        return result
+        except BaseException:
+            if acquired:
+                self._dispatch_lock.release()
+            raise
+        try:
+            next_revision = update.state.state_revision if update is not None else state.state_revision
+            result = ToolResult(call_id, tool, state.state_revision, next_revision,
+                                key, executed, update, failure)
+            self._records.append(result)
+            return result
+        finally:
+            if acquired:
+                self._dispatch_lock.release()
