@@ -15,11 +15,11 @@ from pyproj.exceptions import CRSError
 from shapely.geometry import LineString, Point, mapping
 from shapely.ops import transform
 from shapely.strtree import STRtree
-
-DEFAULT_SEARCH_DISTANCE_M = 20.0
-DEFAULT_MAX_HEADING_DEVIATION_DEGREES = 45.0
-SOURCE_CRS = "EPSG:4326"
-METRIC_CRS = "EPSG:5235"
+# Constants — thresholds
+DEFAULT_SEARCH_DISTANCE_M = 20.0    # proximity threshold
+DEFAULT_MAX_HEADING_DEVIATION_DEGREES = 45.0   # angular threshold
+SOURCE_CRS = "EPSG:4326"     # GPS coordinates
+METRIC_CRS = "EPSG:5235"     # Sri Lanka metres
 GEOJSON_CRS = "EPSG:4326"
 SEMANTIC_ATTRIBUTES = (
     "layer",
@@ -112,7 +112,7 @@ def _undirected_neighbors(graph: nx.MultiDiGraph) -> dict[Any, set[Any]]:
             neighbors[v].add(u)
     return neighbors
 
-#calculate road point direction (0°–360°)
+#calculate road point direction (0°–360°) -- implementation regarding angular bridging
 def _endpoint_heading(
     graph: nx.MultiDiGraph, node: Any, neighbors: dict[Any, set[Any]]
 ) -> float | None:
@@ -123,10 +123,10 @@ def _endpoint_heading(
     x2, y2 = _node_xy(graph, neighbor)
     if x1 == x2 and y1 == y2:
         return None
-    return math.degrees(math.atan2(y2 - y1, x2 - x1)) % 360.0
+    return math.degrees(math.atan2(y2 - y1, x2 - x1)) % 360.0    # Angular check — atan2 formula
 
 #Heading deviation formula - if point the road opposite directions, deviation =0°, othervise deviation =180°(upto line 132)
-def _heading_deviation(first: float, second: float) -> float:
+def _heading_deviation(first: float, second: float) -> float:    
     difference = abs((first - second) % 360.0)
     difference = min(difference, 360.0 - difference)
     return abs(180.0 - difference)
@@ -182,12 +182,12 @@ def _semantic_assessment(
 def _empty_geojson() -> dict[str, Any]:
     return {"type": "FeatureCollection", "features": [], "crs": {"type": "name", "properties": {"name": GEOJSON_CRS}}}
 
-
+# Main function
 def detect_candidates(
     graph: nx.MultiDiGraph,
-    search_distance_m: float = DEFAULT_SEARCH_DISTANCE_M,    # proximity threshold
-    max_heading_deviation_degrees: float = DEFAULT_MAX_HEADING_DEVIATION_DEGREES,   # angular threshold
-) -> tuple[dict[str, Any], dict[str, Any]]:
+    search_distance_m: float = DEFAULT_SEARCH_DISTANCE_M,    
+    max_heading_deviation_degrees: float = DEFAULT_MAX_HEADING_DEVIATION_DEGREES,     
+) -> tuple[dict[str, Any], dict[str, Any]]:      # Returns candidates
     """Detect possible endpoint connections without mutating ``graph``."""
     if not isinstance(graph, nx.MultiDiGraph):
         raise TypeError("Topology detection requires a networkx.MultiDiGraph.")
@@ -199,11 +199,11 @@ def detect_candidates(
     validated_crs = _validate_graph_crs(graph)
     _validate_coordinates(graph)
     neighbors = _undirected_neighbors(graph)
-    endpoints = sorted((node for node, values in neighbors.items() if len(values) == 1), key=_node_key)   #find endpoints for degree-1 nodes
-    transformer = Transformer.from_crs(SOURCE_CRS, METRIC_CRS, always_xy=True).transform    #convert coordinates from source CRS to metric CRS for distance calculations
+    endpoints = sorted((node for node, values in neighbors.items() if len(values) == 1), key=_node_key)   #find endpoints for degree-1 nodes(Dangling endpoints)
+    transformer = Transformer.from_crs(SOURCE_CRS, METRIC_CRS, always_xy=True).transform    #convert coordinates from source CRS to metric CRS for distance calculations(EPSG:4326 → EPSG:5235 (degrees → metres))
     projected_points = [transform(transformer, Point(_node_xy(graph, node))) for node in endpoints]
     # build spatial index for efficient nearest-neighbor queries(STRtree index- Proximity Snapping)(upto 218)
-    tree = STRtree(projected_points)    
+    tree = STRtree(projected_points)     #STRtree — build spatial index  
     candidates: list[dict[str, Any]] = []
     status_counts: Counter[str] = Counter()
     reason_counts: Counter[str] = Counter()
