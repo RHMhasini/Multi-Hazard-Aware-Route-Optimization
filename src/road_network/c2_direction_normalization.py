@@ -41,11 +41,11 @@ def classify_direction(data: dict[str, Any]) -> tuple[str, str]:
     value = _source_value(data)         # reads oneway_osm or oneway tag
     junction = str(data.get("junction", "")).strip().lower()
     if value in {"yes", "true", "1"}:
-        return "forward", "existing_extraction_representation"   # one-way
+        return "forward", "existing_extraction_representation"   # one-way(forward)
     if value == "-1":
         return "reverse", "existing_extraction_representation"   # reverse one-way
     if value == "no":
-        return "bidirectional", "existing_extraction_representation"
+        return "bidirectional", "existing_extraction_representation"  #bidirectional
     if value == "" and junction == "roundabout":
         return "forward", "roundabout_default"      # roundabout default
     if value == "":         # conservative default
@@ -119,7 +119,7 @@ def validate_preservation(
         ),
     }
 
-#save normalized graph
+
 def normalize_graph(graph: nx.MultiDiGraph) -> tuple[nx.MultiDiGraph, dict[str, Any]]:
     """Copy a graph and add direction metadata without adding/removing records."""
     if not isinstance(graph, nx.MultiDiGraph):
@@ -167,18 +167,18 @@ def normalize_graph(graph: nx.MultiDiGraph) -> tuple[nx.MultiDiGraph, dict[str, 
         "direction_source_counts": dict(sorted(source_counts.items())),
     }
 
-
-def normalize_file(input_path: Path, output_path: Path) -> dict[str, Any]:   #save normalized graph
+#implementation of save normalized graph
+def normalize_file(input_path: Path, output_path: Path) -> dict[str, Any]:   
     """Load, normalize, validate, save, and return the reproducibility report."""
     before = nx.read_graphml(input_path, force_multigraph=True, node_type=int)
     if not isinstance(before, nx.MultiDiGraph):
         raise TypeError("The cleaned graph did not load as a MultiDiGraph.")
-    after, direction = normalize_graph(before)
+    after, direction = normalize_graph(before)     # add metadata only
     preservation = validate_preservation(before, after)     # structure unchanged check
     if not all(preservation[key] for key in PRESERVATION_CHECKS):
         raise RuntimeError("Direction normalization changed graph structure or original attributes.")
     output_path.parent.mkdir(parents=True, exist_ok=True)
-    nx.write_graphml(after, output_path)
+    nx.write_graphml(after, output_path)    # save
     reloaded = nx.read_graphml(output_path, force_multigraph=True, node_type=int)
     reload_preservation = validate_preservation(before, reloaded)
     if not all(reload_preservation[key] for key in PRESERVATION_CHECKS):
