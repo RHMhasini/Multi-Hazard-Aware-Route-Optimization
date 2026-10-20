@@ -182,7 +182,7 @@ def _skip(candidate: dict[str, Any], reason: str) -> dict[str, Any]:
     return {
         "candidate_id": candidate["candidate_id"],
         "repair_id": None,
-        "status": "skipped",
+        "status": "skipped",      # "not_explicitly_approved"  /  Currently: 0 approvals → 0 repairs
         "action": "none",
         "reason": reason,
         "endpoint_u": candidate.get("endpoint_u"),
