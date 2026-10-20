@@ -133,29 +133,26 @@ class AdaptiveController:
                  host_event: Callable[[DependencyState, int], DependencyState | None] | None = None):
         if type(registry) is not ToolRegistry or type(budget) is not AdaptiveExecutionBudget:
             raise ValueError("Expected trusted registry and adaptive execution budget")
+        # Metered planner adapters must use this very ledger, not a new scope.
+        if hasattr(planner, "uses_budget") and planner.uses_budget(budget) is not True:
+            raise ValueError("Planner must share the controller execution budget")
         self._registry, self._budget, self._planner = registry, budget, planner
         self._clock, self._host_event = clock, host_event
         self._last_time = registry.state.as_of
         self._feedback = None
-        self._no_progress = 0
-        self._progress_state = _progress_key(registry.state)
-        self._evaluated_inputs = set()
+        first_binding = self._budget.bind_session(registry, _progress_key(registry.state))
         self._evaluation = None
         # Bootstrap only from registry-accepted evaluation records, never a
         # caller-supplied selected-route string or an adapter's own claim.
         for result in registry.records:
             if result.ok and result.tool is Tool.EVALUATE:
                 self._evaluation = result
-                self._evaluated_inputs.add(registry.operation_identity(Tool.EVALUATE, result.update.state))
+                if first_binding:
+                    self._budget.remember_evaluation(registry.operation_identity(Tool.EVALUATE, result.update.state))
 
     def _accept_progress(self):
         """Called only on registry-owned state, never planner observations/flags."""
-        current = _progress_key(self._registry.state)
-        if current == self._progress_state:
-            return False
-        self._progress_state = current
-        self._no_progress = 0
-        return True
+        return self._budget.observe_progress(_progress_key(self._registry.state))
 
     def _now(self):
         try:
@@ -229,7 +226,7 @@ class AdaptiveController:
                 if recovery:
                     retries.append(option.tool)
         return AdaptiveObservation(_observation_copy(state), eligibility, tuple(options), tuple(retries),
-                                   self._cached(state), _observation_copy(self._feedback), self._no_progress,
+                                   self._cached(state), _observation_copy(self._feedback), self._budget.no_progress,
                                    _observation_copy(self._budget.snapshot))
 
     def _feedback_for(self, result, identity, recovery, before):
@@ -287,7 +284,7 @@ class AdaptiveController:
                         eligible_tools, dispatchable_tools, _observation_copy(audit_action),
                         _observation_copy(feedback),
                         _view(self._registry.state), self._budget.snapshot, reason))
-                if self._no_progress >= self._budget.limits.max_no_progress:
+                if self._budget.no_progress >= self._budget.limits.max_no_progress:
                     reason = Reason.NO_PROGRESS
                     record()
                     return finish(AdaptiveOutcome.NO_PROGRESS, reason)
@@ -329,9 +326,9 @@ class AdaptiveController:
                 except Exception:
                     # Omit invalid objects/narrative from the audit record.
                     action = None
-                    self._no_progress += 1
+                    self._budget.record_progress_outcome(progress=False)
                     record()
-                    if self._no_progress >= self._budget.limits.max_no_progress:
+                    if self._budget.no_progress >= self._budget.limits.max_no_progress:
                         return finish(AdaptiveOutcome.NO_PROGRESS, Reason.NO_PROGRESS)
                     continue
                 reason = action.reason
@@ -344,7 +341,7 @@ class AdaptiveController:
                 identity = self._registry.operation_identity(action.option.tool)
                 allowed, recovery = self._budget.attempt_status(identity)
                 if not allowed:
-                    self._no_progress += 1
+                    self._budget.record_progress_outcome(progress=False)
                     reason = Reason.NO_PROGRESS
                     record()
                     return finish(AdaptiveOutcome.NO_PROGRESS, reason)
@@ -382,11 +379,11 @@ class AdaptiveController:
                 if result.ok and result.tool is Tool.EVALUATE:
                     # Count new authoritative evaluation feedback, not another
                     # timestamp/revision of the same evaluated input identity.
-                    progress = progress or identity not in self._evaluated_inputs
-                    self._evaluated_inputs.add(identity)
-                self._no_progress = 0 if progress else self._no_progress + 1
+                    new_evaluation = self._budget.remember_evaluation(identity)
+                    progress = progress or new_evaluation
+                self._budget.record_progress_outcome(progress=progress)
                 record()
-                if self._no_progress >= self._budget.limits.max_no_progress:
+                if self._budget.no_progress >= self._budget.limits.max_no_progress:
                     return finish(AdaptiveOutcome.NO_PROGRESS, Reason.NO_PROGRESS)
         except ToolRejected:
             return finish(AdaptiveOutcome.BUDGET_EXHAUSTED if self._budget.snapshot.exhausted

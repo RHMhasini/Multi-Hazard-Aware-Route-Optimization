@@ -236,6 +236,12 @@ class AdaptiveExecutionBudget:
         self._steps = self._tools = self._recoveries = 0
         self._reason = None
         self._attempts = {}  # input -> (attempt count, recovery count, retryable)
+        # One retained host session per adaptive ledger, never per run/planner.
+        # The owner is a trusted registry object, not a caller-supplied string.
+        self._session_owner = self._progress_state = None
+        self._no_progress = 0
+        self._evaluated_inputs = set()
+        self._model_transport_stopped = False
         self._run_lock = Lock()
         self._lock = Lock()
         self.checkpoint()
@@ -247,6 +253,70 @@ class AdaptiveExecutionBudget:
 
     def release_run(self):
         self._run_lock.release()
+
+    def bind_session(self, registry, progress_key):
+        """Host controller binding; reconstruction cannot initialize guards again.
+
+        A different registry requires an independent adaptive ledger. Identical
+        textual scope/run IDs do not join otherwise independent ledger objects.
+        Progress keys come only from the controller's validated registry state.
+        Return True only for the initial binding, for host history bootstrap.
+        """
+        with self._lock:
+            if self._session_owner is None:
+                self._session_owner = registry
+                self._progress_state = progress_key
+                return True
+            elif self._session_owner is not registry:
+                raise ValueError("Adaptive ledger already belongs to another registry")
+            return False
+
+    def observe_progress(self, progress_key):
+        """Host-only accepted semantic state, never planner-reported progress."""
+        with self._lock:
+            if self._session_owner is None:
+                raise ValueError("Adaptive session is not bound")
+            if progress_key == self._progress_state:
+                return False
+            self._progress_state = progress_key
+            self._no_progress = 0
+            return True
+
+    @property
+    def no_progress(self):
+        with self._lock:
+            return self._no_progress
+
+    def record_progress_outcome(self, *, progress: bool):
+        """Host reports independently accepted change or a no-progress attempt."""
+        if type(progress) is not bool:
+            raise ValueError("Expected host progress classification")
+        with self._lock:
+            self._no_progress = 0 if progress else self._no_progress + 1
+
+    def remember_evaluation(self, identity):
+        """Return whether this accepted evaluation input is new to the session."""
+        if type(identity) is not str or len(identity) != 64:
+            raise ValueError("Expected host input digest")
+        with self._lock:
+            new = identity not in self._evaluated_inputs
+            self._evaluated_inputs.add(identity)
+            return new
+
+    def stop_model_transport(self):
+        """Terminal for ALL model/provider identities on this retained ledger.
+
+        No reset method or implicit provider fallback. This does not refund
+        reservations or exhaust non-model resources: trusted rule planning may
+        still use the same tools. A new host-authorized session uses a new ledger.
+        """
+        with self._lock:
+            self._model_transport_stopped = True
+
+    @property
+    def model_transport_stopped(self):
+        with self._lock:
+            return self._model_transport_stopped
 
     def _check(self, **reservation):
         if self._reason is not None:
@@ -317,8 +387,10 @@ class AdaptiveExecutionBudget:
             return self._check(reserve_provider_call=True)
 
     def reserve_model(self):
-        """Future M4 host hook; the M3 rule planner never calls this method."""
+        """One M4 model attempt; a stopped session never reserves another."""
         with self._lock:
+            if self._model_transport_stopped or self._no_progress >= self.limits.max_no_progress:
+                return False
             return self._check(reserve_model_call=True)
 
     @property

@@ -17,6 +17,9 @@ if TYPE_CHECKING:
 ACTION_VERSION = "c4.planner-action/1.0.0"
 PROMPT_VERSION = "c4.structured-planner-prompt/1.0.0"
 DECODER_VERSION = "c4.action-json-decoder/1.0.0"
+ADAPTIVE_ACTION_VERSION = "c4.adaptive-action/2.0.0"
+ADAPTIVE_PROMPT_VERSION = "c4.adaptive-planner-prompt/2.0.0"
+ADAPTIVE_DECODER_VERSION = "c4.adaptive-json-decoder/2.0.0"
 INSTRUCTIONS = (
     "Propose exactly one JSON object, without markdown or surrounding prose. "
     f"Required fields: schema_version equal to {ACTION_VERSION!r}, and kind. "
@@ -137,8 +140,18 @@ class ModelRequest:
     timeout_sec: float          # Remaining duration at reservation; cooperative.
     attempt: int = field(default=1, init=False)
     max_attempts: int = field(default=1, init=False)
-    prompt_version: str = field(default=PROMPT_VERSION, init=False)
-    decoder_version: str = field(default=DECODER_VERSION, init=False)
+    prompt_version: str = field(default=PROMPT_VERSION, kw_only=True)
+    decoder_version: str = field(default=DECODER_VERSION, kw_only=True)
+    action_version: str = field(default=ACTION_VERSION, kw_only=True)
+
+    def __post_init__(self):
+        # Host metadata only; v1 defaults and its strict decoder are unchanged.
+        versions = self.prompt_version, self.decoder_version, self.action_version
+        if any(type(version) is not str for version in versions) or versions not in (
+            (PROMPT_VERSION, DECODER_VERSION, ACTION_VERSION),
+            (ADAPTIVE_PROMPT_VERSION, ADAPTIVE_DECODER_VERSION, ADAPTIVE_ACTION_VERSION),
+        ):
+            raise ValueError("Unsupported planner protocol versions")
 
 
 @dataclass(frozen=True, slots=True)
