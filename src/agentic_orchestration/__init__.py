@@ -49,6 +49,7 @@ from .llm_planner import (
     ModelProposal, ModelReply, ModelRequest, ModelUsage, StructuredLLMPlanner, decode_action,
 )
 from .ollama_client import OllamaModelClient, OllamaTransportError
+from .groq_client import GROQ_MODEL_ID, GroqModelClient, GroqTransportError
 
 __all__ = [
     "CandidateAssessment", "CandidateStatus", "CheckStatus", "ConstraintCheck",
@@ -75,4 +76,5 @@ __all__ = [
     "ModelPlannerError", "ModelProposal", "ModelReply", "ModelRequest", "ModelUsage",
     "StructuredLLMPlanner", "decode_action",
     "OllamaModelClient", "OllamaTransportError",
+    "GROQ_MODEL_ID", "GroqModelClient", "GroqTransportError",
 ]

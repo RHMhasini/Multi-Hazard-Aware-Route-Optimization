@@ -593,6 +593,125 @@ particular installed Ollama version/model remains unverified until an optional
 manual test. Strict response-field checks may reject future API extensions;
 review supported formats explicitly rather than silently relaxing them.
 
+## Optional Groq HTTPS transport
+
+`groq_client.py::GroqModelClient.complete(ModelRequest) -> ModelReply` implements
+the same `ModelClient` protocol using Python's standard library. It sends one
+non-streaming HTTPS POST to the fixed official endpoint
+`https://api.groq.com/openai/v1/chat/completions`, using the exact model ID
+`openai/gpt-oss-20b` (`GROQ_MODEL_ID`). No SDK or extra framework is required.
+Construction/import does not contact Groq; `complete()` does.
+
+The model ID and parameters were checked against Groq's official documentation
+on 2026-10-20: [model details](https://console.groq.com/docs/model/openai/gpt-oss-20b),
+[chat API reference](https://console.groq.com/docs/api-reference), and
+[reasoning options](https://console.groq.com/docs/reasoning).
+Generation settings map to `temperature` (0 through 2),
+`max_completion_tokens`, and optional `seed`. Fixed transport settings are
+`response_format: {"type": "json_object"}`, `stream: false`,
+`reasoning_effort: "low"`, and `include_reasoning: false`.
+`reasoning_format` is not supported for this model and is not sent.
+No tools, search, model fallback, redirects, proxy environment settings,
+automatic retries or response repair are used.
+
+JSON mode assists generation; it does not enforce the closed action schema.
+The existing `decode_action()` still rejects extra fields, route selections,
+policy/constraint/snapshot changes, duplicate keys and invalid action values.
+The controller independently checks action state, repetition and its allowlist.
+Groq receives the fixed planner instructions as a system message and the bounded
+observation as a separate user message. This is role separation, not proof of
+prompt-injection resistance. Verifiers, route evidence, ranking and shared
+execution budgets remain host-owned and unchanged.
+
+### Key configuration and host wiring
+
+Store `GROQ_API_KEY` in your environment, never in source, a tracked environment
+file, a prompt or an observation. Do not print it or include it in diagnostics.
+The client reads it at call time: the process variable takes precedence; on
+Windows, if absent, it reads only `GROQ_API_KEY` from the current user's
+`HKCU\Environment`. This supports VS Code instances started before the user
+variable was saved. An existing invalid/empty process value fails rather than
+silently selecting another credential. No registry/environment values are
+written, and the key is not stored on the client or in planner audit records.
+
+To explicitly refresh an old PowerShell terminal from an already-configured
+Windows user variable, without displaying the credential:
+
+```powershell
+$env:GROQ_API_KEY = [Environment]::GetEnvironmentVariable('GROQ_API_KEY', 'User')
+```
+
+Restarting VS Code is another way to inherit updated variables. Missing or
+invalid keys fail before network access. The client does not verify whether an
+existing key is active until an explicitly authorized request is made.
+
+Host wiring (this example constructs objects only; it makes no API call):
+
+```python
+from src.agentic_orchestration import (
+    GROQ_MODEL_ID, GenerationSettings, GroqModelClient,
+    HostExecutionBudget, StructuredLLMPlanner,
+)
+
+budget = HostExecutionBudget(
+    "groq-experiment", max_provider_calls=1, max_duration_sec=60,
+    max_model_calls=2, max_model_output_bytes=4096,
+)
+planner = StructuredLLMPlanner(
+    GroqModelClient(), model_id=GROQ_MODEL_ID, budget=budget,
+    settings=GenerationSettings(temperature=0, max_output_tokens=1024),
+)
+# When authorized, inject planner and this SAME budget into run_controller(),
+# together with trusted provider/verifier dependencies and synthetic inputs.
+```
+
+Groq is a remote service: only use observations approved for external processing.
+Do not put secrets or sensitive mission labels in observations. A live call is
+an explicit host action, not part of setup or automated tests. This adapter
+does not use the local Ollama model or its D: storage.
+
+### Limits, failures and verification scope
+
+The [documented free-plan limits](https://console.groq.com/docs/rate-limits)
+for this model at the verification date are 30 requests/minute, 1,000
+requests/day, 8,000 tokens/minute and 200,000 tokens/day. These can change and
+organization-specific exceptions apply; check your account's Limits page.
+Free access is quota-limited and not a capacity/availability guarantee.
+Reasoning can consume the completion-token allowance even when hidden;
+small output limits may produce truncation. Seeded generation is best-effort,
+not guaranteed deterministic. Host-side route ranking remains deterministic.
+
+Each `complete()` makes at most one request. A 429 is a fixed
+`groq_rate_limited` failure; the client neither sleeps nor retries, even if
+`Retry-After` is present. Authentication/other HTTP errors also fail without
+reading or exposing the error body. Any later experiment needs separate host
+authorization and the existing shared budget; do not reset it to bypass limits.
+
+Verified TLS, an envelope byte cap (default 65,536), a separate action-text byte
+cap, bounded reads and a decreasing monotonic deadline protect the transport.
+Checks include reads during HTTP header parsing and body transfer. DNS resolution,
+OS scheduling and server-side cancellation cannot be forcibly bounded by this
+synchronous implementation; the shared budget checks elapsed time again before
+releasing an action. No client deadline implies server-side cancellation.
+
+Malformed JSON/UTF-8, duplicate keys, ambiguous framing, compressed/streamed
+formats, model mismatches, multiple choices, unexpected reasoning/tool calls,
+and unsupported statuses fail closed. Explicit refusals/content filtering and
+length truncation return flags that the planner rejects, even if the content
+looks like a valid action. Natural-language refusal fails strict JSON decoding.
+Usage counts are retained when supplied and valid, otherwise unknown; invalid
+counts are rejected. `system_fingerprint` is backend metadata, not a verified
+weight revision, so `model_revision` remains unknown. Provider metadata is an
+audit assertion, not evidence authentication.
+
+`tests/component4/test_groq_client.py` mocks HTTPS/socket data and credentials,
+including Windows user-variable fallback, rate limits, deadlines, byte caps,
+refusal/truncation, shared-budget exhaustion and a controller run with separately
+held synthetic authority. No live API call has been made; real key access,
+account permissions, model behavior, latency and current service compatibility
+remain unverified. Future API extensions may require explicit response-parser
+updates. These tests are not evidence of model quality or operational safety.
+
 Run the synthetic unit tests from the repository root:
 
 ```text
