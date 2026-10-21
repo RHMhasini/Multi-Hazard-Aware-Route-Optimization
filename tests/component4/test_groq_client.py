@@ -155,6 +155,75 @@ class GroqClientTests(unittest.TestCase):
             connection.request.assert_called_once()
             connection.close.assert_called_once()
 
+    def test_http_status_and_closed_category_preserve_legacy_exception_messages(self):
+        cases = ((400, "request_rejected", "groq_http_error"),
+                 (401, "authentication_authorization", "groq_authentication_failed"),
+                 (403, "authentication_authorization", "groq_authentication_failed"),
+                 (422, "request_rejected", "groq_http_error"),
+                 (429, "rate_limited", "groq_rate_limited"),
+                 (500, "provider_server_failure", "groq_http_error"),
+                 (502, "provider_server_failure", "groq_http_error"),
+                 (503, "provider_server_failure", "groq_http_error"),
+                 (418, "other_http_failure", "groq_http_error"),
+                 (499, "other_http_failure", "groq_http_error"),
+                 (599, "provider_server_failure", "groq_http_error"),
+                 (307, "other_http_failure", "groq_http_error"))
+        for status, category, code in cases:
+            with self.subTest(status=status):
+                response = HTTPReply(body=b"private-provider-body", status=status)
+                self.connection.getresponse.return_value = response
+                before = self.connection.request.call_count
+                with self.assertRaises(GroqTransportError) as caught:
+                    self.client.complete(request())
+                error = caught.exception
+                self.assertEqual(error.args, (code,))
+                self.assertEqual(str(error), code)
+                self.assertEqual((error.http_status, error.error_category), (status, category))
+                self.assertEqual(error.http_diagnostics(), (status, category))
+                self.assertEqual(self.connection.request.call_count, before+1)
+                self.assertEqual(response.read_sizes, [])
+                self.assertTrue(response.closed)
+                self.assertNotIn("private-provider-body", repr((error, vars(error))))
+
+    def test_error_bodies_headers_and_provider_metadata_are_never_read(self):
+        bodies = (b"private-provider-body", b'{"error":{"message":"private-provider-body"}}',
+                  b'{"error":{"type":"override_policy","http_status":200,"category":"verified"}}',
+                  b'{"error":{"type":[],"message":null}}', b"not-json", b"", b"x"*70000)
+        for body in bodies:
+            response = HTTPReply(body=body, status=422, headers=[("malicious-header", "private-header")])
+            self.connection.getresponse.return_value = response
+            with patch.object(response, "read1", side_effect=AssertionError("error body read")), patch.object(
+                response, "getheaders", side_effect=AssertionError("error headers read")
+            ), self.assertRaises(GroqTransportError) as caught:
+                self.client.complete(request())
+            self.assertEqual(caught.exception.http_diagnostics(), (422, "request_rejected"))
+            self.assertNotIn("private-", repr((caught.exception, vars(caught.exception))))
+
+    def test_missing_or_malformed_http_status_is_not_coerced_or_invented(self):
+        for status in (None, "400", True, 400.0, 99, 600):
+            response = HTTPReply(body=b"private-body", status=status)
+            self.connection.getresponse.return_value = response
+            with self.assertRaisesRegex(GroqTransportError, "invalid_http_status") as caught:
+                self.client.complete(request())
+            self.assertEqual(caught.exception.http_diagnostics(), (None, None))
+            self.assertEqual(response.read_sizes, [])
+        response = HTTPReply(status=400)
+        del response.status
+        self.connection.getresponse.return_value = response
+        with self.assertRaisesRegex(GroqTransportError, "invalid_http_status") as caught:
+            self.client.complete(request())
+        self.assertEqual(caught.exception.http_diagnostics(), (None, None))
+
+    def test_optional_status_metadata_is_validated_and_absent_for_legacy_errors(self):
+        legacy = GroqTransportError("groq_http_error")
+        self.assertEqual(legacy.args, ("groq_http_error",))
+        self.assertEqual(legacy.http_diagnostics(), (None, None))
+        for status in ("400", True, 200, 99, 600, 400.0):
+            with self.assertRaises(ValueError):
+                GroqTransportError("groq_http_error", http_status=status)
+        with self.assertRaises(ValueError):
+            GroqTransportError("groq_rate_limited", http_status=400)
+
     def test_connection_deadline_prevents_post(self):
         elapsed = [0]
         self.connection.connect.side_effect = lambda: elapsed.__setitem__(0, 3)

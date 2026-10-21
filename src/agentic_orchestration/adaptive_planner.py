@@ -14,7 +14,7 @@ from threading import Lock
 from .adaptive_contracts import Dependency, Tool, ToolOption
 from .dependency_state import derive_eligibility
 from .execution import AdaptiveExecutionBudget
-from .groq_client import GROQ_MODEL_ID, GroqTransportError
+from .groq_client import GROQ_MODEL_ID, GroqTransportError, _http_error_category
 from .llm_planner import (
     ADAPTIVE_ACTION_VERSION as ACTION_VERSION,
     ADAPTIVE_PROMPT_VERSION as PROMPT_VERSION,
@@ -78,6 +78,15 @@ class AdaptiveModelRecord:
     action_version: str = ACTION_VERSION
     decoder_version: str = DECODER_VERSION
     prompt_sha256: str = PROMPT_SHA256
+    http_status: int | None = None
+    error_category: str | None = None
+
+    def __post_init__(self):
+        if self.http_status is None and self.error_category is None:
+            return
+        if (type(self.error_category) is not str
+                or self.error_category != _http_error_category(self.http_status)):
+            raise ValueError("Invalid HTTP audit diagnostic")
 
 
 def _topics(observation):
@@ -290,6 +299,7 @@ class AdaptiveLLMPlanner:
             raise ToolRejected(FailureKind.PERMANENT, "adaptive_model_budget_exhausted")
         start = self._budget.snapshot.host
         latency = usage = revision = kind = detail = None
+        http_status = http_category = None
         category = "invalid_model_response"
         digest = hashlib.sha256(data.encode("utf-8")).hexdigest()
         try:
@@ -306,6 +316,7 @@ class AdaptiveLLMPlanner:
                 category = "client_error"
                 # Preserve only known transport codes, never arbitrary messages.
                 if type(exc) is GroqTransportError:
+                    http_status, http_category = GroqTransportError.http_diagnostics(exc)
                     for code in ("groq_authentication_failed", "groq_rate_limited", "groq_http_error"):
                         if exc.args == (code,):
                             category = code
@@ -362,4 +373,5 @@ class AdaptiveLLMPlanner:
                 revision, digest, resources.steps, resources.tool_attempts, end.provider_calls,
                 resources.recovery_attempts, self._settings.temperature, self._settings.max_output_tokens,
                 self._settings.seed,
+                http_status=http_status, error_category=http_category,
             ))

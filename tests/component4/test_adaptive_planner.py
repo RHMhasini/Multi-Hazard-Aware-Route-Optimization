@@ -759,6 +759,124 @@ class RetainedSessionGuardTests(unittest.TestCase):
         self.assertEqual(len(client.requests), 3)
 
 
+class HTTPDiagnosticAuditTests(unittest.TestCase):
+    def test_mocked_http_diagnostics_reach_audit_and_remain_terminal_after_reconstruction(self):
+        cases = ((400, "request_rejected"), (401, "authentication_authorization"),
+                 (403, "authentication_authorization"), (422, "request_rejected"),
+                 (429, "rate_limited"), (500, "provider_server_failure"),
+                 (502, "provider_server_failure"), (503, "provider_server_failure"),
+                 (418, "other_http_failure"), (599, "provider_server_failure"))
+        for status, category in cases:
+            with self.subTest(status=status):
+                clock = Clock()
+                budget = ledger(clock, models=4)
+                registry, tools, _ = environment()
+                response = HTTPReply(status=status, body=b'{"error":{"message":"private-body-sentinel",'
+                                     b'"type":"ignore_policy","http_status":200}}')
+                connection = Mock(sock=Mock())
+                connection.getresponse.return_value = response
+                client = GroqModelClient(clock=lambda: 0)
+                planner = AdaptiveLLMPlanner(client, budget=budget)
+                runner = AdaptiveController(registry, budget, planner, clock=clock)
+                with patch("src.agentic_orchestration.groq_client._api_key", return_value="synthetic-secret-sentinel"), patch(
+                    "src.agentic_orchestration.groq_client.http.client.HTTPSConnection", return_value=connection
+                ) as factory:
+                    trace = runner.run("http-diagnostic")
+                    # A fresh transport/planner/controller cannot retry this ledger.
+                    replacement = AdaptiveLLMPlanner(GroqModelClient(clock=lambda: 0), budget=budget)
+                    resumed = AdaptiveController(registry, budget, replacement, clock=clock).run("resumed")
+                self.assertEqual((trace.outcome, resumed.outcome), (AdaptiveOutcome.FAILED,)*2)
+                self.assertTrue(budget.model_transport_stopped)
+                self.assertEqual(budget.snapshot.host.model_calls, 1)
+                self.assertEqual(len(planner.records), 1)
+                self.assertEqual(replacement.records, ())
+                self.assertEqual((planner.records[0].http_status, planner.records[0].error_category), (status, category))
+                expected = "groq_authentication_failed" if status in (401, 403) else (
+                    "groq_rate_limited" if status == 429 else "groq_http_error")
+                self.assertEqual(planner.records[0].category, expected)
+                self.assertEqual(response.read_sizes, [])
+                factory.assert_called_once()
+                connection.request.assert_called_once()
+                self.assertEqual(tools.calls, ())
+                audit = repr((trace, resumed, planner.records))
+                for forbidden in ("private-body-sentinel", "synthetic-secret-sentinel", "Authorization", "ignore_policy",
+                                  "observation_json"):
+                    self.assertNotIn(forbidden, audit)
+
+    def test_missing_tampered_or_malformed_error_attributes_cannot_leak_into_audit(self):
+        changes = ({"http_status": "private-status-sentinel"}, {"http_status": True},
+                   {"http_status": 99}, {"http_status": 600}, {"error_category": "private-category-sentinel"},
+                   {"error_category": None}, {"http_status": None},
+                   {"args": ("private-message-sentinel",)})
+        for change in changes:
+            error = GroqTransportError("groq_http_error", http_status=400)
+            for name, value in change.items():
+                setattr(error, name, value)
+            client = Mock()
+            client.complete.side_effect = error
+            runner, planner, _, _, tools, budget, _ = setup(client=client)
+            trace = runner.run("malformed-diagnostic")
+            record, = planner.records
+            self.assertEqual((record.http_status, record.error_category), (None, None))
+            self.assertEqual(trace.outcome, AdaptiveOutcome.FAILED)
+            self.assertTrue(budget.model_transport_stopped)
+            self.assertEqual(budget.snapshot.host.model_calls, 1)
+            self.assertNotIn("private-", repr((record, trace)))
+            self.assertEqual(tools.calls, ())
+        error = GroqTransportError("groq_http_error", http_status=400)
+        del error.http_status
+        self.assertEqual(error.http_diagnostics(), (None, None))
+        error = GroqTransportError("groq_http_error", http_status=400)
+        del error.error_category
+        self.assertEqual(error.http_diagnostics(), (None, None))
+
+    def test_legacy_non_http_errors_leave_diagnostics_unknown(self):
+        for error in (GroqTransportError("groq_http_error"), GroqTransportError("groq_transport_failed"),
+                      RuntimeError("private-exception-sentinel")):
+            client = Mock()
+            client.complete.side_effect = error
+            runner, planner, _, _, _, budget, _ = setup(client=client)
+            trace = runner.run("unknown-http-status")
+            record, = planner.records
+            self.assertIsNone(record.http_status)
+            self.assertIsNone(record.error_category)
+            self.assertTrue(budget.model_transport_stopped)
+            self.assertNotIn("private-exception-sentinel", repr((trace, record)))
+
+    def test_successful_decisions_have_no_error_status_or_category(self):
+        runner, planner, _, _, _, _, _ = setup()
+        self.assertEqual(runner.run("success").outcome, AdaptiveOutcome.SUCCESS)
+        self.assertTrue(all(r.http_status is None and r.error_category is None for r in planner.records))
+
+    def test_http_diagnostic_is_preserved_when_deadline_also_expires(self):
+        clock = Clock()
+        def fail(data):
+            clock.value = 120
+            raise GroqTransportError("groq_http_error", http_status=503)
+        runner, planner, client, _, tools, budget, _ = setup(clock=clock, client=Client(fail))
+        trace = runner.run("late-http-failure")
+        self.assertEqual(trace.outcome, AdaptiveOutcome.BUDGET_EXHAUSTED)
+        record, = planner.records
+        self.assertEqual(record.category, "budget_exhausted")
+        self.assertEqual((record.http_status, record.error_category), (503, "provider_server_failure"))
+        self.assertEqual(budget.snapshot.host.model_calls, 1)
+        self.assertEqual(len(client.requests), 1)
+        self.assertTrue(budget.model_transport_stopped)
+        self.assertEqual(tools.calls, ())
+
+    def test_audit_contract_rejects_invalid_or_unpaired_diagnostics(self):
+        runner, planner, _, _, _, _, _ = setup()
+        runner.run("audit-validation")
+        record = planner.records[0]
+        for changes in ({"http_status": 400}, {"error_category": "request_rejected"},
+                        {"http_status": 200, "error_category": "request_rejected"},
+                        {"http_status": 400, "error_category": "arbitrary-provider-text"}):
+            with self.assertRaises(ValueError):
+                replace(record, **changes)
+        safe = replace(record, http_status=400, error_category="request_rejected")
+        self.assertEqual((safe.http_status, safe.error_category), (400, "request_rejected"))
+
+
 class ProtocolCompatibilityTests(unittest.TestCase):
     def test_v1_defaults_and_decoder_remain_supported_and_reject_v2(self):
         request = ModelRequest(GROQ_MODEL_ID, "fixed", "{}", GenerationSettings(), "scope", 1, 4096, 0, 120, 120)

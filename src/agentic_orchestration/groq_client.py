@@ -12,8 +12,53 @@ from .contracts import finite_number
 from .llm_planner import GenerationSettings, ModelReply, ModelRequest, ModelUsage
 
 
+def _http_error_category(status):
+    """Closed host classification, based solely on an actual HTTP status."""
+    if type(status) is not int or not 100 <= status <= 599 or status == 200:
+        raise ValueError("Invalid HTTP error status")
+    if status in (401, 403):
+        return "authentication_authorization"
+    if status == 429:
+        return "rate_limited"
+    if status in (400, 404, 405, 413, 415, 422):
+        return "request_rejected"
+    if 500 <= status <= 599:
+        return "provider_server_failure"
+    return "other_http_failure"
+
+
+def _http_error_code(status):
+    if status in (401, 403):
+        return "groq_authentication_failed"
+    return "groq_rate_limited" if status == 429 else "groq_http_error"
+
+
 class GroqTransportError(RuntimeError):
-    """Fixed transport diagnostic; never include provider bodies or observations."""
+    """Legacy message plus optional status/category; no response body or headers.
+
+    Non-HTTP failures retain absent metadata. These are transport assertions,
+    not model instructions or proof of the provider's underlying failure cause.
+    """
+
+    def __init__(self, code, *, http_status=None):
+        category = None if http_status is None else _http_error_category(http_status)
+        if type(code) is not str or http_status is not None and code != _http_error_code(http_status):
+            raise ValueError("Invalid Groq transport diagnostic")
+        super().__init__(code)
+        self.http_status = http_status
+        self.error_category = category
+
+    def http_diagnostics(self):
+        """Revalidate optional exception attributes before projecting into audit."""
+        status = getattr(self, "http_status", None)
+        if type(status) is not int or not 100 <= status <= 599 or status == 200:
+            return None, None
+        category = _http_error_category(status)
+        supplied = getattr(self, "error_category", None)
+        if (type(supplied) is not str or supplied != category
+                or self.args != (_http_error_code(status),)):
+            return None, None
+        return status, category
 
 
 GROQ_MODEL_ID = "openai/gpt-oss-20b"
@@ -178,12 +223,11 @@ class GroqModelClient:
             remaining()
             response = connection.getresponse()
             remaining()
-            if response.status == 429:
-                raise GroqTransportError("groq_rate_limited")
-            if response.status in (401, 403):
-                raise GroqTransportError("groq_authentication_failed")
-            if response.status != 200:
-                raise GroqTransportError("groq_http_error")
+            status = getattr(response, "status", None)
+            if type(status) is not int or not 100 <= status <= 599:
+                raise GroqTransportError("invalid_http_status")
+            if status != 200:
+                raise GroqTransportError(_http_error_code(status), http_status=status)
             headers = {}
             for key, value in response.getheaders():
                 name = key.lower()
