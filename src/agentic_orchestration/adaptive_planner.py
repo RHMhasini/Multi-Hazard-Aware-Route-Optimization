@@ -14,7 +14,7 @@ from threading import Lock
 from .adaptive_contracts import Dependency, Tool, ToolOption
 from .dependency_state import derive_eligibility
 from .execution import AdaptiveExecutionBudget
-from .groq_client import GROQ_MODEL_ID, GroqTransportError, _http_error_category
+from .groq_client import GROQ_MODEL_ID, GroqTransportError, _http_error_category, _provider_error_code
 from .llm_planner import (
     ADAPTIVE_ACTION_VERSION as ACTION_VERSION,
     ADAPTIVE_PROMPT_VERSION as PROMPT_VERSION,
@@ -80,8 +80,12 @@ class AdaptiveModelRecord:
     prompt_sha256: str = PROMPT_SHA256
     http_status: int | None = None
     error_category: str | None = None
+    provider_error_code: str | None = None
 
     def __post_init__(self):
+        if self.provider_error_code is not None and (
+                self.http_status is None or _provider_error_code(self.provider_error_code) is None):
+            raise ValueError("Invalid provider audit diagnostic")
         if self.http_status is None and self.error_category is None:
             return
         if (type(self.error_category) is not str
@@ -300,6 +304,7 @@ class AdaptiveLLMPlanner:
         start = self._budget.snapshot.host
         latency = usage = revision = kind = detail = None
         http_status = http_category = None
+        provider_code = None
         category = "invalid_model_response"
         digest = hashlib.sha256(data.encode("utf-8")).hexdigest()
         try:
@@ -317,6 +322,7 @@ class AdaptiveLLMPlanner:
                 # Preserve only known transport codes, never arbitrary messages.
                 if type(exc) is GroqTransportError:
                     http_status, http_category = GroqTransportError.http_diagnostics(exc)
+                    provider_code = GroqTransportError.provider_diagnostic(exc)
                     for code in ("groq_authentication_failed", "groq_rate_limited", "groq_http_error"):
                         if exc.args == (code,):
                             category = code
@@ -374,4 +380,5 @@ class AdaptiveLLMPlanner:
                 resources.recovery_attempts, self._settings.temperature, self._settings.max_output_tokens,
                 self._settings.seed,
                 http_status=http_status, error_category=http_category,
+                provider_error_code=provider_code,
             ))

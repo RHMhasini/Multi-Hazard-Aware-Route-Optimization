@@ -12,6 +12,22 @@ from .contracts import finite_number
 from .llm_planner import GenerationSettings, ModelReply, ModelRequest, ModelUsage
 
 
+MAX_ERROR_BODY_BYTES = 4096
+# Optional observed code, NOT a stable/complete Groq error taxonomy. The general
+# errors reference documents type/message but does not guarantee error.code.
+# Primary response example (Groq-hosted community, not a normative API promise):
+# https://community.groq.com/t/allow-no-output-parsing-of-message-content-return-raw-response-only/560
+PROVIDER_ERROR_CODES = frozenset({"tool_use_failed"})
+
+
+def _provider_error_code(value):
+    if type(value) is str:
+        for code in PROVIDER_ERROR_CODES:
+            if value == code:
+                return code  # Return a host constant, never the provider object.
+    return None
+
+
 def _http_error_category(status):
     """Closed host classification, based solely on an actual HTTP status."""
     if type(status) is not int or not 100 <= status <= 599 or status == 200:
@@ -34,19 +50,23 @@ def _http_error_code(status):
 
 
 class GroqTransportError(RuntimeError):
-    """Legacy message plus optional status/category; no response body or headers.
+    """Legacy message plus closed diagnostics; no response body or headers.
 
     Non-HTTP failures retain absent metadata. These are transport assertions,
     not model instructions or proof of the provider's underlying failure cause.
     """
 
-    def __init__(self, code, *, http_status=None):
+    def __init__(self, code, *, http_status=None, provider_error_code=None):
         category = None if http_status is None else _http_error_category(http_status)
         if type(code) is not str or http_status is not None and code != _http_error_code(http_status):
             raise ValueError("Invalid Groq transport diagnostic")
+        if provider_error_code is not None and (
+                http_status is None or _provider_error_code(provider_error_code) is None):
+            raise ValueError("Invalid provider error diagnostic")
         super().__init__(code)
         self.http_status = http_status
         self.error_category = category
+        self.provider_error_code = _provider_error_code(provider_error_code)
 
     def http_diagnostics(self):
         """Revalidate optional exception attributes before projecting into audit."""
@@ -59,6 +79,11 @@ class GroqTransportError(RuntimeError):
                 or self.args != (_http_error_code(status),)):
             return None, None
         return status, category
+
+    def provider_diagnostic(self):
+        if GroqTransportError.http_diagnostics(self)[0] is None:
+            return None
+        return _provider_error_code(getattr(self, "provider_error_code", None))
 
 
 GROQ_MODEL_ID = "openai/gpt-oss-20b"
@@ -140,6 +165,70 @@ def _pairs(pairs):
 
 def _constant(value):
     raise GroqTransportError("nonstandard_response_json")
+
+
+def _read_provider_error_code(response, remaining, byte_limit):
+    """Best-effort optional diagnostic; failure never replaces the HTTP error.
+
+    Reads use the existing deadline-wrapped socket. Cap actual entity bytes,
+    including one overflow-detection byte; never decompress, repair, or retry.
+    No body/parsed object/parse exception escapes this helper into error audit.
+    """
+    body = bytearray()
+    value = None
+    try:
+        remaining()
+        headers = {}
+        for name, text in response.getheaders():
+            if type(name) is not str or type(text) is not str:
+                return None
+            key = name.lower()
+            if key in ("content-type", "content-encoding", "content-length", "transfer-encoding"):
+                if key in headers:
+                    return None
+                headers[key] = text.strip().lower()
+        if not re.fullmatch(r'application/json(?:\s*;\s*charset=(?:utf-8|"utf-8"))?',
+                            headers.get("content-type", "")):
+            return None
+        if headers.get("content-encoding", "identity") != "identity":
+            return None
+        transfer = headers.get("transfer-encoding", "")
+        if transfer not in ("", "chunked") or transfer and "content-length" in headers:
+            return None
+        length = None
+        if "content-length" in headers:
+            text = headers["content-length"]
+            if len(text) > 20 or not re.fullmatch(r"[0-9]+", text):
+                return None
+            length = int(text)
+            if length > byte_limit:
+                return None
+        while True:
+            remaining()
+            chunk = response.read1(min(1024, byte_limit + 1 - len(body)))
+            remaining()
+            if type(chunk) is not bytes:
+                return None
+            if not chunk:
+                break
+            if len(body) + len(chunk) > byte_limit:
+                return None
+            body.extend(chunk)
+        if length is not None and len(body) != length:
+            return None
+        remaining()
+        value = json.loads(body.decode("utf-8"), object_pairs_hook=_pairs, parse_constant=_constant)
+        remaining()
+        if type(value) is not dict or type(value.get("error")) is not dict:
+            return None
+        return _provider_error_code(value["error"].get("code"))
+    except Exception:
+        # Includes deadline, socket, framing, UTF-8, JSON and duplicate-key
+        # failures. Their arbitrary text/body is not attached to the HTTP error.
+        return None
+    finally:
+        body.clear()
+        value = None
 
 
 class GroqModelClient:
@@ -227,7 +316,10 @@ class GroqModelClient:
             if type(status) is not int or not 100 <= status <= 599:
                 raise GroqTransportError("invalid_http_status")
             if status != 200:
-                raise GroqTransportError(_http_error_code(status), http_status=status)
+                provider_code = _read_provider_error_code(
+                    response, remaining, min(self._max_body, MAX_ERROR_BODY_BYTES))
+                raise GroqTransportError(_http_error_code(status), http_status=status,
+                                         provider_error_code=provider_code)
             headers = {}
             for key, value in response.getheaders():
                 name = key.lower()
