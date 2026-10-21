@@ -13,6 +13,9 @@ import networkx as nx
 
 from contracts.schemas import C3RouteResultContract
 from src.route_optimization.metrics import calculate_route_metrics
+from src.route_optimization.synthetic import LABEL_MODE
+
+SYNTHETIC_BANNER = "Synthetic network and synthetic hazard. Place names are illustrative placeholders, not real locations."
 
 
 def export_routes_to_geojson(
@@ -23,6 +26,8 @@ def export_routes_to_geojson(
     destination_coord: Optional[Union[List[float], Tuple[float, float]]] = None,
     output_filepath: Optional[Union[str, Path]] = None,
     target_region: Optional[str] = None,
+    data_mode: str = "synthetic",
+    label_mode: Optional[str] = None,
 ) -> Dict[str, Any]:
     """Convert candidate and recommended routing solutions into standard GeoJSON format.
 
@@ -33,11 +38,14 @@ def export_routes_to_geojson(
         origin_coord: Optional original query (lon, lat) of emergency origin.
         destination_coord: Optional original query (lon, lat) of emergency destination.
         output_filepath: Optional file path to save the resulting .geojson file.
-        target_region: Study area name (default: "Ratnapura District, Sabaragamuwa Province, Sri Lanka").
+        target_region: Study area name (default: "synthetic network over an illustrative extent").
+        data_mode: "synthetic" or "real".
+        label_mode: "demo" (default) or "real".
 
     Returns:
         Dict: Standard GeoJSON FeatureCollection dictionary.
     """
+    mode = (label_mode or LABEL_MODE).lower()
     features: List[Dict[str, Any]] = []
 
     # 1. Add Point features for Origin and Destination markers if available
@@ -155,12 +163,21 @@ def export_routes_to_geojson(
                 "threshold_penalty": metrics.threshold_penalty,
                 "edge_count": metrics.edge_count,
                 "node_count": len(path),
+                "origin_name": str(graph.nodes[path[0]].get("name", path[0])) if path and path[0] in graph else None,
+                "destination_name": str(graph.nodes[path[-1]].get("name", path[-1])) if path and path[-1] in graph else None,
                 "audit_notes": audit_notes,
             },
         }
+
+        # In real mode only: include waypoint_names and corridor_description if present in loaded data
+        if mode == "real":
+            feature["properties"]["waypoint_names"] = [str(graph.nodes[node].get("name", node)) for node in path if node in graph]
+            feature["properties"]["corridor_description"] = " -> ".join([str(graph.nodes[node].get("name", node)) for node in [path[0], path[len(path)//2], path[-1]] if node in graph])
+
         features.append(feature)
 
-    region_title = target_region or "Ratnapura District, Sabaragamuwa Province, Sri Lanka"
+    default_target = "synthetic network over an illustrative extent" if mode == "demo" else "loaded network"
+    region_title = target_region or default_target
     feature_collection = {
         "type": "FeatureCollection",
         "crs": {
@@ -169,6 +186,10 @@ def export_routes_to_geojson(
         },
         "metadata": {
             "generator": "Multi-Hazard-Aware Route Optimization Engine (Component 3)",
+            "banner": SYNTHETIC_BANNER,
+            "disclaimer": SYNTHETIC_BANNER,
+            "data_mode": data_mode,
+            "label_mode": mode,
             "target_region": region_title,
             "feature_count": len(features),
         },

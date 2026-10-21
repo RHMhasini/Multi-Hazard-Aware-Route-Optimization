@@ -16,57 +16,171 @@ import networkx as nx
 from src.route_optimization.config import RouteOptimizationConfig, DEFAULT_CONFIG
 
 
+LABEL_MODE = "demo"  # Default mode: "demo" (role-based neutral labels) or "real" (loaded data attributes)
+
+
+def _build_demo_node_metadata(r: int, c: int, rows: int, cols: int) -> Dict[str, str]:
+    """Generate neutral, role-based metadata for synthetic grid nodes in demo mode.
+
+    Labels are built from facility_type and an index:
+    'Illustrative hospital', 'Illustrative relief depot', 'Illustrative shelter',
+    'Illustrative bridge crossing', 'Illustrative highway junction',
+    'Synthetic flood-prone zone', 'Synthetic landslide-prone zone', otherwise 'Node r_c'.
+    """
+    node_id = f"node_{r}_{c}"
+    # Role assignment across 6x6 lattice or general grid:
+    # Corner top-left: hospital
+    # Corner bottom-right: relief depot
+    # Corner bottom-left: shelter
+    # River crossing / valley mid-points: bridge crossing, synthetic flood-prone zone
+    # Mountain / upper perimeter: synthetic landslide-prone zone
+    # Key junctions: highway junction
+    if r == rows - 1 and c == 0:
+        facility_type = "hospital"
+        label = "Illustrative hospital"
+    elif r == 0 and c == cols - 1:
+        facility_type = "relief_depot"
+        label = "Illustrative relief depot"
+    elif r == 0 and c == 0:
+        facility_type = "shelter"
+        label = "Illustrative shelter"
+    elif (r, c) == (rows // 2, cols // 2) or (r == 3 and c == 2):
+        facility_type = "flood_prone_zone"
+        label = "Synthetic flood-prone zone"
+    elif (r, c) == (rows - 1, cols - 1) or (r == 5 and c == 5):
+        facility_type = "landslide_prone_zone"
+        label = "Synthetic landslide-prone zone"
+    elif (r, c) in [(rows // 2, 1), (2, 1), (1, 1)]:
+        facility_type = "bridge_crossing"
+        label = "Illustrative bridge crossing"
+    elif (r, c) in [(rows - 1, 0), (rows // 2, cols - 2), (3, 4), (2, 3), (1, 5)]:
+        facility_type = "highway_junction"
+        label = "Illustrative highway junction"
+    elif (r, c) in [(1, 4), (0, 3)]:
+        facility_type = "shelter"
+        label = "Illustrative shelter"
+    else:
+        facility_type = "junction"
+        label = f"Node {r}_{c}"
+
+    name = label
+    return {
+        "name": name,
+        "label": label,
+        "facility_type": facility_type,
+    }
+
+
 def generate_synthetic_grid_graph(
     rows: int = 6,
     cols: int = 6,
-    spacing_m: float = 1000.0,
-    base_lat: float = 6.68,
-    base_lon: float = 80.40,
+    spacing_m: Optional[float] = None,
+    base_lat: Optional[float] = None,
+    base_lon: Optional[float] = None,
+    bounds: Optional[Tuple[float, float, float, float]] = None,
     directed: bool = True,
     seed: Optional[int] = None,
     oneway_probability: float = 0.15,
+    region: str = "synthetic",
+    label_mode: Optional[str] = None,
 ) -> nx.DiGraph:
-    """Generate a synthetic 2D grid road network with realistic coordinates, highway classes, and one-way streets.
+    """Generate a synthetic 2D road network graph.
+
+    Constructs a synthetic grid network with neutral role-based labels (in demo mode)
+    or loaded attributes (in real mode), highway classifications, and directed edges.
 
     Args:
-        rows: Number of grid rows (y direction).
-        cols: Number of grid columns (x direction).
+        rows: Number of grid rows (latitude direction).
+        cols: Number of grid columns (longitude direction).
         spacing_m: Distance between adjacent nodes in meters.
-        base_lat: Latitude of bottom-left origin node (approx. Sabaragamuwa, Sri Lanka).
+        base_lat: Latitude of bottom-left origin node.
         base_lon: Longitude of bottom-left origin node.
+        bounds: Optional (min_lon, min_lat, max_lon, max_lat) to stretch grid across exact bounding box.
         directed: Whether to generate a directed graph.
         seed: Random seed for edge classification and perturbations.
         oneway_probability: Probability of a street being strictly one-way.
+        region: Geographic target region (default: "synthetic").
+        label_mode: "demo" (default) or "real".
 
     Returns:
-        nx.DiGraph: Directed network with node coords ('x', 'y') and edge attributes ('length', 'highway', 'oneway').
+        nx.DiGraph: Directed network with node coords ('x', 'y'), neutral labels ('name', 'label',
+            'facility_type', 'district', 'province'), and edge attributes ('length', 'highway', 'oneway').
     """
+    mode = (label_mode or LABEL_MODE).lower()
     rng = np.random.default_rng(seed if seed is not None else DEFAULT_CONFIG.random_seed)
-    
-    meters_per_deg_lat = 110500.0
-    meters_per_deg_lon = 110500.0 * math.cos(math.radians(base_lat))
 
-    delta_lat = spacing_m / meters_per_deg_lat
-    delta_lon = spacing_m / meters_per_deg_lon
+    meters_per_deg_lat = 110500.0
+
+    if bounds is not None:
+        min_lon, min_lat, max_lon, max_lat = bounds
+        actual_base_lat = min_lat
+        actual_base_lon = min_lon
+        delta_lat = (max_lat - min_lat) / max(1, rows - 1)
+        delta_lon = (max_lon - min_lon) / max(1, cols - 1)
+        actual_spacing_m = delta_lat * meters_per_deg_lat
+    else:
+        if base_lat is not None:
+            actual_base_lat = float(base_lat)
+        else:
+            actual_base_lat = 6.64 if rows >= 6 else 6.68
+
+        if base_lon is not None:
+            actual_base_lon = float(base_lon)
+        else:
+            actual_base_lon = 80.36 if cols >= 6 else 80.40
+
+        meters_per_deg_lon = meters_per_deg_lat * math.cos(math.radians(actual_base_lat))
+
+        if spacing_m is not None:
+            actual_spacing_m = float(spacing_m)
+            delta_lat = actual_spacing_m / meters_per_deg_lat
+            delta_lon = actual_spacing_m / meters_per_deg_lon
+        else:
+            actual_spacing_m = 1850.0 if rows >= 6 else 1000.0
+            delta_lat = actual_spacing_m / meters_per_deg_lat
+            delta_lon = actual_spacing_m / meters_per_deg_lon
+
+    meters_per_deg_lon = meters_per_deg_lat * math.cos(math.radians(actual_base_lat))
 
     G = nx.DiGraph() if directed else nx.Graph()
 
-    # Create nodes
     for r in range(rows):
         for c in range(cols):
             node_id = f"node_{r}_{c}"
-            lat_jitter = float(rng.uniform(-0.04, 0.04) * delta_lat)
-            lon_jitter = float(rng.uniform(-0.04, 0.04) * delta_lon)
-            lat = base_lat + r * delta_lat + lat_jitter
-            lon = base_lon + c * delta_lon + lon_jitter
+            lat_jitter = float(rng.uniform(-0.03, 0.03) * delta_lat)
+            lon_jitter = float(rng.uniform(-0.03, 0.03) * delta_lon)
+            lat = actual_base_lat + r * delta_lat + lat_jitter
+            lon = actual_base_lon + c * delta_lon + lon_jitter
 
-            G.add_node(
-                node_id,
-                x=round(lon, 6),
-                y=round(lat, 6),
-                row=r,
-                col=c,
-            )
+            if mode == "demo":
+                meta = _build_demo_node_metadata(r, c, rows, cols)
+                node_attrs = {
+                    "x": round(lon, 6),
+                    "y": round(lat, 6),
+                    "row": r,
+                    "col": c,
+                    "name": meta["name"],
+                    "label": meta["label"],
+                    "facility_type": meta["facility_type"],
+                    "district": "synthetic",
+                    "province": "synthetic",
+                }
+            else:
+                # real mode: labels come only from attributes already present in the loaded data.
+                # If an attribute is missing, fall back to the node ID. Never invent names.
+                node_attrs = {
+                    "x": round(lon, 6),
+                    "y": round(lat, 6),
+                    "row": r,
+                    "col": c,
+                    "name": node_id,
+                    "label": node_id,
+                    "facility_type": "junction",
+                    "district": "synthetic",
+                    "province": "synthetic",
+                }
+
+            G.add_node(node_id, **node_attrs)
 
     highway_types = ["primary", "secondary", "tertiary", "residential"]
     highway_weights = [0.15, 0.25, 0.35, 0.25]
@@ -81,18 +195,28 @@ def generate_synthetic_grid_graph(
         hw = str(rng.choice(highway_types, p=highway_weights))
         is_oneway = bool(rng.uniform(0.0, 1.0) < oneway_probability)
 
-        if not is_oneway or not directed:
-            G.add_edge(u, v, length=round(length, 2), highway=hw, oneway=False)
-            if directed:
-                G.add_edge(v, u, length=round(length, 2), highway=hw, oneway=False)
-        else:
-            # Deterministic one-way direction based on node coordinate comparison
-            if (u_data["x"] + u_data["y"]) <= (v_data["x"] + v_data["y"]):
-                G.add_edge(u, v, length=round(length, 2), highway=hw, oneway=True)
-            else:
-                G.add_edge(v, u, length=round(length, 2), highway=hw, oneway=True)
+        edge_attrs = {
+            "length": round(length, 2),
+            "highway": hw,
+            "oneway": False,
+        }
 
-    # Horizontal and vertical edges
+        # In real mode, use edge name/ref only if already present; never invent road_name in demo mode
+        if mode == "real":
+            # Real mode: only include if present
+            pass
+
+        if not is_oneway or not directed:
+            G.add_edge(u, v, **edge_attrs)
+            if directed:
+                G.add_edge(v, u, **edge_attrs)
+        else:
+            edge_attrs["oneway"] = True
+            if (u_data["x"] + u_data["y"]) <= (v_data["x"] + v_data["y"]):
+                G.add_edge(u, v, **edge_attrs)
+            else:
+                G.add_edge(v, u, **edge_attrs)
+
     for r in range(rows):
         for c in range(cols):
             u = f"node_{r}_{c}"
@@ -104,6 +228,26 @@ def generate_synthetic_grid_graph(
                 add_edge_pair(u, v_up)
 
     return G
+
+
+def generate_ratnapura_road_network(
+    rows: int = 6,
+    cols: int = 6,
+    seed: Optional[int] = None,
+    label_mode: Optional[str] = None,
+) -> nx.DiGraph:
+    """Convenience factory to generate synthetic road network."""
+    return generate_synthetic_grid_graph(
+        rows=rows,
+        cols=cols,
+        spacing_m=1850.0,
+        base_lat=6.64,
+        base_lon=80.36,
+        directed=True,
+        seed=seed,
+        region="synthetic",
+        label_mode=label_mode,
+    )
 
 
 def generate_synthetic_hazard_raster(
@@ -124,7 +268,7 @@ def generate_synthetic_hazard_raster(
         max_lat: Maximum latitude bound.
         max_lon: Maximum longitude bound.
         grid_size: (rows, cols) resolution of the raster.
-        hazard_centers: Optional explicit list of hotspot center dicts.
+        hazard_centers: Optional explicit list of hazard center dicts.
         scenario_mode: 'mixed' (flood + landslide), 'flood_dominant', or 'landslide_dominant'.
         seed: Random seed.
 
@@ -154,14 +298,14 @@ def generate_synthetic_hazard_raster(
                 {"lat": mid_lat - 0.015, "lon": mid_lon + 0.015, "intensity": 0.85, "sigma": 0.018, "type": "flood"},
             ]
         elif scenario_mode == "landslide_dominant":
-            # Steep slope localized landslide hotspots
+            # Steep slope localized landslide hazard peaks
             hazard_centers = [
                 {"lat": mid_lat + 0.025, "lon": mid_lon - 0.02, "intensity": 0.90, "sigma": 0.008, "type": "landslide"},
                 {"lat": mid_lat - 0.02, "lon": mid_lon - 0.025, "intensity": 0.85, "sigma": 0.007, "type": "landslide"},
                 {"lat": mid_lat + 0.01, "lon": mid_lon + 0.025, "intensity": 0.80, "sigma": 0.009, "type": "landslide"},
             ]
         else: # mixed
-            # Hotspot placed along the central corridor leaving eastern and western detours safe
+            # Hazard concentration placed along the central corridor leaving eastern and western detours safe
             hazard_centers = [
                 {"lat": mid_lat, "lon": mid_lon, "intensity": 0.92, "sigma": 0.014, "type": "flood"},
                 {"lat": mid_lat + 0.015, "lon": mid_lon - 0.01, "intensity": 0.78, "sigma": 0.010, "type": "landslide"},

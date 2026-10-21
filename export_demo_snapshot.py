@@ -51,7 +51,15 @@ def export_preset_snapshot(preset_id: str, title: str, scenario: str, seed: int,
     print(f"Generating fallback snapshot for {preset_id}: {title}...")
     
     # 1. Build environment
-    grid_graph = generate_synthetic_grid_graph(rows=6, cols=6, spacing_m=1200.0, seed=seed)
+    grid_graph = generate_synthetic_grid_graph(
+        rows=6,
+        cols=6,
+        spacing_m=1850.0,
+        base_lat=6.64,
+        base_lon=80.36,
+        seed=seed,
+        region="synthetic",
+    )
     hazard_data = generate_synthetic_hazard_raster(scenario_mode=scenario, seed=seed)
     attach_hazard_to_graph(grid_graph, hazard_data)
     routing_graph = build_routing_graph(grid_graph)
@@ -148,13 +156,21 @@ def export_preset_snapshot(preset_id: str, title: str, scenario: str, seed: int,
         ys = [routing_graph.nodes[n]["y"] for n in r_path]
         ax.plot(xs, ys, color=col, lw=lw, ls=ls, label=r_name, zorder=5)
 
-    # Mark origin and destination
+    # Mark origin and destination with neutral role-based labels
     ox, oy = routing_graph.nodes[origin]["x"], routing_graph.nodes[origin]["y"]
     dx, dy = routing_graph.nodes[destination]["x"], routing_graph.nodes[destination]["y"]
-    ax.scatter([ox], [oy], color="#3b82f6", s=140, edgecolors="white", lw=2, zorder=10, label=f"Origin: {origin}")
-    ax.scatter([dx], [dy], color="#ef4444", s=140, edgecolors="white", lw=2, zorder=10, label=f"Destination: {destination}")
+    orig_name = routing_graph.nodes[origin].get("name", origin)
+    dest_name = routing_graph.nodes[destination].get("name", destination)
+    ax.scatter([ox], [oy], color="#3b82f6", s=140, edgecolors="white", lw=2, zorder=10, label=f"Origin: {orig_name} ({origin})")
+    ax.scatter([dx], [dy], color="#ef4444", s=140, edgecolors="white", lw=2, zorder=10, label=f"Destination: {dest_name} ({destination})")
 
-    ax.set_title(f"Synthetic road network & Synthetic hazard layer\n{title} ({origin} -> {destination})", color="white", fontsize=11, pad=12)
+    ax.set_title(
+        f"Synthetic Road Network (Component 3)\n{title}\n{orig_name} -> {dest_name}\n"
+        "Synthetic network and synthetic hazard. Place names are illustrative placeholders, not real locations.",
+        color="white",
+        fontsize=9,
+        pad=12,
+    )
     ax.set_xlabel("Longitude (deg E)", color="#9ca3af", fontsize=9)
     ax.set_ylabel("Latitude (deg N)", color="#9ca3af", fontsize=9)
     ax.tick_params(colors="#9ca3af")
@@ -195,7 +211,13 @@ def export_preset_snapshot(preset_id: str, title: str, scenario: str, seed: int,
     ax_p.scatter([rec_pt[0]], [rec_pt[1]], color="#10b981", marker="*", s=220, edgecolors="white", lw=1.5,
                  label="Recommended route (rule-based, pending supervisor approval)", zorder=10)
 
-    ax_p.set_title(f"Pareto Frontier: Travel Time vs Hazard Exposure\n{title}", color="white", fontsize=11, pad=12)
+    ax_p.set_title(
+        f"Pareto Frontier: Travel Time vs Hazard Exposure\n{title}\n"
+        "Synthetic network and synthetic hazard. Place names are illustrative placeholders, not real locations.",
+        color="white",
+        fontsize=9,
+        pad=12,
+    )
     ax_p.set_xlabel("Time (min)", color="#9ca3af", fontsize=9)
     ax_p.set_ylabel("Exposure (hazard·m)", color="#9ca3af", fontsize=9)
     ax_p.tick_params(colors="#9ca3af")

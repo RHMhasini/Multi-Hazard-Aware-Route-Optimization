@@ -1,6 +1,6 @@
 """Origin-Destination coordinate snapping engine for Component 3.
 
-Connects arbitrary geographic coordinate queries (e.g. Ratnapura General Hospital,
+Connects arbitrary geographic coordinate queries (e.g. illustrative facility coordinates,
 relief centers, emergency shelters) to the closest valid nodes or edges in the road network graph.
 """
 

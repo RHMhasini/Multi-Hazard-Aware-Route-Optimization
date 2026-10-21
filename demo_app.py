@@ -107,7 +107,7 @@ st.markdown(
 # Section A: Always-Visible Prototype Banner
 # -----------------------------------------------------------------------------
 st.markdown(
-    '<div class="banner-warning">Prototype. Synthetic data. Components 1 and 2 integration pending.</div>',
+    '<div class="banner-warning">Synthetic network and synthetic hazard. Place names are illustrative placeholders, not real locations.</div>',
     unsafe_allow_html=True,
 )
 
@@ -117,15 +117,16 @@ st.markdown(
 # -----------------------------------------------------------------------------
 @st.cache_resource(show_spinner=False)
 def get_routing_graph(scenario_mode: str, seed: int):
-    # Generates 6x6 directed grid graph
+    # Generates 6x6 directed grid graph with neutral synthetic labels
     grid_graph = generate_synthetic_grid_graph(
         rows=6,
         cols=6,
-        spacing_m=1200.0,
+        spacing_m=1850.0,
         base_lat=6.64,
         base_lon=80.36,
         directed=True,
         seed=seed,
+        region="synthetic",
     )
     hazard_data = generate_synthetic_hazard_raster(
         min_lat=6.63,
@@ -139,17 +140,6 @@ def get_routing_graph(scenario_mode: str, seed: int):
     attach_hazard_to_graph(grid_graph, hazard_data)
     routing_graph = build_routing_graph(grid_graph)
     return grid_graph, hazard_data, routing_graph
-
-
-# Illustrative points pool (Honest labeling: illustrative points, not verified facility coordinates)
-ILLUSTRATIVE_POINTS = {
-    "Ratnapura General Hospital (illustrative)": (80.3620, 6.7020),
-    "Kahawatta Relief Depot (illustrative)": (80.4550, 6.6450),
-    "Elapatha Emergency Outpost (illustrative)": (80.3800, 6.6400),
-    "Kuruwita Evacuation Center (illustrative)": (80.3700, 6.7200),
-    "Pelmadulla Aid Station (illustrative)": (80.4500, 6.7100),
-    "Central Valley Junction (illustrative)": (80.4000, 6.6800),
-}
 
 
 # -----------------------------------------------------------------------------
@@ -209,19 +199,20 @@ node_list = sorted(list(routing_graph.nodes()))
 
 st.sidebar.markdown("---")
 st.sidebar.subheader("Origin & Destination")
-st.sidebar.caption("Named places are illustrative points, not verified facility coordinates")
+st.sidebar.caption("Synthetic road network nodes over an illustrative extent")
 
-selection_mode = st.sidebar.radio("Select by", ["Illustrative Points", "Direct Graph Nodes"], index=0 if default_orig_node is None else 1)
+selection_mode = st.sidebar.radio("Select by", ["Direct Graph Nodes", "Illustrative Coordinate Snapping"], index=0)
 
-if selection_mode == "Illustrative Points":
-    pt_names = list(ILLUSTRATIVE_POINTS.keys())
-    orig_pt_name = st.sidebar.selectbox("Origin Location", pt_names, index=0)
-    dest_pt_name = st.sidebar.selectbox("Destination Location", pt_names, index=1)
+if selection_mode == "Illustrative Coordinate Snapping":
+    st.sidebar.caption("Illustrative coordinate snapping demo")
+    orig_lat = st.sidebar.number_input("Origin Latitude", value=6.7020, format="%.4f")
+    orig_lon = st.sidebar.number_input("Origin Longitude", value=80.3620, format="%.4f")
+    dest_lat = st.sidebar.number_input("Destination Latitude", value=6.6450, format="%.4f")
+    dest_lon = st.sidebar.number_input("Destination Longitude", value=80.4550, format="%.4f")
 
-    orig_coord = ILLUSTRATIVE_POINTS[orig_pt_name]
-    dest_coord = ILLUSTRATIVE_POINTS[dest_pt_name]
+    orig_coord = (orig_lon, orig_lat)
+    dest_coord = (dest_lon, dest_lat)
 
-    # Snap coordinates
     snap_info = snap_od_coordinates(
         routing_graph,
         origin_coord=orig_coord,
@@ -234,20 +225,16 @@ if selection_mode == "Illustrative Points":
     orig_snap_dist = snap_info["origin_dist_m"]
     dest_snap_dist = snap_info["destination_dist_m"]
 
-    # Snapping distance indicators and warnings
-    st.sidebar.info(f"Origin snapped: **{origin_node}** ({orig_snap_dist:.1f} m)")
-    if orig_snap_dist > 1000.0:
-        st.sidebar.warning(f"⚠️ Origin snapping distance exceeds 1 km ({orig_snap_dist/1000:.2f} km)!")
-
-    st.sidebar.info(f"Destination snapped: **{dest_node}** ({dest_snap_dist:.1f} m)")
-    if dest_snap_dist > 1000.0:
-        st.sidebar.warning(f"⚠️ Destination snapping distance exceeds 1 km ({dest_snap_dist/1000:.2f} km)!")
+    orig_name = routing_graph.nodes[origin_node].get("name", origin_node)
+    dest_name = routing_graph.nodes[dest_node].get("name", dest_node)
+    st.sidebar.info(f"Origin snapped: **{origin_node}** ({orig_name}) — {orig_snap_dist:.1f} m")
+    st.sidebar.info(f"Destination snapped: **{dest_node}** ({dest_name}) — {dest_snap_dist:.1f} m")
 
 else:
     o_idx = node_list.index(default_orig_node) if (default_orig_node and default_orig_node in node_list) else 0
     d_idx = node_list.index(default_dest_node) if (default_dest_node and default_dest_node in node_list) else min(len(node_list)-1, 35)
-    origin_node = st.sidebar.selectbox("Origin Node", node_list, index=o_idx)
-    dest_node = st.sidebar.selectbox("Destination Node", node_list, index=d_idx)
+    origin_node = st.sidebar.selectbox("Origin Node", node_list, index=o_idx, format_func=lambda n: f"{n} - {routing_graph.nodes[n].get('name', n)}")
+    dest_node = st.sidebar.selectbox("Destination Node", node_list, index=d_idx, format_func=lambda n: f"{n} - {routing_graph.nodes[n].get('name', n)}")
     orig_coord = (routing_graph.nodes[origin_node]["x"], routing_graph.nodes[origin_node]["y"])
     dest_coord = (routing_graph.nodes[dest_node]["x"], routing_graph.nodes[dest_node]["y"])
     orig_snap_dist = 0.0
@@ -295,7 +282,7 @@ if "acceptance_checked" not in st.session_state:
 # -----------------------------------------------------------------------------
 st.title("Component 3: Disaster-Aware Route Optimization")
 st.caption(
-    "Road-Risk Attachment and Disaster-Aware Bi-Criteria Route Optimization | Ratnapura District Study Region"
+    "Road-Risk Attachment and Disaster-Aware Bi-Criteria Route Optimization | Synthetic network over an illustrative extent"
 )
 
 col_map, col_pareto = st.columns([1.1, 0.9])

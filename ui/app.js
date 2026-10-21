@@ -31,17 +31,17 @@ const OD_PRESETS = {
   "ratnapura_default": {
     origin: [80.3620, 6.7020],
     dest: [80.4550, 6.6450],
-    label: "Ratnapura General Hospital -> Kahawatta Camp"
+    label: "Illustrative Hospital -> Illustrative Relief Depot"
   },
   "north_south": {
     origin: [80.3600, 6.7200],
     dest: [80.3600, 6.6400],
-    label: "North Valley -> South Mountain Relief"
+    label: "North Area -> South Relief Station"
   },
   "diagonal_crossing": {
     origin: [80.3600, 6.6400],
     dest: [80.4500, 6.7200],
-    label: "East-West Hazard Hotspot Traverse"
+    label: "Diagonal High-Hazard Traverse"
   }
 };
 
@@ -177,11 +177,11 @@ async function loadEnvironment() {
           const p = feature.properties;
           layer.bindPopup(`
             <div style="font-size:12px; font-family:sans-serif; color:#111;">
-              <strong>Road Segment</strong><br>
-              From: ${p.source} &rarr; ${p.target}<br>
+              <strong>${p.road_name || 'Ratnapura Road Segment'}</strong><br>
+              From: <b>${p.source_name || p.source}</b><br>
+              To: <b>${p.target_name || p.target}</b><br>
               Hazard Score: <b>${p.hazard_score}</b><br>
-              Length: ${p.length_m} m<br>
-              Travel Time: ${p.travel_time_s} s
+              Length: ${p.length_m} m &bull; Travel Time: ${p.travel_time_s} s
             </div>
           `);
         }

@@ -16,9 +16,11 @@ from src.route_optimization.config import (
     DEFAULT_CONFIG,
 )
 from src.route_optimization.synthetic import (
+    LABEL_MODE,
     generate_synthetic_grid_graph,
     generate_synthetic_hazard_raster,
     generate_synthetic_od_pairs,
+    generate_ratnapura_road_network,
 )
 from src.route_optimization.loaders import (
     load_c1_hazard_raster,
@@ -104,4 +106,6 @@ __all__ = [
     "check_scenario_reachability",
     "evaluate_network_resilience",
     "export_routes_to_geojson",
+    "LABEL_MODE",
+    "generate_ratnapura_road_network",
 ]

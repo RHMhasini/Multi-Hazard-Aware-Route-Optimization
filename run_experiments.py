@@ -32,6 +32,7 @@ from src.route_optimization.pareto import (
 )
 from src.route_optimization.scenarios import apply_hazard_exclusion, check_scenario_reachability
 from src.route_optimization.metrics import calculate_route_metrics
+from src.route_optimization.recommend import recommend_optimal_route
 
 # ---------------------------------------------------------------------------
 # Configuration
@@ -95,27 +96,21 @@ def run_single_od(graph, origin: str, destination: str, config: RouteOptimizatio
     sweep_missed = len(full_obj_set - sweep_obj_set)
     pareto_size = max(1, len(full_obj_set))
 
-    t_min = min((r['travel_time'] for r in all_combined), default=t_fast)
-    r_min = min((r['hazard_exposure'] for r in all_combined), default=0.0)
-    t_max = max((r['travel_time'] for r in all_combined), default=t_fast)
-    r_max = max((r['hazard_exposure'] for r in all_combined), default=1.0)
-    t_span = max(1e-4, t_max - t_min)
-    r_span = max(1e-4, r_max - r_min)
+    # Recommend optimal route using standard policy (enforcing detour budget)
+    rec = recommend_optimal_route(
+        graph,
+        all_combined,
+        config=config,
+        user_max_hazard=0.70,
+        user_max_detour_ratio=config.max_detour_ratio,
+    )
+    t_knee = rec.metrics.total_travel_time_sec
+    r_knee = rec.metrics.cumulative_hazard_exposure
+    constraint_flag = "NORMAL"
+    for line in (rec.audit_notes or "").splitlines():
+        if line.startswith("STATUS_FLAG:"):
+            constraint_flag = line.split(":", 1)[1].strip()
 
-    best = None
-    best_dist = float('inf')
-    for cand in all_combined:
-        nt = (cand['travel_time'] - t_min) / t_span
-        nr = (cand['hazard_exposure'] - r_min) / r_span
-        d = (nt**2 + nr**2) ** 0.5
-        if d < best_dist:
-            best_dist = d
-            best = cand
-
-    if best is None:
-        return None
-
-    t_knee, r_knee = best['travel_time'], best['hazard_exposure']
     time_detour_pct = (t_knee - t_fast) / max(1e-4, t_fast) * 100.0
     exposure_reduction_pct = (r_fast - r_knee) / max(1e-4, r_fast) * 100.0 if r_fast > 0 else 0.0
 
@@ -134,7 +129,8 @@ def run_single_od(graph, origin: str, destination: str, config: RouteOptimizatio
         'reachable_after_exclusion': int(is_reachable),
         'runtime_sweep_s': t_sweep,
         'runtime_ls_s': t_ls,
-        'edge_count_knee': best.get('edge_count', -1),
+        'edge_count_knee': rec.metrics.edge_count,
+        'constraint_flag': constraint_flag,
     }
 
 

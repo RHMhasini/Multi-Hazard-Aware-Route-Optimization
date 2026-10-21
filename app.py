@@ -50,7 +50,7 @@ from src.route_optimization.exporter import export_routes_to_geojson
 
 app = FastAPI(
     title="Component 3: Disaster-Aware Route Optimization Dashboard",
-    description="Multi-Hazard-Aware Route Optimization for Emergency Response (Ratnapura, Sri Lanka)",
+    description="Multi-Hazard-Aware Route Optimization for Emergency Response (Synthetic network over an illustrative extent)",
     version="1.0.0",
 )
 
@@ -73,11 +73,12 @@ def get_or_create_routing_environment():
     grid_graph = generate_synthetic_grid_graph(
         rows=6,
         cols=6,
-        spacing_m=1200.0,
+        spacing_m=1850.0,
         base_lat=6.64,
         base_lon=80.36,
         directed=True,
         seed=42,
+        region="ratnapura",
     )
     hazard_data = generate_synthetic_hazard_raster(
         min_lat=6.63,
@@ -90,11 +91,16 @@ def get_or_create_routing_environment():
     attach_hazard_to_graph(grid_graph, hazard_data)
     routing_graph = build_routing_graph(grid_graph)
 
-    # Format nodes for frontend
+    # Format nodes for frontend with authentic Ratnapura landmarks
     nodes_summary = []
     for node_id, data in routing_graph.nodes(data=True):
         nodes_summary.append({
             "id": str(node_id),
+            "name": str(data.get("name", node_id)),
+            "label": str(data.get("label", node_id)),
+            "road_name": str(data.get("road_name", "")),
+            "facility_type": str(data.get("facility_type", "junction")),
+            "district": str(data.get("district", "Ratnapura")),
             "lon": float(data.get("x", 0.0)),
             "lat": float(data.get("y", 0.0)),
         })
@@ -119,6 +125,9 @@ def get_or_create_routing_environment():
             "properties": {
                 "source": str(u),
                 "target": str(v),
+                "source_name": str(u_node.get("name", u)),
+                "target_name": str(v_node.get("name", v)),
+                "road_name": str(d.get("road_name", "Ratnapura Road")),
                 "hazard_score": round(float(d.get("hazard_score", 0.0)), 3),
                 "length_m": round(float(d.get("length", 0.0)), 1),
                 "travel_time_s": round(float(d.get("travel_time", 0.0)), 1),
@@ -191,7 +200,8 @@ def get_environment_info():
             })
 
     return {
-        "study_area": "Ratnapura District, Sabaragamuwa Province, Sri Lanka",
+        "study_area": "Synthetic network over an illustrative extent",
+        "banner": "Synthetic network and synthetic hazard. Place names are illustrative placeholders, not real locations.",
         "bounds": bounds,
         "nodes": env["nodes_summary"],
         "edges_geojson": env["edges_geojson"],
