@@ -210,7 +210,7 @@ def detect_candidates(
     semantic_missing_counts: Counter[str] = Counter()
     redundant_pair_count = 0
 
-    for index, first_geometry in enumerate(projected_points):Ad
+    for index, first_geometry in enumerate(projected_points):
         for match in tree.query(
             first_geometry,
             predicate="dwithin",    #dwithin - find all endpoints in the 20m radius
