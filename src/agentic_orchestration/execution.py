@@ -401,3 +401,35 @@ class AdaptiveExecutionBudget:
                 raise ValueError("Host budget unavailable")
             return AdaptiveBudgetSnapshot(self._guard.checks[-1], self._steps,
                                           self._tools, self._recoveries, self._reason)
+
+    def export_history(self, registry):
+        """Quiescent M5.1 export, NOT a resumable budget or dispatch journal.
+
+        Only the concrete host ledger has a defined complete persistence shape.
+        Custom ExecutionBudget implementations must supply a separately reviewed
+        exporter. This never binds a new registry or resets an existing guard.
+        Callers must also own the registry control lease while capturing state.
+        """
+        from .session_contracts import ExecutionLedger, HostLedger, InputAttempt, fingerprint
+
+        with self._lock:
+            if (type(self._guard._budget) is not HostExecutionBudget
+                    or self._session_owner is not None and self._session_owner is not registry):
+                raise ValueError("checkpoint_binding_mismatch")
+            # Refresh time even after adaptive exhaustion. Preserve both sticky
+            # reasons, and never serialize the monotonic origin or owner object.
+            self._guard.checkpoint()
+            host = self._guard.checks[-1]
+            if host.exhausted:
+                self._reason = self._reason or host.reason or "host_budget_exhausted"
+            return ExecutionLedger(
+                HostLedger(host.scope_id, host.max_provider_calls, host.provider_calls,
+                           host.max_model_calls, host.model_calls, host.max_model_output_bytes,
+                           host.max_duration_sec, host.elapsed_sec, host.reason),
+                self.limits, self._steps, self._tools, self._recoveries, self._reason,
+                tuple(InputAttempt(identity, *values) for identity, values in sorted(self._attempts.items())),
+                self._no_progress,
+                fingerprint(self._progress_state) if self._session_owner is not None else None,
+                tuple(sorted(self._evaluated_inputs)), self._session_owner is not None,
+                self._model_transport_stopped,
+            )

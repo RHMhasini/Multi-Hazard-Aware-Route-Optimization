@@ -188,6 +188,15 @@ class ToolRegistry:
     def records(self) -> tuple[ToolResult, ...]:
         return tuple(sorted(self._records, key=lambda r: r.call_id))
 
+    @property
+    def checkpoint_configuration(self):
+        """Host registration labels only; no adapters, authority or handles.
+
+        These labels must be versioned by host wiring when implementation or
+        preparation targets change. They are not restoration authorization.
+        """
+        return self._registration_id, tuple(sorted(t.value for t in self._supported))
+
     def claim_control(self):
         """Exclusive in-process M3 lease; never expose it to a planner or tool."""
         with self._meta_lock:
