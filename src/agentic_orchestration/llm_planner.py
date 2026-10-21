@@ -18,7 +18,7 @@ ACTION_VERSION = "c4.planner-action/1.0.0"
 PROMPT_VERSION = "c4.structured-planner-prompt/1.0.0"
 DECODER_VERSION = "c4.action-json-decoder/1.0.0"
 ADAPTIVE_ACTION_VERSION = "c4.adaptive-action/2.0.0"
-ADAPTIVE_PROMPT_VERSION = "c4.adaptive-planner-prompt/2.0.0"
+ADAPTIVE_PROMPT_VERSION = "c4.adaptive-planner-prompt/2.0.1"
 ADAPTIVE_DECODER_VERSION = "c4.adaptive-json-decoder/2.0.0"
 INSTRUCTIONS = (
     "Propose exactly one JSON object, without markdown or surrounding prose. "
@@ -154,6 +154,66 @@ class ModelRequest:
             raise ValueError("Unsupported planner protocol versions")
 
 
+MAX_DIAGNOSTIC_CONTENT_BYTES = 65536
+
+
+@dataclass(frozen=True, slots=True)
+class ResponseDiagnostics:
+    """Closed response facts, never text or evidence of a valid/authorized action."""
+
+    finish_reason: str | None = None
+    content_size: str | None = None
+    blank_content: bool | None = None
+    content_shape: str | None = None
+
+    def __post_init__(self):
+        for value, allowed in (
+            (self.finish_reason, ("stop", "length", "content_filter")),
+            (self.content_size, ("empty", "up_to_256_bytes", "up_to_4096_bytes",
+                                 "up_to_65536_bytes", "over_65536_bytes")),
+            (self.content_shape, ("blank", "object_prefix", "array_prefix", "markdown_fence", "other")),
+        ):
+            if value is not None and (type(value) is not str or value not in allowed):
+                raise ValueError("Invalid response diagnostic")
+        if self.blank_content is not None and type(self.blank_content) is not bool:
+            raise ValueError("Invalid response diagnostic")
+
+
+def safe_response_diagnostics(value):
+    """Detach/revalidate optional metadata even if a frozen record was tampered."""
+    if type(value) is not ResponseDiagnostics:
+        return None
+    try:
+        return ResponseDiagnostics(value.finish_reason, value.content_size,
+                                   value.blank_content, value.content_shape)
+    except (ValueError, AttributeError):
+        return None
+
+
+def describe_response_content(text, *, finish_reason=None):
+    """Bound the work as well as the result; do not parse, repair or retain text."""
+    finish = next((v for v in ("stop", "length", "content_filter")
+                   if type(finish_reason) is str and finish_reason == v), None)
+    if type(text) is not str:
+        return ResponseDiagnostics(finish)
+    if len(text) > MAX_DIAGNOSTIC_CONTENT_BYTES:
+        return ResponseDiagnostics(finish, "over_65536_bytes")
+    try:
+        size = len(text.encode("utf-8"))
+    except UnicodeError:
+        return ResponseDiagnostics(finish)
+    if size > MAX_DIAGNOSTIC_CONTENT_BYTES:
+        return ResponseDiagnostics(finish, "over_65536_bytes")
+    category = ("empty" if size == 0 else "up_to_256_bytes" if size <= 256 else
+                "up_to_4096_bytes" if size <= 4096 else "up_to_65536_bytes")
+    stripped = text.lstrip()
+    blank = not stripped
+    shape = ("blank" if blank else "markdown_fence" if stripped.startswith("```") else
+             "object_prefix" if stripped.startswith("{") else
+             "array_prefix" if stripped.startswith("[") else "other")
+    return ResponseDiagnostics(finish, category, blank, shape)
+
+
 @dataclass(frozen=True, slots=True)
 class ModelReply:
     text: str
@@ -162,6 +222,7 @@ class ModelReply:
     usage: ModelUsage | None = None
     refused: bool = False
     truncated: bool = False
+    response_diagnostics: ResponseDiagnostics | None = field(default=None, kw_only=True)
 
 
 class ModelClient(Protocol):

@@ -13,6 +13,7 @@ from src.agentic_orchestration import (
     GroqTransportError, ModelUsage, StructuredLLMPlanner,
 )
 from src.agentic_orchestration.groq_client import _DeadlineSocket, _api_key
+from src.agentic_orchestration.llm_planner import ResponseDiagnostics
 from test_agent_controller import provider, run
 from test_llm_planner import budget, envelope
 from test_ollama_client import HTTPReply, request as base_request
@@ -610,6 +611,45 @@ class GroqClientTests(unittest.TestCase):
         with self.assertRaises(KeyboardInterrupt):
             self.client.complete(request())
         self.connection.close.assert_called_once()
+
+    def test_validated_finish_reason_and_content_facts_survive_reply_extraction(self):
+        for finish in ("stop", "length", "content_filter"):
+            self.connection.getresponse.return_value = HTTPReply(response_value(text="{}", finish=finish))
+            reply = self.client.complete(request())
+            self.assertEqual(reply.response_diagnostics,
+                             ResponseDiagnostics(finish, "up_to_256_bytes", False, "object_prefix"))
+            self.assertEqual(reply.truncated, finish == "length")
+            self.assertEqual(reply.refused, finish == "content_filter")
+
+    def test_reasoning_and_null_content_errors_keep_only_safe_response_facts(self):
+        for fields, category in (({"content": None, "reasoning": "private-reasoning-sentinel"}, "unexpected_reasoning"),
+                                 ({"content": None}, "invalid_content")):
+            value = response_value()
+            value["choices"][0]["message"].update(fields)
+            self.connection.getresponse.return_value = HTTPReply(value)
+            with self.assertRaises(GroqTransportError) as caught:
+                self.client.complete(request())
+            self.assertEqual(caught.exception.args, (category,))
+            self.assertEqual(caught.exception.response_diagnostic(), ResponseDiagnostics("stop"))
+            self.assertNotIn("private-", repr((caught.exception, vars(caught.exception))))
+
+    def test_unknown_finish_reason_is_not_promoted_to_safe_metadata(self):
+        self.connection.getresponse.return_value = HTTPReply(response_value(finish="private-finish-sentinel"))
+        with self.assertRaises(GroqTransportError) as caught:
+            self.client.complete(request())
+        self.assertEqual(caught.exception.args, ("unsupported_completion_status",))
+        self.assertIsNone(caught.exception.response_diagnostic())
+        self.assertNotIn("private-", repr((caught.exception, vars(caught.exception))))
+
+    def test_malformed_exception_response_metadata_is_revalidated_before_projection(self):
+        diagnostic = ResponseDiagnostics("stop")
+        object.__setattr__(diagnostic, "content_shape", "private-shape-sentinel")
+        error = GroqTransportError("unexpected_reasoning")
+        for value in ({"finish_reason": "stop"}, "private-response-sentinel", diagnostic):
+            error.response_diagnostics = value
+            self.assertIsNone(error.response_diagnostic())
+        with self.assertRaises(ValueError):
+            GroqTransportError("unexpected_reasoning", response_diagnostics=diagnostic)
 
 
 if __name__ == "__main__":

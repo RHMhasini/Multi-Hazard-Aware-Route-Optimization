@@ -9,7 +9,10 @@ import re
 from time import monotonic
 
 from .contracts import finite_number
-from .llm_planner import GenerationSettings, ModelReply, ModelRequest, ModelUsage
+from .llm_planner import (
+    GenerationSettings, ModelReply, ModelRequest, ModelUsage,
+    describe_response_content, safe_response_diagnostics,
+)
 
 
 MAX_ERROR_BODY_BYTES = 4096
@@ -18,6 +21,21 @@ MAX_ERROR_BODY_BYTES = 4096
 # Primary response example (Groq-hosted community, not a normative API promise):
 # https://community.groq.com/t/allow-no-output-parsing-of-message-content-return-raw-response-only/560
 PROVIDER_ERROR_CODES = frozenset({"tool_use_failed"})
+# Existing fixed client validation errors; never provider descriptions.
+CLIENT_VALIDATION_CATEGORIES = (
+    "unsupported_response_envelope", "model_identity_mismatch", "unsupported_choices",
+    "unsupported_completion_status", "unsupported_message", "unexpected_reasoning",
+    "unsupported_tool_call", "invalid_refusal", "invalid_content", "action_text_oversized",
+    "invalid_usage", "malformed_http_json", "duplicate_response_key", "nonstandard_response_json",
+)
+
+
+def _client_validation_category(error):
+    if type(error) is GroqTransportError and type(error.args) is tuple and len(error.args) == 1:
+        for category in CLIENT_VALIDATION_CATEGORIES:
+            if type(error.args[0]) is str and error.args[0] == category:
+                return category
+    return None
 
 
 def _provider_error_code(value):
@@ -56,7 +74,7 @@ class GroqTransportError(RuntimeError):
     not model instructions or proof of the provider's underlying failure cause.
     """
 
-    def __init__(self, code, *, http_status=None, provider_error_code=None):
+    def __init__(self, code, *, http_status=None, provider_error_code=None, response_diagnostics=None):
         category = None if http_status is None else _http_error_category(http_status)
         if type(code) is not str or http_status is not None and code != _http_error_code(http_status):
             raise ValueError("Invalid Groq transport diagnostic")
@@ -67,6 +85,11 @@ class GroqTransportError(RuntimeError):
         self.http_status = http_status
         self.error_category = category
         self.provider_error_code = _provider_error_code(provider_error_code)
+        if response_diagnostics is not None:
+            diagnostic = safe_response_diagnostics(response_diagnostics)
+            if diagnostic is None:
+                raise ValueError("Invalid response diagnostic")
+            self.response_diagnostics = diagnostic
 
     def http_diagnostics(self):
         """Revalidate optional exception attributes before projecting into audit."""
@@ -84,6 +107,11 @@ class GroqTransportError(RuntimeError):
         if GroqTransportError.http_diagnostics(self)[0] is None:
             return None
         return _provider_error_code(getattr(self, "provider_error_code", None))
+
+    def response_diagnostic(self):
+        if _client_validation_category(self) is None:
+            return None
+        return safe_response_diagnostics(getattr(self, "response_diagnostics", None))
 
 
 GROQ_MODEL_ID = "openai/gpt-oss-20b"
@@ -398,6 +426,16 @@ class GroqModelClient:
                 or set(message) - {"role", "content", "refusal", "reasoning", "tool_calls", "function_call"}
                 or message.get("role") != "assistant"):
             raise GroqTransportError("unsupported_message")
+        diagnostic = describe_response_content(message.get("content"), finish_reason=choice["finish_reason"])
+        # These facts are available even when validation below rejects the reply.
+        try:
+            return GroqModelClient._message_reply(value, request, choice, message, diagnostic)
+        except GroqTransportError as exc:
+            exc.response_diagnostics = diagnostic
+            raise
+
+    @staticmethod
+    def _message_reply(value, request, choice, message, diagnostic):
         if message.get("reasoning") not in (None, ""):
             raise GroqTransportError("unexpected_reasoning")
         if message.get("tool_calls") not in (None, []) or message.get("function_call") is not None:
@@ -430,4 +468,4 @@ class GroqModelClient:
         # system_fingerprint identifies backend configuration, NOT model weights.
         # The API does not supply a verified model revision; do not invent one.
         return ModelReply(text, value["model"], model_revision=None, usage=usage,
-                          refused=refused, truncated=truncated)
+                          refused=refused, truncated=truncated, response_diagnostics=diagnostic)

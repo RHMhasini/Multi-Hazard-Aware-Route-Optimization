@@ -3,6 +3,7 @@
 from dataclasses import asdict, replace
 import hashlib
 import json
+import re
 import unittest
 from unittest.mock import Mock, patch
 
@@ -16,6 +17,7 @@ from src.agentic_orchestration.groq_client import GROQ_MODEL_ID, GroqModelClient
 from src.agentic_orchestration.llm_planner import (
     ACTION_VERSION as V1_ACTION, PROMPT_VERSION as V1_PROMPT, DECODER_VERSION as V1_DECODER,
     ActionDecodeError, GenerationSettings, ModelReply, ModelRequest, ModelUsage, decode_action,
+    ResponseDiagnostics, describe_response_content,
 )
 from src.agentic_orchestration.rule_planner import ActionKind, AdaptiveObservation, ToolFeedback
 from src.agentic_orchestration.synthetic_tools import Fault
@@ -931,6 +933,292 @@ class HTTPDiagnosticAuditTests(unittest.TestCase):
         safe = replace(record, http_status=400, error_category="request_rejected")
         self.assertEqual((safe.http_status, safe.error_category), (400, "request_rejected"))
         self.assertEqual(replace(safe, provider_error_code="tool_use_failed").provider_error_code, "tool_use_failed")
+
+
+class AdaptiveOutputContractTests(unittest.TestCase):
+    def propose(self, text=None, *, edit=None, finish="stop", status=200):
+        registry, tools, _ = environment(graph=None, hazard=None)
+        clock = Clock()
+        budget = ledger(clock, models=3)
+        obs = observation(registry, budget)
+        base = dict(schema_version=ACTION_VERSION, kind="call_tool",
+                    state_revision=obs.state.state_revision, option_id="opt-1-0")
+        content = json.dumps(base) if text is None else text(base)
+        value = groq_response(text=content, finish=finish)
+        if edit:
+            edit(value)
+        connection = Mock(sock=Mock())
+        connection.getresponse.return_value = HTTPReply(value, status=status)
+        planner = AdaptiveLLMPlanner(GroqModelClient(clock=clock.monotonic), budget=budget)
+        action = None
+        with patch("src.agentic_orchestration.groq_client._api_key", return_value="private-key-sentinel"), patch(
+            "src.agentic_orchestration.groq_client.http.client.HTTPSConnection", return_value=connection
+        ):
+            try:
+                action = planner.choose(obs)
+            except Exception:
+                pass
+        record, = planner.records
+        self.assertEqual(budget.snapshot.host.model_calls, 1)
+        connection.request.assert_called_once()
+        self.assertEqual(tools.calls, ())
+        return action, record, planner, registry, budget, connection, obs
+
+    def test_all_prompt_examples_pass_real_decoder_after_current_value_substitution(self):
+        examples = []
+        for match in re.finditer(r"(call_tool|request_clarification|stop) example: ", INSTRUCTIONS):
+            value, _ = json.JSONDecoder().raw_decode(INSTRUCTIONS[match.end():])
+            examples.append(value)
+        self.assertEqual([v["kind"] for v in examples], ["call_tool", "request_clarification", "stop"])
+        for revision in (0, 7):
+            registry, _, _ = environment(graph=None, hazard=None)
+            if revision:
+                for _ in range(revision):
+                    registry.adopt_host_state(replace(registry.state, state_revision=registry.state.state_revision+1))
+            obs = observation(registry, ledger(Clock(), models=1))
+            options = {"opt-9-0": obs.options[-1]}
+            for example in examples:
+                value = dict(example, state_revision=revision)
+                if value["kind"] == "call_tool":
+                    value["option_id"] = "opt-9-0"
+                action = decode_adaptive_action(json.dumps(value), observation=obs, options=options,
+                                                max_output_bytes=4096)
+                if action.kind is ActionKind.CALL:
+                    self.assertIs(action.option, obs.options[-1])
+        self.assertIn("double-quoted", INSTRUCTIONS)
+        self.assertIn("Markdown code fences", INSTRUCTIONS)
+        self.assertIn("never invent an option ID", INSTRUCTIONS)
+        self.assertNotIn("request_approval", INSTRUCTIONS)
+        self.assertEqual(PROMPT_VERSION, "c4.adaptive-planner-prompt/2.0.1")
+        self.assertEqual(ACTION_VERSION, "c4.adaptive-action/2.0.0")
+
+    def test_real_groq_reply_records_success_without_changing_parameters_or_handle(self):
+        action, record, _, _, _, connection, obs = self.propose()
+        self.assertIs(action.option, obs.options[0])
+        self.assertEqual(record.category, "decoded")
+        self.assertEqual(record.response_diagnostics,
+                         ResponseDiagnostics("stop", "up_to_256_bytes", False, "object_prefix"))
+        self.assertIsNone(record.json_error_position)
+        self.assertIsNone(record.client_validation_category)
+        payload = json.loads(connection.request.call_args.kwargs["body"])
+        self.assertEqual(payload["response_format"], {"type": "json_object"})
+        self.assertEqual((payload["reasoning_effort"], payload["include_reasoning"], payload["temperature"]),
+                         ("low", False, 0))
+        self.assertEqual(payload["max_completion_tokens"], GenerationSettings().max_output_tokens)
+        self.assertEqual(payload["messages"][0]["content"], INSTRUCTIONS)
+
+    def test_malformed_outputs_are_classified_without_repair(self):
+        cases = ((lambda b: "```json\n"+json.dumps(b)+"\n```", "markdown_fence", False, 0),
+                 (lambda b: "Chosen: "+json.dumps(b), "other", False, 0),
+                 (lambda b: "", "blank", True, 0),
+                 (lambda b: "   ", "blank", True, 3),
+                 (lambda b: "<think>private-reasoning-sentinel</think>"+json.dumps(b), "other", False, 0),
+                 (lambda b: '{"x":', "object_prefix", False, 5))
+        for text, shape, blank, position in cases:
+            with self.subTest(shape=shape, position=position):
+                action, record, _, _, budget, _, _ = self.propose(text)
+                self.assertIsNone(action)
+                self.assertEqual(record.category, "malformed_json")
+                self.assertEqual(record.json_error_position, position)
+                self.assertEqual(record.response_diagnostics.finish_reason, "stop")
+                self.assertEqual(record.response_diagnostics.content_shape, shape)
+                self.assertEqual(record.response_diagnostics.blank_content, blank)
+                self.assertFalse(budget.model_transport_stopped)
+                self.assertNotIn("private-reasoning-sentinel", repr(record))
+
+    def test_schema_errors_remain_distinct_from_json_parsing_failures(self):
+        cases = ((lambda b: json.dumps(dict(b, schema_version="wrong")), "unsupported_action_version"),
+                 (lambda b: json.dumps(dict(b, option_id="private-forged-sentinel")), "unissued_option"),
+                 (lambda b: json.dumps(dict(b, state_revision=9)), "stale_or_invalid_revision"),
+                 (lambda b: json.dumps(dict(b, state_revision=True)), "stale_or_invalid_revision"),
+                 (lambda b: json.dumps(dict(b, option_id=1)), "invalid_action_reference"),
+                 (lambda b: json.dumps(dict(b, arguments={"secret": "private-argument-sentinel"})), "unexpected_or_missing_fields"),
+                 (lambda b: envelope(b, "request_approval", proposal_ref="private-proposal-sentinel"), "approval_unavailable"),
+                 (lambda b: envelope(b, "stop", reason_code="completed"), "evaluation_not_ready"))
+        for text, category in cases:
+            with self.subTest(category=category):
+                action, record, _, _, _, _, _ = self.propose(text)
+                self.assertIsNone(action)
+                self.assertEqual(record.category, category)
+                self.assertIsNone(record.json_error_position)
+                self.assertNotIn("private-", repr(record))
+
+    def test_valid_clarification_and_stop_still_decode(self):
+        for text, kind in ((lambda b: envelope(b, "request_clarification", topic="host_review"), ActionKind.CLARIFY),
+                           (lambda b: envelope(b, "stop", reason_code="no_safe_progress"), ActionKind.ABSTAIN)):
+            action, record, _, _, _, _, _ = self.propose(text)
+            self.assertEqual(action.kind, kind)
+            self.assertEqual(record.category, "decoded")
+
+    def test_length_and_refusal_precede_parsing_and_preserve_closed_finish_reason(self):
+        for finish, category in (("length", "model_truncated"), ("content_filter", "model_refusal")):
+            action, record, _, _, budget, _, _ = self.propose(lambda b: '{"x":', finish=finish)
+            self.assertIsNone(action)
+            self.assertEqual(record.category, category)
+            self.assertEqual(record.response_diagnostics.finish_reason, finish)
+            self.assertIsNone(record.json_error_position)
+            self.assertFalse(budget.model_transport_stopped)
+
+    def test_separate_reasoning_and_missing_output_have_safe_terminal_client_categories(self):
+        for edit, category in ((lambda v: v["choices"][0]["message"].update(content=None, reasoning="private-reasoning-sentinel"),
+                                "unexpected_reasoning"),
+                               (lambda v: v["choices"][0]["message"].update(content=None), "invalid_content"),
+                               (lambda v: v["choices"][0]["message"].pop("content"), "invalid_content")):
+            action, record, _, _, budget, _, _ = self.propose(edit=edit)
+            self.assertIsNone(action)
+            self.assertEqual(record.category, "client_error")
+            self.assertEqual(record.client_validation_category, category)
+            self.assertEqual(record.response_diagnostics, ResponseDiagnostics("stop"))
+            self.assertTrue(budget.model_transport_stopped)
+            self.assertNotIn("private-", repr(record))
+
+    def test_terminal_client_failure_survives_reconstruction_without_another_request(self):
+        _, record, planner, registry, budget, connection, _ = self.propose(
+            edit=lambda v: v["choices"][0]["message"].update(reasoning="private-reasoning-sentinel"))
+        replacement = AdaptiveLLMPlanner(GroqModelClient(clock=lambda: 0), budget=budget)
+        runner = AdaptiveController(registry, budget, replacement, clock=Clock())
+        with patch("src.agentic_orchestration.groq_client.http.client.HTTPSConnection") as factory:
+            trace = runner.run("reconstructed-diagnostic")
+        factory.assert_not_called()
+        self.assertEqual(trace.outcome, AdaptiveOutcome.FAILED)
+        self.assertEqual(budget.snapshot.host.model_calls, 1)
+        self.assertEqual(replacement.records, ())
+        connection.request.assert_called_once()
+        self.assertNotIn("private-", repr((trace, planner.records, record)))
+
+    def test_http_failure_does_not_invent_completion_metadata(self):
+        _, record, _, _, budget, _, _ = self.propose(status=400)
+        self.assertEqual(record.category, "groq_http_error")
+        self.assertEqual((record.http_status, record.error_category), (400, "request_rejected"))
+        self.assertIsNone(record.response_diagnostics)
+        self.assertIsNone(record.client_validation_category)
+        self.assertTrue(budget.model_transport_stopped)
+
+    def test_transport_exception_cannot_supply_arbitrary_diagnostic_categories(self):
+        error = GroqTransportError("private-client-sentinel")
+        error.response_diagnostics = {"finish_reason": "private-finish-sentinel"}
+        client = Mock()
+        client.complete.side_effect = error
+        runner, planner, _, _, _, budget, _ = setup(client=client)
+        trace = runner.run("untrusted-diagnostic")
+        record, = planner.records
+        self.assertEqual(record.category, "client_error")
+        self.assertIsNone(record.client_validation_category)
+        self.assertIsNone(record.response_diagnostics)
+        self.assertTrue(budget.model_transport_stopped)
+        self.assertNotIn("private-", repr((trace, record)))
+
+    def test_legacy_and_malformed_metadata_cannot_invent_a_finish_reason_or_content_shape(self):
+        bad = ResponseDiagnostics("stop")
+        object.__setattr__(bad, "finish_reason", "private-finish-sentinel")
+        for supplied in (None, {}, bad, ResponseDiagnostics("length", "empty", True, "blank")):
+            client = Client(lambda data: ModelReply(choose(data), GROQ_MODEL_ID, response_diagnostics=supplied))
+            runner, planner, _, _, _, _, _ = setup(client=client)
+            runner.run("legacy-diagnostic")
+            for record in planner.records:
+                self.assertIsNone(record.response_diagnostics.finish_reason)
+                self.assertEqual(record.response_diagnostics.content_shape, "object_prefix")
+                self.assertFalse(record.response_diagnostics.blank_content)
+            self.assertNotIn("private-", repr(planner.records))
+
+    def test_content_classification_work_and_output_are_bounded(self):
+        cases = (("", "empty", True, "blank"), (" "*256, "up_to_256_bytes", True, "blank"),
+                 ("x"*257, "up_to_4096_bytes", False, "other"),
+                 ("x"*4097, "up_to_65536_bytes", False, "other"),
+                 ("x"*65537, "over_65536_bytes", None, None),
+                 ("é"*40000, "over_65536_bytes", None, None),
+                 ("[1]", "up_to_256_bytes", False, "array_prefix"))
+        for text, size, blank, shape in cases:
+            self.assertEqual(describe_response_content(text), ResponseDiagnostics(None, size, blank, shape))
+        self.assertEqual(describe_response_content("\ud800"), ResponseDiagnostics())
+
+    def test_audit_diagnostic_validation_rejects_arbitrary_strings_and_invalid_offsets(self):
+        _, record, _, _, _, _, _ = self.propose()
+        for value in (True, -1, 65537, "private-position-sentinel"):
+            with self.assertRaises(ValueError):
+                replace(record, json_error_position=value)
+        for field in ("finish_reason", "content_size", "content_shape", "blank_content"):
+            with self.assertRaises(ValueError):
+                ResponseDiagnostics(**{field: "private-diagnostic-sentinel"})
+        with self.assertRaises(ValueError):
+            replace(record, client_validation_category="private-client-sentinel")
+        with self.assertRaises(ValueError):
+            replace(record, response_diagnostics={"content_shape": "object_prefix"})
+
+    def test_returned_audit_metadata_is_detached_from_internal_records(self):
+        _, _, planner, _, _, _, _ = self.propose()
+        exposed = planner.records[0].response_diagnostics
+        object.__setattr__(exposed, "content_shape", "private-audit-sentinel")
+        self.assertEqual(planner.records[0].response_diagnostics.content_shape, "object_prefix")
+        self.assertNotIn("private-", repr(planner.records))
+
+    def test_diagnostics_never_become_next_observation_instructions(self):
+        client = Client(lambda data: "```private-output-sentinel")
+        runner, planner, _, _, _, budget, _ = setup(client=client)
+        self.assertEqual(runner.run("malformed-feedback").outcome, AdaptiveOutcome.NO_PROGRESS)
+        self.assertEqual(len(client.requests), 2)
+        data = json.loads(client.requests[-1].observation_json)
+        self.assertEqual(data["last_model_outcome"], "malformed_json")
+        for field in ("response_diagnostics", "json_error_position", "client_validation_category"):
+            self.assertNotIn(field, data)
+        self.assertNotIn("private-output-sentinel", repr(planner.records))
+        self.assertEqual(budget.no_progress, 2)
+
+    def test_json_error_position_is_character_offset_capped_without_retaining_exception(self):
+        text = '{"x":' + " "*65540
+        registry, _, _ = environment()
+        obs = observation(registry, ledger(Clock(), models=1))
+        with self.assertRaises(ActionDecodeError) as caught:
+            decode_adaptive_action(text, observation=obs, options={}, max_output_bytes=70000)
+        self.assertEqual(caught.exception.args, ("malformed_json",))
+        self.assertEqual(caught.exception.json_error_position, 65536)
+        self.assertEqual(vars(caught.exception), {"json_error_position": 65536})
+        self.assertIsNone(caught.exception.__context__)
+
+    def test_json_error_offset_counts_characters_without_retaining_unicode_document(self):
+        _, record, _, _, _, _, _ = self.propose(lambda b: '{"é":}')
+        self.assertEqual(record.category, "malformed_json")
+        self.assertEqual(record.json_error_position, 5)
+        self.assertEqual(record.response_diagnostics.content_size, "up_to_256_bytes")
+
+    def test_mocked_five_decision_groq_mission_uses_updated_verified_observations(self):
+        registry, tools, _ = environment(graph=None, hazard=None)
+        clock = Clock()
+        budget = ledger(clock, models=5)
+        connection = Mock(sock=Mock())
+        expected = (Tool.PREPARE_NETWORK, Tool.PREPARE_HAZARD, Tool.GENERATE, Tool.EVALUATE)
+        received = []
+        def respond():
+            payload = json.loads(connection.request.call_args.kwargs["body"])
+            data = json.loads(payload["messages"][1]["content"])
+            index = len(received)
+            received.append(data)
+            if index == 4:
+                self.assertTrue(data["evaluation_ready"])
+                text = envelope(data, "stop", reason_code="completed")
+            else:
+                text = choose(data, expected[index])
+            return HTTPReply(groq_response(text=text))
+        connection.getresponse.side_effect = respond
+        planner = AdaptiveLLMPlanner(GroqModelClient(clock=clock.monotonic), budget=budget)
+        runner = AdaptiveController(registry, budget, planner, clock=clock)
+        with patch("src.agentic_orchestration.groq_client._api_key", return_value="private-key-sentinel"), patch(
+            "src.agentic_orchestration.groq_client.http.client.HTTPSConnection", return_value=connection
+        ):
+            trace = runner.run("mocked-output-contract")
+        self.assertEqual(trace.outcome, AdaptiveOutcome.SUCCESS)
+        self.assertEqual(actions(trace), expected)
+        self.assertEqual(trace.selected_route_id, "route-1")
+        self.assertEqual([tuple(o["tool"] for o in d["options"]) for d in received], [
+            (Tool.PREPARE_HAZARD.value, Tool.PREPARE_NETWORK.value), (Tool.PREPARE_HAZARD.value,),
+            (Tool.GENERATE.value,), (Tool.EVALUATE.value,), ()])
+        self.assertEqual(received[1]["graph"]["verification"], "verified")
+        self.assertEqual(received[2]["hazard"]["verification"], "verified")
+        self.assertTrue(all(r.response_diagnostics.finish_reason == "stop" for r in planner.records))
+        self.assertEqual(budget.snapshot.host.model_calls, 5)
+        self.assertEqual(connection.request.call_count, 5)
+        self.assertEqual(len(tools.calls), 4)
+        self.assertNotIn("private-key-sentinel", repr((trace, planner.records)))
 
 
 class ProtocolCompatibilityTests(unittest.TestCase):
